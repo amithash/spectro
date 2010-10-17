@@ -15,7 +15,7 @@
 #define __SPECTRUM_H__
 
 
-/* Since fftwspectrum and fftwunspectrum are supposed to be 
+/* Since fftwspectrum_2 and fftwunspectrum_2 are supposed to be 
  * opposites, they'll be using the same caps: */
 
 #define SPECTRUM_SIGNAL_CAPS "audio/x-raw-float, " \

@@ -28,9 +28,9 @@
 /* Plugin managing                                             */
 /***************************************************************/
 
-GST_DEBUG_CATEGORY_EXTERN (gst_fftwspectrum_debug);
-GST_DEBUG_CATEGORY_EXTERN (gst_fftwunspectrum_debug);
-GST_DEBUG_CATEGORY_EXTERN (gst_spectrumeq_debug);
+GST_DEBUG_CATEGORY_EXTERN (gst_fftwspectrum_2_debug);
+GST_DEBUG_CATEGORY_EXTERN (gst_fftwunspectrum_2_debug);
+GST_DEBUG_CATEGORY_EXTERN (gst_spectrumeq_2_debug);
 GST_DEBUG_CATEGORY_EXTERN (gst_spectgen_debug);
 
 
@@ -44,25 +44,25 @@ GST_DEBUG_CATEGORY_EXTERN (gst_spectgen_debug);
 static gboolean
 plugin_init (GstPlugin * plugin)
 {
-  if (!gst_element_register (plugin, "fftwspectrum",
+  if (!gst_element_register (plugin, "fftwspectrum_2",
 			     GST_RANK_NONE, GST_TYPE_FFTWSPECTRUM))
     return FALSE;
 
-  if (!gst_element_register (plugin, "fftwunspectrum",
+  if (!gst_element_register (plugin, "fftwunspectrum_2",
 			     GST_RANK_NONE, GST_TYPE_FFTWUNSPECTRUM))
     return FALSE;
-  if (!gst_element_register (plugin, "spectrumeq",
+  if (!gst_element_register (plugin, "spectrumeq_2",
 			     GST_RANK_NONE, GST_TYPE_SPECTRUMEQ))
     return FALSE;
   if (!gst_element_register (plugin, "spectgen",
 			     GST_RANK_NONE, GST_TYPE_SPECTGEN))
     return FALSE;
 
-  GST_DEBUG_CATEGORY_INIT (gst_fftwspectrum_debug, "fftwspectrum",
+  GST_DEBUG_CATEGORY_INIT (gst_fftwspectrum_2_debug, "fftwspectrum_2",
       0, "FFTW Sample-to-Spectrum Converter Plugin");
-  GST_DEBUG_CATEGORY_INIT (gst_fftwunspectrum_debug, "fftwunspectrum",
+  GST_DEBUG_CATEGORY_INIT (gst_fftwunspectrum_2_debug, "fftwunspectrum_2",
       0, "FFTW Spectrum-to-Sample Converter Plugin");
-  GST_DEBUG_CATEGORY_INIT (gst_spectrumeq_debug, "spectrumeq",
+  GST_DEBUG_CATEGORY_INIT (gst_spectrumeq_2_debug, "spectrumeq_2",
       0, "Spectrum-space Equalizer");
   GST_DEBUG_CATEGORY_INIT (gst_spectgen_debug, "spectgen",
       0, "Spectgen analyzer");

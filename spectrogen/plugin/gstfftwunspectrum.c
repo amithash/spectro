@@ -12,13 +12,13 @@
  ***************************************************************************/
 
 /**
- * SECTION:element-fftwunspectrum
+ * SECTION:element-fftwunspectrum_2
  *
  * <refsect2>
  * <title>Example launch line</title>
  * <para>
  * <programlisting>
- * gst-launch audiotestsrc ! audioconvert ! fftwspectrum ! fftwunspectrum ! audioconvert ! alsasink
+ * gst-launch audiotestsrc ! audioconvert ! fftwspectrum_2 ! fftwunspectrum_2 ! audioconvert ! alsasink
  * </programlisting>
  * </para>
  * </refsect2>
@@ -36,8 +36,8 @@
 #include "gstfftwunspectrum.h"
 #include "spectrum.h"
 
-GST_DEBUG_CATEGORY (gst_fftwunspectrum_debug);
-#define GST_CAT_DEFAULT gst_fftwunspectrum_debug
+GST_DEBUG_CATEGORY (gst_fftwunspectrum_2_debug);
+#define GST_CAT_DEFAULT gst_fftwunspectrum_2_debug
 
 /* Filter signals and args */
 enum
@@ -70,19 +70,19 @@ static GstStaticPadTemplate src_factory
 			       ( SPECTRUM_SIGNAL_CAPS )
 			     );
 
-GST_BOILERPLATE (GstFFTWUnSpectrum, gst_fftwunspectrum, GstElement,
+GST_BOILERPLATE (GstFFTWUnSpectrum, gst_fftwunspectrum_2, GstElement,
     GST_TYPE_ELEMENT);
 
-static void gst_fftwunspectrum_set_property (GObject *object, guint prop_id,
+static void gst_fftwunspectrum_2_set_property (GObject *object, guint prop_id,
     const GValue *value, GParamSpec *pspec);
-static void gst_fftwunspectrum_get_property (GObject *object, guint prop_id,
+static void gst_fftwunspectrum_2_get_property (GObject *object, guint prop_id,
     GValue *value, GParamSpec *pspec);
 
-static gboolean gst_fftwunspectrum_set_sink_caps (GstPad *pad, GstCaps *caps);
-static GstCaps *gst_fftwunspectrum_getcaps (GstPad *pad);
+static gboolean gst_fftwunspectrum_2_set_sink_caps (GstPad *pad, GstCaps *caps);
+static GstCaps *gst_fftwunspectrum_2_getcaps (GstPad *pad);
 
-static GstFlowReturn gst_fftwunspectrum_chain (GstPad *pad, GstBuffer *buf);
-static GstStateChangeReturn gst_fftwunspectrum_change_state 
+static GstFlowReturn gst_fftwunspectrum_2_chain (GstPad *pad, GstBuffer *buf);
+static GstStateChangeReturn gst_fftwunspectrum_2_change_state 
                               (GstElement *element, GstStateChange transition);
 
 
@@ -96,7 +96,7 @@ static GstStateChangeReturn gst_fftwunspectrum_change_state
 
 
 static void
-gst_fftwunspectrum_base_init (gpointer gclass)
+gst_fftwunspectrum_2_base_init (gpointer gclass)
 {
   static GstElementDetails element_details = 
     {
@@ -116,7 +116,7 @@ gst_fftwunspectrum_base_init (gpointer gclass)
 
 /* initialize the plugin's class */
 static void
-gst_fftwunspectrum_class_init (GstFFTWUnSpectrumClass * klass)
+gst_fftwunspectrum_2_class_init (GstFFTWUnSpectrumClass * klass)
 {
   GObjectClass *gobject_class;
   GstElementClass *gstelement_class;
@@ -124,8 +124,8 @@ gst_fftwunspectrum_class_init (GstFFTWUnSpectrumClass * klass)
   gobject_class = (GObjectClass *) klass;
   gstelement_class = (GstElementClass *) klass;
 
-  gobject_class->set_property = gst_fftwunspectrum_set_property;
-  gobject_class->get_property = gst_fftwunspectrum_get_property;
+  gobject_class->set_property = gst_fftwunspectrum_2_set_property;
+  gobject_class->get_property = gst_fftwunspectrum_2_get_property;
 
   g_object_class_install_property (gobject_class, ARG_HIQUALITY,
       g_param_spec_boolean ("hiquality", "High Quality", 
@@ -133,7 +133,7 @@ gst_fftwunspectrum_class_init (GstFFTWUnSpectrumClass * klass)
 	  HIQUALITY_DEFAULT, G_PARAM_READWRITE));
 
   gstelement_class->change_state 
-    = GST_DEBUG_FUNCPTR (gst_fftwunspectrum_change_state);
+    = GST_DEBUG_FUNCPTR (gst_fftwunspectrum_2_change_state);
 }
 
 /* initialize the new element
@@ -142,7 +142,7 @@ gst_fftwunspectrum_class_init (GstFFTWUnSpectrumClass * klass)
  * initialize structure
  */
 static void
-gst_fftwunspectrum_init (GstFFTWUnSpectrum * conv,
+gst_fftwunspectrum_2_init (GstFFTWUnSpectrum * conv,
 			 GstFFTWUnSpectrumClass * gclass)
 {
   GstElementClass *klass = GST_ELEMENT_GET_CLASS (conv);
@@ -151,17 +151,17 @@ gst_fftwunspectrum_init (GstFFTWUnSpectrum * conv,
       gst_pad_new_from_template 
           (gst_element_class_get_pad_template (klass, "sink"), "sink");
   gst_pad_set_setcaps_function (conv->sinkpad, 
-      GST_DEBUG_FUNCPTR (gst_fftwunspectrum_set_sink_caps));
+      GST_DEBUG_FUNCPTR (gst_fftwunspectrum_2_set_sink_caps));
   gst_pad_set_getcaps_function (conv->sinkpad,
-      GST_DEBUG_FUNCPTR (gst_fftwunspectrum_getcaps));
+      GST_DEBUG_FUNCPTR (gst_fftwunspectrum_2_getcaps));
   gst_pad_set_chain_function (conv->sinkpad, 
-      GST_DEBUG_FUNCPTR (gst_fftwunspectrum_chain));
+      GST_DEBUG_FUNCPTR (gst_fftwunspectrum_2_chain));
 
   conv->srcpad =
       gst_pad_new_from_template 
           (gst_element_class_get_pad_template (klass, "src"), "src");
   gst_pad_set_getcaps_function (conv->srcpad,
-      GST_DEBUG_FUNCPTR (gst_fftwunspectrum_getcaps));
+      GST_DEBUG_FUNCPTR (gst_fftwunspectrum_2_getcaps));
 
 
   gst_element_add_pad (GST_ELEMENT (conv), conv->sinkpad);
@@ -184,7 +184,7 @@ gst_fftwunspectrum_init (GstFFTWUnSpectrum * conv,
 }
 
 static void
-gst_fftwunspectrum_set_property (GObject * object, guint prop_id,
+gst_fftwunspectrum_2_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec)
 {
   GstFFTWUnSpectrum *conv = GST_FFTWUNSPECTRUM (object);
@@ -201,7 +201,7 @@ gst_fftwunspectrum_set_property (GObject * object, guint prop_id,
 }
 
 static void
-gst_fftwunspectrum_get_property (GObject * object, guint prop_id,
+gst_fftwunspectrum_2_get_property (GObject * object, guint prop_id,
     GValue * value, GParamSpec * pspec)
 {
   GstFFTWUnSpectrum *conv = GST_FFTWUNSPECTRUM (object);
@@ -294,7 +294,7 @@ alloc_extra_samples (GstFFTWUnSpectrum *conv)
  */
 
 static gboolean
-gst_fftwunspectrum_set_sink_caps (GstPad *pad, GstCaps *caps)
+gst_fftwunspectrum_2_set_sink_caps (GstPad *pad, GstCaps *caps)
 {
   GstFFTWUnSpectrum *conv;
   GstCaps *srccaps, *newsrccaps;
@@ -347,7 +347,7 @@ gst_fftwunspectrum_set_sink_caps (GstPad *pad, GstCaps *caps)
 
 /* The only thing that can constrain the caps is the rate. */ 
 static GstCaps *
-gst_fftwunspectrum_getcaps (GstPad *pad)
+gst_fftwunspectrum_2_getcaps (GstPad *pad)
 {
   GstFFTWUnSpectrum *conv;
   GstCaps *tmplcaps;
@@ -373,7 +373,7 @@ gst_fftwunspectrum_getcaps (GstPad *pad)
 
 
 static GstStateChangeReturn 
-gst_fftwunspectrum_change_state (GstElement * element,
+gst_fftwunspectrum_2_change_state (GstElement * element,
 			       GstStateChange transition)
 {
   GstFFTWUnSpectrum *conv = GST_FFTWUNSPECTRUM (element);
@@ -414,7 +414,7 @@ gst_fftwunspectrum_change_state (GstElement * element,
 
 
 static GstFlowReturn
-gst_fftwunspectrum_chain (GstPad * pad, GstBuffer * buf)
+gst_fftwunspectrum_2_chain (GstPad * pad, GstBuffer * buf)
 {
   GstFFTWUnSpectrum *conv;
   GstBuffer *outbuf;

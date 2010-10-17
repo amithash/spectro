@@ -12,12 +12,12 @@
  ***************************************************************************/
 
 /**
- * SECTION:element-spectrumeq
+ * SECTION:element-spectrumeq_2
  *
  * <refsect2>
  * <title>Example launch line</title>
  * <para>
- * The spectrumeq element scales the amplitudes of the bands in a spectrum.
+ * The spectrumeq_2 element scales the amplitudes of the bands in a spectrum.
  * It is recommended to have the size of the input spectra be twice the 
  * value of the step, since the reconstituted signal is rather rough
  * without some overlap.  I also recommend not using scale factors > 1.0,
@@ -25,7 +25,7 @@
  * </para>
  * <para>
  * <programlisting>
- * gst-launch audiotestsrc ! audioconvert ! fftwspectrum def-size=1024 def-step=512 ! spectrumeq preset=lowpreset ! fftwunspectrum ! audioconvert ! alsasink
+ * gst-launch audiotestsrc ! audioconvert ! fftwspectrum_2 def-size=1024 def-step=512 ! spectrumeq_2 preset=lowpreset ! fftwunspectrum_2 ! audioconvert ! alsasink
  * </programlisting>
  * </para>
  * </refsect2>
@@ -45,8 +45,8 @@
 #include "gstspectrumeq.h"
 #include "spectrum.h"
 
-#define GST_CAT_DEFAULT gst_spectrumeq_debug
-GST_DEBUG_CATEGORY (gst_spectrumeq_debug);
+#define GST_CAT_DEFAULT gst_spectrumeq_2_debug
+GST_DEBUG_CATEGORY (gst_spectrumeq_2_debug);
 
 
 /* Filter signals and args */
@@ -63,7 +63,7 @@ enum
   ARG_PRESET
 };
 
-static GstStaticPadTemplate spectrumeq_sink_template 
+static GstStaticPadTemplate spectrumeq_2_sink_template 
   = GST_STATIC_PAD_TEMPLATE ("sink",
 			     GST_PAD_SINK,
 			     GST_PAD_ALWAYS,
@@ -71,7 +71,7 @@ static GstStaticPadTemplate spectrumeq_sink_template
 			       ( SPECTRUM_FREQ_CAPS )
 			     );
 
-static GstStaticPadTemplate spectrumeq_src_template 
+static GstStaticPadTemplate spectrumeq_2_src_template 
   = GST_STATIC_PAD_TEMPLATE ("src",
 			     GST_PAD_SRC,
 			     GST_PAD_ALWAYS,
@@ -79,17 +79,17 @@ static GstStaticPadTemplate spectrumeq_src_template
 			       ( SPECTRUM_FREQ_CAPS )
 			     );
 
-GST_BOILERPLATE (GstSpectrumEq, gst_spectrumeq, GstBaseTransform,
+GST_BOILERPLATE (GstSpectrumEq, gst_spectrumeq_2, GstBaseTransform,
     GST_TYPE_BASE_TRANSFORM);
 
-static void spectrumeq_set_property (GObject *object, guint prop_id,
+static void spectrumeq_2_set_property (GObject *object, guint prop_id,
     const GValue *value, GParamSpec *pspec);
-static void spectrumeq_get_property (GObject *object, guint prop_id,
+static void spectrumeq_2_get_property (GObject *object, guint prop_id,
     GValue *value, GParamSpec *pspec);
 
-static GstFlowReturn spectrumeq_transform_ip (GstBaseTransform *base,
+static GstFlowReturn spectrumeq_2_transform_ip (GstBaseTransform *base,
     GstBuffer *outbuf);
-static gboolean spectrumeq_set_caps (GstBaseTransform *base, GstCaps *incaps,
+static gboolean spectrumeq_2_set_caps (GstBaseTransform *base, GstCaps *incaps,
     GstCaps *outcaps);
 
 
@@ -176,10 +176,10 @@ static const gfloat preset_high[] =
 /* GObject boilerplate stuff                                   */
 /***************************************************************/
 
-#define GST_TYPE_SPECTRUMEQ_PRESETS (spectrumeq_presets_get_type())
+#define GST_TYPE_SPECTRUMEQ_PRESETS (spectrumeq_2_presets_get_type())
 
 static GType
-spectrumeq_presets_get_type (void)
+spectrumeq_2_presets_get_type (void)
 {
   static GType type = 0;
   static const GEnumValue presets[] =
@@ -198,7 +198,7 @@ spectrumeq_presets_get_type (void)
 
 
 static void
-spectrumeq_dispose (GObject *object)
+spectrumeq_2_dispose (GObject *object)
 {
   GstSpectrumEq *spec = GST_SPECTRUMEQ (object);
   
@@ -213,9 +213,9 @@ spectrumeq_dispose (GObject *object)
 
 
 static void
-gst_spectrumeq_base_init (gpointer g_class)
+gst_spectrumeq_2_base_init (gpointer g_class)
 {
-  static GstElementDetails spectrumeq_details =
+  static GstElementDetails spectrumeq_2_details =
     {
       "Multi-band Spectrum-space Equalizer",
       "Filter/Effect/Audio",
@@ -225,15 +225,15 @@ gst_spectrumeq_base_init (gpointer g_class)
   GstElementClass *element_class = GST_ELEMENT_CLASS (g_class);
 
   gst_element_class_add_pad_template (element_class,
-      gst_static_pad_template_get (&spectrumeq_src_template));
+      gst_static_pad_template_get (&spectrumeq_2_src_template));
   gst_element_class_add_pad_template (element_class,
-      gst_static_pad_template_get (&spectrumeq_sink_template));
-  gst_element_class_set_details (element_class, &spectrumeq_details);
+      gst_static_pad_template_get (&spectrumeq_2_sink_template));
+  gst_element_class_set_details (element_class, &spectrumeq_2_details);
 }
 
 
 static void
-gst_spectrumeq_class_init (GstSpectrumEqClass *klass)
+gst_spectrumeq_2_class_init (GstSpectrumEqClass *klass)
 {
   GObjectClass *gobject_class;
   GstBaseTransformClass *trans_class;
@@ -241,9 +241,9 @@ gst_spectrumeq_class_init (GstSpectrumEqClass *klass)
   gobject_class = (GObjectClass *) klass;
   trans_class = (GstBaseTransformClass *) klass;
 
-  gobject_class->set_property = spectrumeq_set_property;
-  gobject_class->get_property = spectrumeq_get_property;
-  gobject_class->dispose      = spectrumeq_dispose;
+  gobject_class->set_property = spectrumeq_2_set_property;
+  gobject_class->get_property = spectrumeq_2_get_property;
+  gobject_class->dispose      = spectrumeq_2_dispose;
 
   g_object_class_install_property (gobject_class, ARG_EQUALIZER,
       g_param_spec_value_array ("equalizer", "Equalizer", 
@@ -258,15 +258,15 @@ gst_spectrumeq_class_init (GstSpectrumEqClass *klass)
 	  GST_TYPE_SPECTRUMEQ_PRESETS, GST_SPECTRUM_PRESET_MED, 
           G_PARAM_WRITABLE));
 
-  trans_class->transform_ip = GST_DEBUG_FUNCPTR (spectrumeq_transform_ip);
-  trans_class->set_caps = GST_DEBUG_FUNCPTR (spectrumeq_set_caps);
+  trans_class->transform_ip = GST_DEBUG_FUNCPTR (spectrumeq_2_transform_ip);
+  trans_class->set_caps = GST_DEBUG_FUNCPTR (spectrumeq_2_set_caps);
 
   trans_class->passthrough_on_same_caps = FALSE;
 }
 
 
 static void
-gst_spectrumeq_init (GstSpectrumEq *spec, GstSpectrumEqClass *g_class)
+gst_spectrumeq_2_init (GstSpectrumEq *spec, GstSpectrumEqClass *g_class)
 {
   GstBaseTransform *trans = GST_BASE_TRANSFORM (spec);
 
@@ -284,7 +284,7 @@ gst_spectrumeq_init (GstSpectrumEq *spec, GstSpectrumEqClass *g_class)
 
 
 static void
-spectrumeq_set_property (GObject *object, guint prop_id, const GValue *value,
+spectrumeq_2_set_property (GObject *object, guint prop_id, const GValue *value,
 			 GParamSpec *pspec)
 {
   GstSpectrumEq *spec = GST_SPECTRUMEQ (object);
@@ -361,7 +361,7 @@ spectrumeq_set_property (GObject *object, guint prop_id, const GValue *value,
 
 
 static void
-spectrumeq_get_property (GObject *object, guint prop_id, GValue *value,
+spectrumeq_2_get_property (GObject *object, guint prop_id, GValue *value,
 			 GParamSpec *pspec)
 {
   GstSpectrumEq *spec = GST_SPECTRUMEQ (object);
@@ -397,7 +397,7 @@ spectrumeq_get_property (GObject *object, guint prop_id, GValue *value,
  * transform_caps returns that the caps on both pads should be the same.
  */
 static gboolean
-spectrumeq_set_caps (GstBaseTransform *base, GstCaps *incaps, GstCaps *outcaps)
+spectrumeq_2_set_caps (GstBaseTransform *base, GstCaps *incaps, GstCaps *outcaps)
 {
   GstSpectrumEq *spec = GST_SPECTRUMEQ (base);
   GstStructure *s;
@@ -426,7 +426,7 @@ spectrumeq_set_caps (GstBaseTransform *base, GstCaps *incaps, GstCaps *outcaps)
 /***************************************************************/
 
 static GstFlowReturn
-spectrumeq_transform_ip (GstBaseTransform *base, GstBuffer *outbuf)
+spectrumeq_2_transform_ip (GstBaseTransform *base, GstBuffer *outbuf)
 {
   GstSpectrumEq *spec = GST_SPECTRUMEQ (base);
   gfloat *data;

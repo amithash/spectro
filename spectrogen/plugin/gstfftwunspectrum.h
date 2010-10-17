@@ -22,7 +22,7 @@ G_BEGIN_DECLS
 
 /* #defines don't like whitespacey bits */
 #define GST_TYPE_FFTWUNSPECTRUM \
-  (gst_fftwunspectrum_get_type())
+  (gst_fftwunspectrum_2_get_type())
 #define GST_FFTWUNSPECTRUM(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_FFTWUNSPECTRUM,GstFFTWUnSpectrum))
 #define GST_FFTWUNSPECTRUM_CLASS(klass) \
@@ -58,7 +58,7 @@ struct _GstFFTWUnSpectrumClass
   GstElementClass parent_class;
 };
 
-GType gst_fftwunspectrum_get_type (void);
+GType gst_fftwunspectrum_2_get_type (void);
 
 G_END_DECLS
 

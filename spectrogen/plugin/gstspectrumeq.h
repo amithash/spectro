@@ -29,7 +29,7 @@ typedef enum
 
 
 #define GST_TYPE_SPECTRUMEQ \
-  (gst_spectrumeq_get_type())
+  (gst_spectrumeq_2_get_type())
 #define GST_SPECTRUMEQ(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_SPECTRUMEQ,GstSpectrumEq))
 #define GST_SPECTRUMEQ_CLASS(klass) \
@@ -57,7 +57,7 @@ struct _GstSpectrumEqClass {
   GstBaseTransformClass parent_class;
 };
 
-GType gst_spectrumeq_get_type (void);
+GType gst_spectrumeq_2_get_type (void);
 
 G_END_DECLS
 

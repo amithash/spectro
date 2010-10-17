@@ -213,7 +213,7 @@ run_loop (gchar *infile, gchar *outfile)
   audiopad = gst_element_get_pad (conv, "sink");
 
   /* Create analyzer chain */
-  fft = make_element ("fftwspectrum", "fft");
+  fft = make_element ("fftwspectrum_2", "fft");
   g_object_set (G_OBJECT (fft), "def-size", 2048, "def-step", 1024,
 		"hiquality", TRUE, NULL);
   spectgen = make_element ("spectgen", "spectgen");

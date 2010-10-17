@@ -12,13 +12,13 @@
  ***************************************************************************/
 
 /**
- * SECTION:element-fftwspectrum
+ * SECTION:element-fftwspectrum_2
  *
  * <refsect2>
  * <title>Example launch line</title>
  * <para>
  * <programlisting>
- * gst-launch audiotestsrc ! audioconvert ! fftwspectrum ! fftwunspectrum ! audioconvert ! alsasink
+ * gst-launch audiotestsrc ! audioconvert ! fftwspectrum_2 ! fftwunspectrum_2 ! audioconvert ! alsasink
  * </programlisting>
  * </para>
  * </refsect2>
@@ -47,8 +47,8 @@
 #include "gstfftwspectrum.h"
 #include "spectrum.h"
 
-GST_DEBUG_CATEGORY (gst_fftwspectrum_debug);
-#define GST_CAT_DEFAULT gst_fftwspectrum_debug
+GST_DEBUG_CATEGORY (gst_fftwspectrum_2_debug);
+#define GST_CAT_DEFAULT gst_fftwspectrum_2_debug
 
 /* Filter signals and args */
 enum
@@ -89,21 +89,21 @@ static GstStaticPadTemplate src_factory
 			       ( SPECTRUM_FREQ_CAPS )
 			     );
 
-GST_BOILERPLATE (GstFFTWSpectrum, gst_fftwspectrum, GstElement,
+GST_BOILERPLATE (GstFFTWSpectrum, gst_fftwspectrum_2, GstElement,
     GST_TYPE_ELEMENT);
 
-static void gst_fftwspectrum_set_property (GObject *object, guint prop_id,
+static void gst_fftwspectrum_2_set_property (GObject *object, guint prop_id,
     const GValue *value, GParamSpec *pspec);
-static void gst_fftwspectrum_get_property (GObject *object, guint prop_id,
+static void gst_fftwspectrum_2_get_property (GObject *object, guint prop_id,
     GValue *value, GParamSpec *pspec);
 
-static gboolean gst_fftwspectrum_set_sink_caps (GstPad *pad, GstCaps *caps);
-static gboolean gst_fftwspectrum_set_src_caps (GstPad *pad, GstCaps *caps);
-static void     gst_fftwspectrum_fixatecaps (GstPad *pad, GstCaps *caps);
-static GstCaps *gst_fftwspectrum_getcaps (GstPad *pad);
+static gboolean gst_fftwspectrum_2_set_sink_caps (GstPad *pad, GstCaps *caps);
+static gboolean gst_fftwspectrum_2_set_src_caps (GstPad *pad, GstCaps *caps);
+static void     gst_fftwspectrum_2_fixatecaps (GstPad *pad, GstCaps *caps);
+static GstCaps *gst_fftwspectrum_2_getcaps (GstPad *pad);
 
-static GstFlowReturn gst_fftwspectrum_chain (GstPad *pad, GstBuffer *buf);
-static GstStateChangeReturn gst_fftwspectrum_change_state (GstElement *element,
+static GstFlowReturn gst_fftwspectrum_2_chain (GstPad *pad, GstBuffer *buf);
+static GstStateChangeReturn gst_fftwspectrum_2_change_state (GstElement *element,
     GstStateChange transition);
 
 
@@ -116,7 +116,7 @@ static GstStateChangeReturn gst_fftwspectrum_change_state (GstElement *element,
 
 
 static void
-gst_fftwspectrum_base_init (gpointer gclass)
+gst_fftwspectrum_2_base_init (gpointer gclass)
 {
   static GstElementDetails element_details = 
     {
@@ -136,7 +136,7 @@ gst_fftwspectrum_base_init (gpointer gclass)
 
 /* initialize the plugin's class */
 static void
-gst_fftwspectrum_class_init (GstFFTWSpectrumClass * klass)
+gst_fftwspectrum_2_class_init (GstFFTWSpectrumClass * klass)
 {
   GObjectClass *gobject_class;
   GstElementClass *gstelement_class;
@@ -144,8 +144,8 @@ gst_fftwspectrum_class_init (GstFFTWSpectrumClass * klass)
   gobject_class = (GObjectClass *) klass;
   gstelement_class = (GstElementClass *) klass;
 
-  gobject_class->set_property = gst_fftwspectrum_set_property;
-  gobject_class->get_property = gst_fftwspectrum_get_property;
+  gobject_class->set_property = gst_fftwspectrum_2_set_property;
+  gobject_class->get_property = gst_fftwspectrum_2_get_property;
 
   g_object_class_install_property (gobject_class, ARG_DEF_SIZE,
       g_param_spec_int ("def-size", "Default Size", 
@@ -163,7 +163,7 @@ gst_fftwspectrum_class_init (GstFFTWSpectrumClass * klass)
 	  HIQUALITY_DEFAULT, G_PARAM_READWRITE));
 
   gstelement_class->change_state 
-    = GST_DEBUG_FUNCPTR (gst_fftwspectrum_change_state);
+    = GST_DEBUG_FUNCPTR (gst_fftwspectrum_2_change_state);
 }
 
 /* initialize the new element
@@ -172,7 +172,7 @@ gst_fftwspectrum_class_init (GstFFTWSpectrumClass * klass)
  * initialize structure
  */
 static void
-gst_fftwspectrum_init (GstFFTWSpectrum * conv,
+gst_fftwspectrum_2_init (GstFFTWSpectrum * conv,
 		       GstFFTWSpectrumClass * gclass)
 {
   GstElementClass *klass = GST_ELEMENT_GET_CLASS (conv);
@@ -181,21 +181,21 @@ gst_fftwspectrum_init (GstFFTWSpectrum * conv,
       gst_pad_new_from_template 
           (gst_element_class_get_pad_template (klass, "sink"), "sink");
   gst_pad_set_setcaps_function (conv->sinkpad, 
-      GST_DEBUG_FUNCPTR (gst_fftwspectrum_set_sink_caps));
+      GST_DEBUG_FUNCPTR (gst_fftwspectrum_2_set_sink_caps));
   gst_pad_set_getcaps_function (conv->sinkpad,
-      GST_DEBUG_FUNCPTR (gst_fftwspectrum_getcaps));
+      GST_DEBUG_FUNCPTR (gst_fftwspectrum_2_getcaps));
   gst_pad_set_chain_function (conv->sinkpad, 
-      GST_DEBUG_FUNCPTR (gst_fftwspectrum_chain));
+      GST_DEBUG_FUNCPTR (gst_fftwspectrum_2_chain));
 
   conv->srcpad =
       gst_pad_new_from_template 
           (gst_element_class_get_pad_template (klass, "src"), "src");
   gst_pad_set_setcaps_function (conv->srcpad, 
-      GST_DEBUG_FUNCPTR (gst_fftwspectrum_set_src_caps));
+      GST_DEBUG_FUNCPTR (gst_fftwspectrum_2_set_src_caps));
   gst_pad_set_getcaps_function (conv->srcpad,
-      GST_DEBUG_FUNCPTR (gst_fftwspectrum_getcaps));
+      GST_DEBUG_FUNCPTR (gst_fftwspectrum_2_getcaps));
   gst_pad_set_fixatecaps_function (conv->srcpad,
-      GST_DEBUG_FUNCPTR (gst_fftwspectrum_fixatecaps));
+      GST_DEBUG_FUNCPTR (gst_fftwspectrum_2_fixatecaps));
 
 
   gst_element_add_pad (GST_ELEMENT (conv), conv->sinkpad);
@@ -224,7 +224,7 @@ gst_fftwspectrum_init (GstFFTWSpectrum * conv,
 }
 
 static void
-gst_fftwspectrum_set_property (GObject * object, guint prop_id,
+gst_fftwspectrum_2_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec)
 {
   GstFFTWSpectrum *conv = GST_FFTWSPECTRUM (object);
@@ -247,7 +247,7 @@ gst_fftwspectrum_set_property (GObject * object, guint prop_id,
 }
 
 static void
-gst_fftwspectrum_get_property (GObject * object, guint prop_id,
+gst_fftwspectrum_2_get_property (GObject * object, guint prop_id,
     GValue * value, GParamSpec * pspec)
 {
   GstFFTWSpectrum *conv = GST_FFTWSPECTRUM (object);
@@ -334,7 +334,7 @@ alloc_fftw_data (GstFFTWSpectrum *conv)
  */
 
 static gboolean
-gst_fftwspectrum_set_sink_caps (GstPad * pad, GstCaps * caps)
+gst_fftwspectrum_2_set_sink_caps (GstPad * pad, GstCaps * caps)
 {
   GstFFTWSpectrum *conv;
   GstCaps *srccaps, *newsrccaps;
@@ -371,7 +371,7 @@ gst_fftwspectrum_set_sink_caps (GstPad * pad, GstCaps * caps)
 }
 
 static gboolean
-gst_fftwspectrum_set_src_caps (GstPad * pad, GstCaps * caps)
+gst_fftwspectrum_2_set_src_caps (GstPad * pad, GstCaps * caps)
 {
   GstFFTWSpectrum *conv;
   gboolean res = FALSE;
@@ -416,7 +416,7 @@ gst_fftwspectrum_set_src_caps (GstPad * pad, GstCaps * caps)
 
 /* The only thing that can constrain the caps is the rate. */ 
 static GstCaps *
-gst_fftwspectrum_getcaps (GstPad *pad)
+gst_fftwspectrum_2_getcaps (GstPad *pad)
 {
   GstFFTWSpectrum *conv;
   GstCaps *tmplcaps;
@@ -441,7 +441,7 @@ gst_fftwspectrum_getcaps (GstPad *pad)
  * we take our hint from the def_size and def_step properties.
  */
 static void
-gst_fftwspectrum_fixatecaps (GstPad *pad, GstCaps *caps)
+gst_fftwspectrum_2_fixatecaps (GstPad *pad, GstCaps *caps)
 {
   GstFFTWSpectrum *conv;
   GstStructure *s;
@@ -488,7 +488,7 @@ gst_fftwspectrum_fixatecaps (GstPad *pad, GstCaps *caps)
 
 
 static GstStateChangeReturn 
-gst_fftwspectrum_change_state (GstElement * element,
+gst_fftwspectrum_2_change_state (GstElement * element,
 			       GstStateChange transition)
 {
   GstFFTWSpectrum *conv = GST_FFTWSPECTRUM (element);
@@ -582,7 +582,7 @@ shift_samples (GstFFTWSpectrum *conv, gint toshift)
  * by conv->step.
  */
 static GstFlowReturn
-gst_fftwspectrum_chain (GstPad * pad, GstBuffer * buf)
+gst_fftwspectrum_2_chain (GstPad * pad, GstBuffer * buf)
 {
   GstFFTWSpectrum *conv;
   GstBuffer *outbuf;
