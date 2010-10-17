@@ -11,7 +11,7 @@ find . -type f -regextype posix-awk -iregex '.*\.(mp3|ogg|flac|wma)' | while rea
        TEMP="${i%.*}.spect"
        OUTF=`echo "$TEMP" | sed 's#\(.*\)/\([^,]*\)#\1/.\2#'`
        if [ ! -e "$OUTF" ] ; then
-               moodbar -o "$OUTF" "$i" &
+               spectgen -o "$OUTF" "$i" &
        fi
 done
 
