@@ -1,0 +1,6 @@
+This has minor changes from the moodbar plugin. 
+Since the generated file is not compatible to that of moodbar's users
+I had to change all references to moodbar with that of spectgen....
+(Just so that I do not piss off people :-)  who use moodbar and wants
+to see what the f**k this tool is all about)
+
