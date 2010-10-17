@@ -1,0 +1,100 @@
+===============================================================================
+				SPECTRO
+===============================================================================
+
+Description:
+------------
+
+Spectro is a collection of tools which in the end aid in listening to music
+similar to an initially predetermined song name. Usage of each tool is provided
+
+Install:
+-------
+In the root directory, 
+./configure.sh
+make
+sudo make install
+# or make install # as root
+
+Uninstall
+---------
+sudo make uninstall
+# or make uninstall # as root
+
+Requirements
+------------
+
+I cannot right now, describe what all are required. I can state the basic minimum
+required to compile the package:
+0. Compilers - gcc, g++, make
+1. gstreamer and its development libs.
+2. mp3 support in gstreamer (This is usually in the bad and ugly libs) = If you want mp3s
+3. Qt 4.7 development libs. (Including qmake)
+4. Anything else configure complains about :-)
+
+
+===============================================================================
+		Steps to perform before using spectradio
+===============================================================================
+
+Usage:
+------
+
+1. Generate "spect" files for your MP3 collection.
+	run gen_spectro.sh from the directory containing your music collection.
+
+	********** NOTE ********
+	This is a _very_ _very_ heavy and time consuming step. For my 8000 song
+	collection, it takes ~7 hours on a dual core machine. This is best done
+	before bed time and if on a laptop = connect the damn charger!
+
+	It generates files which are 192KB per song (Song duration does not matter).
+	So make sure you have disk space. (For 8000 tracks the total space = 1.5 GB)
+
+2. Generate the spect file list.
+	find /full/path/to/your/music/collection -name *.spect > filelist.txt
+	This step generates a file list.
+
+3. Generate the sdb file.
+	genspectdb /path/to/file/created/in/step/2/filelist.txt /path/to/place/out.sdb
+
+	**** NOTE ****
+	This consumes some time. It takes about 10 minutes for 8000 spect files.
+	The out file is <Num Mp3> * 193kB ~ 1.5 GB for 8000 tracks.
+
+4. Generate the hdb file.
+	spect2hist /path/to/file.sdb /path/to/output/file.hdb
+
+	This is quite quick, and the generated .hdb is also quite small. ~100MB for 8000 tracks.
+
+Notes:
+	After step 4, you can delete the sdb file. 
+
+Updating collection:
+--------------------
+
+In case you add more tracks to your collection,
+
+Repeat all the above steps. 
+Step 1 wont take as long, as it generates the spect files only for the newly added files.
+So updating collection should get over within 10-20 minutes.
+
+Freeing up space:
+-----------------
+
+If you decide to delete all the generated spect files:
+	find /path/to/Music/Collection -name *.spect -exec rm -f {} \;
+
+*But be warned*, if you want to update your collection, Step 1 will end up taking 
+the same time. 
+
+===============================================================================
+				Using spectradio
+===============================================================================
+
+1. Start up spectradio,
+2. File->Load DB
+3. Browse and select your .hdb file.
+4. This will take some time to load the db. 
+5. From here on, you can select a song you want to listen to, then spectradio
+   will pick songs similar to that on. (Like pandora, with your own collection).
