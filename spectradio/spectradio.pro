@@ -7,7 +7,7 @@
 	      hist.cpp
 
  # install
- target.path = $$[QT_INSTALL_EXAMPLES]/phonon/spectradio
+ target.path = /usr/local/bin
  sources.files = $$SOURCES $$HEADERS $$FORMS $$RESOURCES *.pro *.png images
  sources.path = $$[QT_INSTALL_EXAMPLES]/phonon/spectradio
  INSTALLS += target sources
