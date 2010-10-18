@@ -110,3 +110,27 @@ the same time.
 2. It takes quite a while for spectradio to load the db. And the only indication
    that it is done, is the print sent to the command line that it is done. 
 
+===============================================================================
+			Credit where credit is due
+===============================================================================
+
+spectrogen == moodbar
+---------------------
+spectrogen is a line by line copy of moodbar 0.1.2. In fact the *.spect files
+are just glorified .mood files. So, mood files are 1000 elements in length,
+and has information of 3 bands (Used for R, G & B colors). Spect is 8192 in
+length, and has 24 bands (Essentially the maximum). 
+
+A simple diff of moodbar source with spectrogen, will provide you will a lot
+of lines changed, but if you observe closely, I had to rename a few things
+so that the filters do not interfere with moodbar (If it also exists).
+
+spectradio == Qt Music player example + My crap
+-----------------------------------------------
+
+http://doc.qt.nokia.com/4.7/phonon-qmusicplayer.html
+You will notice that not a pixel has changed from that! :-)
+
+I have added to that in the most hackiest way possible (Since my native
+language is not C++, it is C and I have absolutely no experience writing
+GUI programs).
