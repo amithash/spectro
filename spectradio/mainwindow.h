@@ -48,6 +48,7 @@
  #include <phonon/volumeslider.h>
  #include <phonon/backendcapabilities.h>
  #include <QList>
+ #include <QLineEdit>
 
  class QAction;
  class QTableWidget;
@@ -67,6 +68,7 @@
 
  private slots:
      void loadDB();
+     void searchDB();
      void about();
      void stateChanged(Phonon::State newState, Phonon::State oldState);
      void tick(qint64 time);
@@ -74,11 +76,14 @@
      void metaStateChanged(Phonon::State newState, Phonon::State oldState);
      void aboutToFinish();
      void tableClicked(int row, int column);
+     void searchTableClicked(int row, int column);
 
  private:
      void setupActions();
      void setupMenus();
      void setupUi();
+     void addSearchEntry(QString title, QString artist, QString album);
+     void clearSearchWindow();
 
      Phonon::SeekSlider *seekSlider;
      Phonon::MediaObject *mediaObject;
@@ -86,6 +91,8 @@
      Phonon::AudioOutput *audioOutput;
      Phonon::VolumeSlider *volumeSlider;
      QList<Phonon::MediaSource> sources;
+     QList<int> searchMap;
+     int stop;
 
      QAction *playAction;
      QAction *pauseAction;
@@ -98,6 +105,8 @@
      QAction *aboutQtAction;
      QLCDNumber *timeLcd;
      QTableWidget *musicTable;
+     QTableWidget *searchTable;
+     QLineEdit *searchBox;
  };
 
  #endif
