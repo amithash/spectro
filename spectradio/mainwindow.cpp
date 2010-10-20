@@ -166,6 +166,9 @@ void MainWindow::loadDB()
 		musicTable->selectRow(0);
 		mediaObject->setCurrentSource(sources.at(0));
 	}
+	musicTable->resizeColumnsToContents();
+	if (musicTable->columnWidth(0) > 300)
+		musicTable->setColumnWidth(0, 300);
 }
 
 void MainWindow::about()
