@@ -73,7 +73,6 @@
      void stateChanged(Phonon::State newState, Phonon::State oldState);
      void tick(qint64 time);
      void sourceChanged(const Phonon::MediaSource &source);
-     void metaStateChanged(Phonon::State newState, Phonon::State oldState);
      void aboutToFinish();
      void tableClicked(int row, int column);
      void searchTableClicked(int row, int column);
@@ -82,12 +81,11 @@
      void setupActions();
      void setupMenus();
      void setupUi();
-     void addSearchEntry(QString title, QString artist, QString album);
+     void addEntry(QTableWidget *table, QString title, QString artist, QString album);
      void clearSearchWindow();
 
      Phonon::SeekSlider *seekSlider;
      Phonon::MediaObject *mediaObject;
-     Phonon::MediaObject *metaInformationResolver;
      Phonon::AudioOutput *audioOutput;
      Phonon::VolumeSlider *volumeSlider;
      QList<Phonon::MediaSource> sources;

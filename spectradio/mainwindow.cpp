@@ -49,14 +49,10 @@ HistDB htdb;
  {
      audioOutput = new Phonon::AudioOutput(Phonon::MusicCategory, this);
      mediaObject = new Phonon::MediaObject(this);
-     metaInformationResolver = new Phonon::MediaObject(this);
-
      mediaObject->setTickInterval(1000);
      connect(mediaObject, SIGNAL(tick(qint64)), this, SLOT(tick(qint64)));
      connect(mediaObject, SIGNAL(stateChanged(Phonon::State,Phonon::State)),
              this, SLOT(stateChanged(Phonon::State,Phonon::State)));
-     connect(metaInformationResolver, SIGNAL(stateChanged(Phonon::State,Phonon::State)),
-             this, SLOT(metaStateChanged(Phonon::State,Phonon::State)));
      connect(mediaObject, SIGNAL(currentSourceChanged(Phonon::MediaSource)),
              this, SLOT(sourceChanged(Phonon::MediaSource)));
      connect(mediaObject, SIGNAL(aboutToFinish()), this, SLOT(aboutToFinish()));
@@ -69,33 +65,33 @@ HistDB htdb;
      timeLcd->display("00:00");
  }
 
-void MainWindow::addSearchEntry(QString title, QString artist, QString album)
+void MainWindow::addEntry(QTableWidget *table, QString title, QString artist, QString album)
 {
-	int currentRow = searchTable->rowCount();
-	searchTable->insertRow(currentRow);
+	int currentRow = table->rowCount();
+	table->insertRow(currentRow);
 	QTableWidgetItem *titleItem = new QTableWidgetItem(title);
 	QTableWidgetItem *artistItem = new QTableWidgetItem(artist);
 	QTableWidgetItem *albumItem = new QTableWidgetItem(album);
-	searchTable->setItem(currentRow, 0, titleItem);
-	searchTable->setItem(currentRow, 1, artistItem);
-	searchTable->setItem(currentRow, 2, albumItem);
 
-	
+        titleItem->setFlags(titleItem->flags() ^ Qt::ItemIsEditable);
+        artistItem->setFlags(artistItem->flags() ^ Qt::ItemIsEditable);
+        albumItem->setFlags(albumItem->flags() ^ Qt::ItemIsEditable);
+
+	table->setItem(currentRow, 0, titleItem);
+	table->setItem(currentRow, 1, artistItem);
+	table->setItem(currentRow, 2, albumItem);
+
 }
 
 void MainWindow::clearSearchWindow()
 {
-	int rowCount = searchTable->rowCount();
-	for(int i = 0; i < rowCount; i++) {
-		searchTable->removeRow(i);
-	}
+	for (int i = searchTable->rowCount() - 1; i >= 0; --i)
+	      	searchTable->removeRow(i);
 }
 
 void MainWindow::searchDB()
 {
-	std::cout << searchBox->text().toAscii().data() << std::endl;
-	QString search = searchBox->text();
-	search = search.toLower();
+	QString search = searchBox->text().toLower();
 	clearSearchWindow();
 	searchMap.clear();
 	if(searchBox->text().isEmpty()) {
@@ -117,7 +113,7 @@ void MainWindow::searchDB()
 			}
 		}
 		if(found == 1) {
-			addSearchEntry(musicTable->item(i, 0)->text(), musicTable->item(i, 1)->text(), musicTable->item(i, 2)->text());
+			addEntry(searchTable, musicTable->item(i, 0)->text(), musicTable->item(i, 1)->text(), musicTable->item(i, 2)->text());
 			searchMap.append(i);
 		}
 		if(stop == 1)
@@ -157,14 +153,22 @@ void MainWindow::searchDB()
      }
 
      sources.reserve(htdb.length());
+     musicTable->hide();
      for(unsigned int i = 0; i < htdb.length(); i++) {
+	
      	QString string(htdb.ind_name(i));
 	Phonon::MediaSource source(string);
 	htdb.set_media_source(i, source);
 	sources.append(source);
+	addEntry(musicTable, QString(htdb.ind_title(i)), 
+			     QString(htdb.ind_artist(i)), 
+			     QString(htdb.ind_album(i)));
      }
-     if (!sources.isEmpty())
-         metaInformationResolver->setCurrentSource(sources.at(0));
+     musicTable->show();
+     if (musicTable->selectedItems().isEmpty()) {
+         musicTable->selectRow(0);
+         mediaObject->setCurrentSource(sources.at(0));
+     }
  }
 
  void MainWindow::about()
@@ -220,9 +224,6 @@ void MainWindow::searchDB()
 	/* Start playing */
 	stop = 1;
 	int mt_row = searchMap.at(row);
-
-
-	clearSearchWindow();
 	searchTable->hide();
 	musicTable->show();
 	tableClicked(mt_row, 0);
@@ -240,7 +241,12 @@ void MainWindow::searchDB()
 
      htdb.set_playing(row);
      mediaObject->setCurrentSource(sources[row]);
-     setWindowTitle(htdb.ind_name(row));
+     QString windowTitle;
+     windowTitle = musicTable->item(row, 0)->text() +
+	 " : Artist: " + musicTable->item(row,1)->text() +
+	 " : Album: " + musicTable->item(row,2)->text();
+
+     setWindowTitle(windowTitle);
 
      if (wasPlaying)
          mediaObject->play();
@@ -252,61 +258,6 @@ void MainWindow::searchDB()
  {
      musicTable->selectRow(sources.indexOf(source));
      timeLcd->display("00:00");
- }
-
- void MainWindow::metaStateChanged(Phonon::State newState, Phonon::State /* oldState */)
- {
-     if (newState == Phonon::ErrorState) {
-         QMessageBox::warning(this, tr("Error opening files"),
-             metaInformationResolver->errorString());
-         while (!sources.isEmpty() &&
-                !(sources.takeLast() == metaInformationResolver->currentSource())) {}  /* loop */;
-         return;
-     }
-     if (newState != Phonon::StoppedState && newState != Phonon::PausedState)
-         return;
-
-     if (metaInformationResolver->currentSource().type() == Phonon::MediaSource::Invalid)
-             return;
-
-     QMap<QString, QString> metaData = metaInformationResolver->metaData();
-
-     QString title = metaData.value("TITLE");
-     if (title == "")
-         title = metaInformationResolver->currentSource().fileName();
-
-     QTableWidgetItem *titleItem = new QTableWidgetItem(title);
-     titleItem->setFlags(titleItem->flags() ^ Qt::ItemIsEditable);
-     QTableWidgetItem *artistItem = new QTableWidgetItem(metaData.value("ARTIST"));
-     artistItem->setFlags(artistItem->flags() ^ Qt::ItemIsEditable);
-     QTableWidgetItem *albumItem = new QTableWidgetItem(metaData.value("ALBUM"));
-     albumItem->setFlags(albumItem->flags() ^ Qt::ItemIsEditable);
-
-     int currentRow = musicTable->rowCount();
-     musicTable->insertRow(currentRow);
-     musicTable->setItem(currentRow, 0, titleItem);
-     musicTable->setItem(currentRow, 1, artistItem);
-     musicTable->setItem(currentRow, 2, albumItem);
-
-     if (musicTable->selectedItems().isEmpty()) {
-         musicTable->selectRow(0);
-         mediaObject->setCurrentSource(metaInformationResolver->currentSource());
-     }
-
-     Phonon::MediaSource source = metaInformationResolver->currentSource();
-     int index = sources.indexOf(metaInformationResolver->currentSource()) + 1;
-     if(index == 1) {
-     	searchBox->setText("Starting to populate media table");
-     }
-     if (sources.size() > index) {
-         metaInformationResolver->setCurrentSource(sources.at(index));
-     }
-     else {
-         musicTable->resizeColumnsToContents();
-         if (musicTable->columnWidth(0) > 300)
-             musicTable->setColumnWidth(0, 300);
-	 searchBox->setText("Populating music table done! You can select your music now!");
-     }
  }
 
  void MainWindow::aboutToFinish()
