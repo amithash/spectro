@@ -4,7 +4,7 @@
 
 
 typedef struct {
-	char *fname;
+	hist_t *hist;
 	double dist;
 } max_type;
 
@@ -18,7 +18,7 @@ void init_nmax(int len)
 	int i;
 	maxes = (max_type *)calloc(len, sizeof(max_type));
 	for(i = 0; i < len; i++) {
-		maxes[i].fname = NULL;
+		maxes[i].hist = NULL;
 		maxes[i].dist = INIT_DIST;
 	}
 }
@@ -69,17 +69,19 @@ int main(int argc, char *argv[])
 		for(j = 0; j < maxes_len; j++) {
 			if(idist < maxes[j].dist) {
 				maxes[j].dist = idist;
-				maxes[j].fname = hist_list[i].fname;
+				maxes[j].hist = &hist_list[i];
 				break;
 			}
 		}
 	}
+	printf("Distance\tTitle\tArtist\tAlbum\n");
 	for(i = 1; i < maxes_len; i++) {
-		if(!maxes[i].fname) {
+		if(!maxes[i].hist) {
 			printf("WAAAAAAAA\n");
 		      continue;
 		}
-		printf("%f\t%s\n", maxes[i].dist, maxes[i].fname);
+
+		printf("%f\t%s\t%s\t%s\n", maxes[i].dist, maxes[i].hist->title, maxes[i].hist->artist, maxes[i].hist->album);
 	}
 	free(hist_list);
 

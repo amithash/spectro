@@ -3,17 +3,14 @@
 
 #include "spect.h"
 
-#ifndef BIN_IND
-#define BIN_IND  2
-#endif
-
-#define BIN_SIZE (1 << BIN_IND)
-#define HIST_LEN (256/BIN_SIZE)
-#define NUM2BIN(num) (num / BIN_SIZE)
-
+#include "../spect-config.h"
 
 typedef struct {
 	char fname[FNAME_LEN];
+	char title[TITLE_LEN];
+	char artist[ARTIST_LEN];
+	char album[ALBUM_LEN];
+	unsigned int track;
 	double spect_hist[NBANDS][HIST_LEN];
 } hist_t;
 

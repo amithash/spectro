@@ -1,5 +1,41 @@
 #include "hist.h"
 #include <pthread.h>
+#include <tag_c.h>
+
+/* Assumption: hist->fname is valid */
+static int set_tags(hist_t *hist)
+{
+	char *p_title;
+	char *p_album;
+	char *p_artist;
+	unsigned int track;
+	TagLib_Tag *tag;
+	TagLib_File *f = taglib_file_new(hist->fname);
+
+	if(f == NULL) {
+		printf("Cannot open %s\n",hist->fname);
+                return -1;
+        }
+        tag = taglib_file_tag(f);
+
+        p_title = taglib_tag_title(tag);
+        strcpy(hist->title, p_title);
+
+        p_artist = taglib_tag_artist(tag);
+        strcpy(hist->artist, p_artist);
+
+        p_album = taglib_tag_album(tag);
+        strcpy(hist->album, p_album);
+
+        hist->track = taglib_tag_track(tag);
+
+        taglib_tag_free_strings();
+
+        taglib_file_free(f);
+
+	return 0;
+
+}
 
 static void vec2hist(double *hist, unsigned char *vec, int vec_len, unsigned char *avoid)
 {
@@ -53,6 +89,8 @@ void spect2hist(hist_t *hist, spect_t *spect)
 	for(i = 0; i < NBANDS; i++) {
 		vec2hist(hist->spect_hist[i], spect->spect[i], spect->len, avoid);
 	}
+	
+	set_tags(hist);
 }
 
 static int read_uint(int fd, unsigned int *val) {
@@ -107,6 +145,18 @@ static int write_hist(int fd, hist_t *hist)
 	if(write_char_vec(fd, hist->fname, FNAME_LEN)) {
 		return -1;
 	}
+	if(write_char_vec(fd, hist->title, TITLE_LEN)) {
+		return -1;
+	}
+	if(write_char_vec(fd, hist->artist, ARTIST_LEN)) {
+		return -1;
+	}
+	if(write_char_vec(fd, hist->album, ALBUM_LEN)) {
+		return -1;
+	}
+	if(write_uint(fd, hist->track)) {
+		return -1;
+	}
 	for(i = 0; i < NBANDS; i++) {
 		if(write_double_vec(fd, hist->spect_hist[i], HIST_LEN)) {
 			return -1;
@@ -122,6 +172,18 @@ static int read_hist(int fd, hist_t *hist)
 		return -1;
 	}
 	if(read_char_vec(fd, hist->fname, FNAME_LEN)) {
+		return -1;
+	}
+	if(read_char_vec(fd, hist->title, TITLE_LEN)) {
+		return -1;
+	}
+	if(read_char_vec(fd, hist->artist, ARTIST_LEN)) {
+		return -1;
+	}
+	if(read_char_vec(fd, hist->album, ALBUM_LEN)) {
+		return -1;
+	}
+	if(read_uint(fd, &hist->track)) {
 		return -1;
 	}
 	for(i = 0; i < NBANDS; i++) {

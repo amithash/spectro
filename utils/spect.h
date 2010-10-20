@@ -4,23 +4,16 @@
 #include <math.h>
 #include <string.h>
 
+
 #ifndef __SPECT_H_
 #define __SPECT_H_
+
+#include "../spect-config.h"
 
 #define FLOAT_UNEQUAL(num1, num2) ((num1 < (num2 - 0.00001)) || (num1 > (num2 + 0.00001)))
 
 #define spect_error(fmt, par...) fprintf(stderr, "ERROR: " fmt "\n", ##par)
 #define spect_warn(fmt, par...) fprintf(stderr, "ERROR: " fmt "\n", ##par)
-
-#ifndef NBANDS
-#define NBANDS 24
-#endif
-
-#ifndef SPECTLEN
-#define SPECTLEN 8192
-#endif
-
-#define FNAME_LEN 256
 
 typedef struct {
 	char         fname[FNAME_LEN];
