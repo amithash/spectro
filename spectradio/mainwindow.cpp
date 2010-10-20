@@ -171,8 +171,7 @@ void MainWindow::loadDB()
 void MainWindow::about()
 {
 	QMessageBox::information(this, tr("Specradio"),
-		tr("Play a song and the player will pick the next one for you... 
-			kinda like pandora, but with your own music"));
+		tr("Play a song and the player will pick the next one for you... kinda like pandora, but with your own music"));
 }
 
 void MainWindow::stateChanged(Phonon::State newState, Phonon::State /* oldState */)
