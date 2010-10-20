@@ -31,6 +31,7 @@ required to compile the package:
 2. mp3 support in gstreamer (This is usually in the bad and ugly libs) = If you want mp3s
 3. Qt 4.7 development libs. (Including qmake)
 4. Anything else configure complains about :-)
+5. TagLib for the utils.
 
 
 ===============================================================================
