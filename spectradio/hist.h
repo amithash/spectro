@@ -1,17 +1,7 @@
 #ifndef _HIST_H_
 #define _HIST_H_
 
-
-#ifndef BIN_IND
-#define BIN_IND  2
-#endif
-
-#define BIN_SIZE (1 << BIN_IND)
-#define HIST_LEN (256/BIN_SIZE)
-
-#define NBANDS 24
-
-#define FNAME_LEN 256
+ #include "../spect-config.h"
 
  #include <phonon/audiooutput.h>
  #include <phonon/seekslider.h>
@@ -23,6 +13,10 @@ class Hist
 {
 	public:
 	char   fname[FNAME_LEN];
+	char   title[TITLE_LEN];
+	char   artist[ARTIST_LEN];
+	char   album[ALBUM_LEN];
+	unsigned int track;
 	double hist[NBANDS][HIST_LEN];
 	int played;
 	Phonon::MediaSource media_source;
@@ -41,7 +35,6 @@ class HistDB
 
 	public:
 	bool is_valid();
-	char *ind_name(unsigned int ind);
 	HistDB(void);
 	HistDB(const char *dbname);
 	~HistDB();
@@ -51,6 +44,10 @@ class HistDB
 	void set_playing(unsigned int ind);
 	int get_next(int current);
 	void LoadDB(const char *dbname);
+	char *ind_name(unsigned int ind);
+	char *ind_title(unsigned int ind);
+	char *ind_artist(unsigned int ind);
+	char *ind_album(unsigned int ind);
 };
 
 #endif

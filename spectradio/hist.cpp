@@ -38,6 +38,22 @@ void HistDB::LoadDB(const char *dbname)
 	     	std::cerr << "Error reading element number " << i << std::endl;
 		goto err;
 	     }
+	     if(!ifs.read((char *)list[i].title, sizeof(char) * TITLE_LEN)) {
+	     	std::cerr << "Error reading element number " << i << std::endl;
+		goto err;
+	     }
+	     if(!ifs.read((char *)list[i].artist, sizeof(char) * ARTIST_LEN)) {
+	     	std::cerr << "Error reading element number " << i << std::endl;
+		goto err;
+	     }
+	     if(!ifs.read((char *)list[i].album, sizeof(char) * ALBUM_LEN)) {
+	     	std::cerr << "Error reading element number " << i << std::endl;
+		goto err;
+	     }
+	     if(!ifs.read((char *)&list[i].track, sizeof(unsigned int))) {
+	     	std::cerr << "Error reading element number " << i << std::endl;
+		goto err;
+	     }
 	     for(int j = 0; j < NBANDS; j++) {
 	     	if(!ifs.read((char *)list[i].hist[j], (sizeof(double) * HIST_LEN) / sizeof(char))) {
 	     		std::cerr << "Error reading element number " << i << "Band: " << j << std::endl;
@@ -116,6 +132,36 @@ char *HistDB::ind_name(unsigned int ind)
 	if(ind >= len)
 	      return NULL;
 	return list[ind].fname;
+}
+
+char*HistDB::ind_title(unsigned int ind)
+{
+	if(ind >= len)
+	      return NULL;
+	return list[ind].title;
+//	QString *str = new QString;
+//	str->append(list[ind].title);
+//	return str;
+}
+
+char *HistDB::ind_artist(unsigned int ind)
+{
+	if(ind >= len)
+	      return NULL;
+	return list[ind].artist;
+//	QString *str = new QString;
+//	str->append(list[ind].artist);
+//	return str;
+}
+
+char *HistDB::ind_album(unsigned int ind)
+{
+	if(ind >= len)
+	      return NULL;
+	return list[ind].album;
+//	QString *str = new QString;
+//	str->append(list[ind].album);
+//	return str;
 }
 
 void HistDB::set_media_source(unsigned int ind, Phonon::MediaSource source)
