@@ -16,11 +16,12 @@
 #define spect_warn(fmt, par...) fprintf(stderr, "ERROR: " fmt "\n", ##par)
 
 typedef struct {
-	char         fname[FNAME_LEN];
-	unsigned char spect[NBANDS][SPECTLEN];
-	unsigned int valid;
 	unsigned int len;
+	char         fname[FNAME_LEN];
+	unsigned char *spect[NBANDS];
 } spect_t;
+
+
 
 #define RM_SUCCESS             0
 #define RM_INVALID_PTR_E       -1
@@ -30,6 +31,7 @@ typedef struct {
 #define RM_LENGTH_NOT_SPECT_E   -5
 #define RM_UNMATCHED_END_E     -6
 #define RM_MP3_NOT_FOUND       -7
+#define RM_MALLOC_FAILED_E     -8
 
 #define RMFL_SUCCESS                0
 #define RMFL_INVALID_FNAME_PTR_E   -1
@@ -48,11 +50,23 @@ typedef struct {
 #define RML_OPEN_FAILED_E          -2
 #define RML_READ_E                 -3
 
+/* Read a spect file spect is allocated, and its members are allocated.
+ * when done, call free_spect(*spect), and free(spect) */
+int read_spectf(char *name, spect_t *spect);
 
-int read_spect(spect_t *spect);
-int read_spect_list(char *fname, spect_t **list, unsigned int *len, int nthreads);
-int write_spect_db(char *fname, spect_t *list, unsigned int len);
-int read_spect_db(char *fname, spect_t **list, unsigned int *len);
-int read_spect_2(int fd, spect_t *spect);
+/* Read spect entry from db file. spect members are allocated.
+ * when done, call free_spect(spect).
+ */
+int read_spect(int fd, spect_t *spect);
+
+/* takes spect file list in ifname, and spect db name in ofname.
+ * Generates spectdb (*.sdb) as of name
+ */
+int combine_spect_list(char *ifname, 
+		    char *ofname,
+		   int nthreads);
+
+/* Free members which are allocated */
+void free_spect(spect_t *spect);
 
 #endif

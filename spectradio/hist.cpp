@@ -177,9 +177,6 @@ char*HistDB::ind_title(unsigned int ind)
 	if(ind >= len)
 	      return NULL;
 	return list[ind].title;
-//	QString *str = new QString;
-//	str->append(list[ind].title);
-//	return str;
 }
 
 char *HistDB::ind_artist(unsigned int ind)
@@ -187,9 +184,6 @@ char *HistDB::ind_artist(unsigned int ind)
 	if(ind >= len)
 	      return NULL;
 	return list[ind].artist;
-//	QString *str = new QString;
-//	str->append(list[ind].artist);
-//	return str;
 }
 
 char *HistDB::ind_album(unsigned int ind)
@@ -197,9 +191,6 @@ char *HistDB::ind_album(unsigned int ind)
 	if(ind >= len)
 	      return NULL;
 	return list[ind].album;
-//	QString *str = new QString;
-//	str->append(list[ind].album);
-//	return str;
 }
 
 void HistDB::set_media_source(unsigned int ind, Phonon::MediaSource source)
@@ -220,7 +211,7 @@ int HistDB::get_next(int ind)
 	if((unsigned int)ind >= len)
 	      return 0;
 
-	unsigned int ret = 0;
+	unsigned int ret = ind == len - 1 ? 0 : ind + 1;
 	double dist = DBL_MAX;
 
 	list[ind].played = 1;
@@ -233,7 +224,6 @@ int HistDB::get_next(int ind)
 			dist = t_dist;
 		}
 	}
-	std::cout << ret << std::endl;
 	return ret;
 
 }

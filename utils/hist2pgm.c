@@ -19,13 +19,8 @@ int main(int argc, char *argv[]) {
 		printf("USAGE: %s FILE.spect4 (Optional output pgm file default: tmp.pgm)\n", argv[0]);
 		exit(-1);
 	}
-	strcpy(spect.fname, argv[1]);
-	if((rc = read_spect(&spect)) != 0) {
+	if((rc = read_spectf(argv[i], &spect)) != 0) {
 		printf("Reading spect file %s failed with rc=%d",argv[1], rc);
-		exit(-1);
-	}
-	if(spect.valid != 1) {
-		printf("%s is not a valid spect! :-(\n",argv[1]);
 		exit(-1);
 	}
 	spect2hist(&hist, &spect);
@@ -56,6 +51,7 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	fclose(pgf);
+	free_spect(&spect);
 
 	return 0;
 }

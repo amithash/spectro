@@ -26,7 +26,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#define MAIN_LEN 8192
+/* Gimme all! */
+#define MAIN_LEN 0
 
 #define WEBPAGE "http://amarok.kde.org/wiki/Spectgen"
 

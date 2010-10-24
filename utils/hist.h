@@ -11,6 +11,7 @@ typedef struct {
 	char artist[ARTIST_LEN];
 	char album[ALBUM_LEN];
 	unsigned int track;
+	unsigned int length;
 	double spect_hist[NBANDS][HIST_LEN];
 } hist_t;
 

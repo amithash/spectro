@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
 	unsigned int len;
 	int i,j;
 	hist_t *hist_list;
-	spect_t *ref_spect;
+	spect_t ref_spect;
 	hist_t ref_hist;
 	int maxes_len = NMAX_DEFAULT;
 
@@ -40,22 +40,14 @@ int main(int argc, char *argv[])
 		maxes_len = atoi(argv[3]) + 1;
 	}
 
-	ref_spect = (spect_t *)malloc(sizeof(spect_t));
-	if(!ref_spect) {
-		spect_error("Malloc failed");
+	if(read_spectf(argv[2], &ref_spect) < 0) {
+		spect_error("Could not read %s", ref_spect.fname);
 		exit(-1);
 	}
+	spect2hist(&ref_hist, &ref_spect);
 
-	strncpy(ref_spect->fname, argv[2], 512);
-	if(read_spect(ref_spect) < 0) {
-		spect_error("Could not read %s", ref_spect->fname);
-		exit(-1);
-	}
-	ref_spect->valid = 1;
-	spect2hist(&ref_hist, ref_spect);
-
-	free(ref_spect);
-	ref_spect = NULL;
+	
+	free_spect(&ref_spect);
 
 	if(read_hist_db(&hist_list, &len, argv[1])) {
 		spect_error("Could not read hist db: %s", argv[1]);

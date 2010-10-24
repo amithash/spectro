@@ -11,6 +11,7 @@ static int set_tags(hist_t *hist)
 	unsigned int track;
 	TagLib_Tag *tag;
 	TagLib_File *f = taglib_file_new(hist->fname);
+	TagLib_AudioProperties *aprop;
 
 	if(f == NULL) {
 		printf("Cannot open %s\n",hist->fname);
@@ -31,20 +32,20 @@ static int set_tags(hist_t *hist)
 
         taglib_tag_free_strings();
 
+	hist->length = taglib_audioproperties_length(taglib_file_audioproperties(f));
+
         taglib_file_free(f);
 
 	return 0;
 
 }
 
-static void vec2hist(double *hist, unsigned char *vec, int vec_len, unsigned char *avoid)
+static void vec2hist(double *hist, unsigned char *vec, int start, int end)
 {
 	int i;
 	int len = 0;
 	memset(hist, 0, HIST_LEN * sizeof(double));
-	for(i = 0; i < vec_len; i++) {
-		if(avoid[i] == 1)
-			continue;
+	for(i = start; i < end; i++) {
 		hist[NUM2BIN(vec[i])]++;
 		len++;
 	}
@@ -53,41 +54,40 @@ static void vec2hist(double *hist, unsigned char *vec, int vec_len, unsigned cha
 	}
 }
 
+static int is_zero(spect_t *spect, int row)
+{
+	int i;
+	for(i = 0; i < NBANDS; i++) {
+		if(spect->spect[i][row] != 0) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
 void spect2hist(hist_t *hist, spect_t *spect)
 	
 {
 	int i;
-	unsigned char avoid[SPECTLEN];
+	int start = 0;
+	int end = spect->len;
 
-	if(spect->valid == 0) {
-		spect_error("Invalid spect file");
-		return;
-	}
-	if(spect->len > SPECTLEN) {
-		spect_error("Invalid spect file");
-		return;
-	}
+	/* Cut out silence at start */
+	for(i = 0; i < spect->len; i++)
+		if(!is_zero(spect, i))
+			break;
+	start = i;
+
+	/* Cut out silence at end */
+	for(i = spect->len; i >= 0; i--)
+		if(!is_zero(spect, i))
+			break;
+	end = i;
 
 	strcpy(hist->fname, spect->fname);
 
-	for(i = 0; i < spect->len; i++) {
-		int j;
-		int all_zero = 1;
-		for(j = 0; j < NBANDS; j++) {
-			if(spect->spect[j][i] != 0) {
-				all_zero = 0;
-				break;
-			}
-		}
-		if(all_zero == 1) {
-			avoid[i] = 1;
-		} else {
-			avoid[i] = 0;
-		}
-	}
-
 	for(i = 0; i < NBANDS; i++) {
-		vec2hist(hist->spect_hist[i], spect->spect[i], spect->len, avoid);
+		vec2hist(hist->spect_hist[i], spect->spect[i], start, end);
 	}
 	
 	set_tags(hist);
@@ -275,14 +275,16 @@ int spectdb2histdb(char * mdb, char *hdb)
 	for(i = 0; i < len; i++) {
 		spect_t md;
 		hist_t ht;
-		if(read_spect_2(fileno(ifp), &md)) {
+		if(read_spect(fileno(ifp), &md)) {
 			goto err;
 		}
 
 		spect2hist(&ht, &md);
 		if(write_hist(fileno(ofp), &ht)) {
+			free_spect(&md);
 			goto err;
 		}
+		free_spect(&md);
 	}
 	errno = 0;
 err:
