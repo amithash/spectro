@@ -1,5 +1,5 @@
-CFLAGS=  -O3 
-LIBS = -lm -lpthread
+CFLAGS=  -O3 -g
+LIBS = -lm -lpthread -lgcc_s
 
 TAGLIB_CFLAGS = `taglib-config --cflags`
 TAGLIB_LIB = `taglib-config --libs`_c
@@ -15,17 +15,20 @@ GENSPECTDB_OBJS = genspectdb.o
 HIST2PGM_OBJS = hist2pgm.o
 HIST_DIST_OBJS = hist_dist.o
 GETSIMILAR_OBJS = getsimilar.o
+SPECT2BSPECT_OBJS = spect2bspect.o
+BSPECT_OBJS = bspect.o
 
 SPECT2CSV_EXE = spect2csv
 GENSPECTDB_EXE = genspectdb
 SPECT2HIST_EXE = spect2hist
 HIST2PGM_EXE = hist2pgm
 GETSIMILAR_EXE = getsimilar
+SPECT2BSPECT_EXE = spect2bspect
 
 INSTALL_DIR = /usr/local/bin
 
 
-all: spect2csv genspectdb spect2hist hist2pgm getsimilar
+all: spect2csv genspectdb spect2hist hist2pgm getsimilar spect2bspect
 
 spect2csv: $(SPECT_OBJS) $(SPECT2CSV_OBJS)
 	$(CC)  -o $(SPECT2CSV_EXE)  $(LIBS) $(SPECT_OBJS) $(SPECT2CSV_OBJS)
@@ -42,9 +45,13 @@ hist2pgm: $(SPECT_OBJS) $(HIST_OBJS) $(HIST2PGM_OBJS)
 getsimilar: $(SPECT_OBJS) $(HIST_OBJS) $(HIST_DIST_OBJS) $(GETSIMILAR_OBJS)
 	$(CC)  -o $(GETSIMILAR_EXE)  $(LIBS) $(TAGLIB_LIB) $(SPECT_OBJS) $(HIST_OBJS) $(HIST_DIST_OBJS) $(GETSIMILAR_OBJS)
 
+spect2bspect: $(SPECT_OBJS) $(SPECT2BSPECT_OBJS) $(BSPECT_OBJS)
+	$(CC)  -o $(SPECT2BSPECT_EXE)  $(LIBS) $(TAGLIB_LIB) $(SPECT_OBJS) $(BSPECT_OBJS) $(SPECT2BSPECT_OBJS)
+
+
 clean:
-	rm -f $(SPECT2CSV_EXE) $(GENSPECTDB_EXE) $(SPECT2HIST_EXE) $(HIST2PGM_EXE) $(GETSIMILAR_EXE)
-	rm -f $(SPECT2CSV_OBJS) $(SPECT_OBJS) $(GENSPECTDB_OBJS) $(SPECT2HIST_OBJS) $(HIST_OBJS) $(HIST2PGM_OBJS) $(HIST_DIST_OBJS) $(GETSIMILAR_OBJS)
+	rm -f $(SPECT2CSV_EXE) $(GENSPECTDB_EXE) $(SPECT2HIST_EXE) $(HIST2PGM_EXE) $(GETSIMILAR_EXE) $(SPECT2BSPECT_EXE)
+	rm -f $(SPECT2CSV_OBJS) $(SPECT_OBJS) $(GENSPECTDB_OBJS) $(SPECT2HIST_OBJS) $(HIST_OBJS) $(HIST2PGM_OBJS) $(HIST_DIST_OBJS) $(GETSIMILAR_OBJS) $(SPECT2BSPECT_OBJS) $(BSPECT_OBJS)
 
 install:
 	cp --target-directory $(INSTALL_DIR) $(SPECT2CSV_EXE) $(GENSPECTDB_EXE) $(SPECT2HIST_EXE) $(HIST2PGM_EXE) $(GETSIMILAR_EXE)
