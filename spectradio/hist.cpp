@@ -98,6 +98,10 @@ void HistDB::LoadDB(const char *dbname)
 			goto err;
 	     	}
 	     }
+	     if(!ifs.read((char *)list[i].beats, (sizeof(double) * BEAT_LEN) / sizeof(char))) {
+	     	std::cerr << "Error reading element number " << i << std::endl;
+		goto err;
+	    }
      }
      valid = 1;
      return;

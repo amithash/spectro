@@ -56,6 +56,7 @@ class Hist
 	char   album[ALBUM_LEN];
 	unsigned int track;
 	double hist[NBANDS][HIST_LEN];
+	double beats[BEAT_LEN];
 	int played;
 	Phonon::MediaSource media_source;
 
