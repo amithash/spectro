@@ -104,12 +104,7 @@ the same time.
 ===============================================================================
 			Known Issues or Annoyances 
 ===============================================================================
-1. genspectdb is very inefficiently coded. It loads all the .spect files into
-   RAM and then writes them into the sdb file. Thus you need ~2GB of ram for 
-   8000 tracks.
-
-2. It takes quite a while for spectradio to load the db. And the only indication
-   that it is done, is the print sent to the command line that it is done. 
+spectradio does not show file paths in case tags are not set on the file.
 
 ===============================================================================
 			Credit where credit is due
