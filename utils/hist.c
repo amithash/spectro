@@ -9,6 +9,7 @@
 #define SAMPLES_PER_STEP(per_sec) (per_sec * BEAT_STEP / 1000)
 
 static double *absolutes = NULL;
+static last_samples_per_second = 0;
 
 static int compute_absolutes(spect_t *spect) 
 {
@@ -176,6 +177,13 @@ int spect2hist(hist_t *hist, spect_t *spect)
 	
 	set_tags(hist);
 
+	if(hist->length == 0) {
+		/* guess based on last processed track */
+		hist->length = spect->len / last_samples_per_second;
+	} else {
+		last_samples_per_second = spect->len / hist->length;
+	}
+
 	if(get_beat(spect, hist->beats, hist->length)) {
 		return -1;
 	}
@@ -302,15 +310,18 @@ int read_hist_db(hist_t **hist, unsigned int *len, char *fname)
 	}
 	if(read_uint(fileno(fp), len)) {
 		fclose(fp);
+		spect_error("Could not read len");
 		return -1;
 	}
 	*hist = this = (hist_t *)calloc(*len, sizeof(hist_t));
 	if(*hist == NULL) {
+		spect_error("Malloc failed!");
 		fclose(fp);
 		return -1;
 	}
 	for(i = 0; i < *len; i++) {
 		if(read_hist(fileno(fp), &this[i])) {
+			spect_error("Read %d resulted in error!",i);
 			goto err;
 		}
 	}

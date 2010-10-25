@@ -46,7 +46,6 @@ int main(int argc, char *argv[])
 	}
 	spect2hist(&ref_hist, &ref_spect);
 
-	
 	free_spect(&ref_spect);
 
 	if(read_hist_db(&hist_list, &len, argv[1])) {

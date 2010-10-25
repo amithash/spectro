@@ -34,12 +34,13 @@ static double edistance(double *dist, unsigned int len)
 double hist_distance(hist_t *hist1, hist_t *hist2)
 {
 	int col;
-	double dist[NBANDS];
+	double dist[NBANDS + 1];
 	for(col = 0; col < NBANDS; col++) {
 		dist[col] = hdistance(hist1->spect_hist[col],
 				      hist2->spect_hist[col],
 				      HIST_LEN);
 	}
+	dist[NBANDS] = hdistance(hist1->beats, hist2->beats, BEAT_LEN);
 	return edistance(dist, NBANDS);
 }
 
