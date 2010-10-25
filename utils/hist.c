@@ -236,9 +236,11 @@ static int write_hist(int fd, hist_t *hist)
 			return -1;
 		}
 	}
-	if(write_double_vec(fd, hist->beats, BEAT_LEN)) {
-		return -1;
-	}
+  for(i = 0; i < NBANDS; i++) {
+	  if(write_double_vec(fd, hist->beats[i], BEAT_LEN)) {
+		  return -1;
+	  }
+  }
 
 	return 0;
 }
@@ -269,9 +271,11 @@ static int read_hist(int fd, hist_t *hist)
 			return -1;
 		}
 	}
-	if(read_double_vec(fd, hist->beats, BEAT_LEN)) {
-		return -1;
-	}
+  for(i = 0; i < NBANDS; i++) {
+	  if(read_double_vec(fd, hist->beats[i], BEAT_LEN)) {
+		  return -1;
+	  }
+  }
 	return 0;
 }
 
