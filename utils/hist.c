@@ -8,34 +8,15 @@
 
 #define SAMPLES_PER_STEP(per_sec) (per_sec * BEAT_STEP / 1000)
 
-static double *absolutes = NULL;
 static last_samples_per_second = 0;
 
-static int compute_absolutes(spect_t *spect) 
-{
-	int i;
-	int j;
-	absolutes = (double *)malloc(spect->len * sizeof(double));
-	if(!absolutes)
-	      return -1;
-
-	for(i = 0; i < spect->len; i++) {
-		double _abs = 0;
-		for(j = 0; j < NBANDS; j++) {
-			_abs += SQR(SPECT_VAL(spect, j, i));
-		}
-		absolutes[i] = sqrt(_abs);
-	}
-	return 0;
-}
-
-int get_beat(spect_t *spect, double beats[BEAT_LEN], int song_len)
+int get_beat(spect_t *spect, double beats[NBANDS][BEAT_LEN], int song_len)
 {
 	void *fft_hdl;
 	double *tmp;
 	double *band;
 	double *autoc;
-	int i,j;
+	int i,j,k;
 	int rc = 0;
 	int step;
 	int samples_per_sec;
@@ -51,33 +32,28 @@ int get_beat(spect_t *spect, double beats[BEAT_LEN], int song_len)
 	      rc = -1; goto err1;
 	}
 
-
 	autoc  = (double *)malloc(sizeof(double) * spect->len);
 	if(!autoc) {
 		rc = -1; goto err2;
 	}
 	
-	if(compute_absolutes(spect)) {
-		rc = -1; goto err3;
-	}
-
-	auto_correlation(fft_hdl, absolutes, autoc);
-
 	step = SAMPLES_PER_STEP(samples_per_sec);
 
-	for(i = 0; i < BEAT_LEN; i++) {
-		double avg = 0;
-		for(j = step + (i * step); j < step + ((i + 1) * step); j++) {
-			avg += autoc[j];
-		}
-		total += beats[i] = avg / step;
-	}
-	for(i = 0; i < BEAT_LEN; i++) {
-		beats[i] /= total;
-	}
+  for(k = 0; k < NBANDS; k++) {
+    auto_correlation(fft_hdl, spect->spect[i], autoc);
 
-	free(absolutes);
-err3:
+	  for(i = 0; i < BEAT_LEN; i++) {
+		  double avg = 0;
+		  for(j = step + (i * step); j < step + ((i + 1) * step); j++) {
+			  avg += autoc[j];
+		  }
+		  total += beats[k][i] = avg / step;
+	  }
+	  for(i = 0; i < BEAT_LEN; i++) {
+		  beats[k][i] /= total;
+	  }
+  }
+
 	free(autoc);
 err2:
 	destroy_fft(fft_hdl);

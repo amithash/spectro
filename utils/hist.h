@@ -13,7 +13,7 @@ typedef struct {
 	unsigned int track;
 	unsigned int length;
 	double spect_hist[NBANDS][HIST_LEN];
-	double beats[BEAT_LEN];
+	double beats[NBANDS][BEAT_LEN];
 } hist_t;
 
 int spect2hist(hist_t *hist, spect_t *spect);
