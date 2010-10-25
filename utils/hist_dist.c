@@ -1,6 +1,8 @@
 #include "hist_dist.h"
 #include <float.h>
 
+#define BEAT_DIST
+
 /* Compute the hellinger distance of two pdfs a and b */
 static double hdistance(double *a, double *b, unsigned int len) 
 {
@@ -34,14 +36,23 @@ static double edistance(double *dist, unsigned int len)
 double hist_distance(hist_t *hist1, hist_t *hist2)
 {
 	int col;
-	double dist[NBANDS + 1];
+	double dist[NBANDS];
+  double beat_dist[NBANDS];
 	for(col = 0; col < NBANDS; col++) {
 		dist[col] = hdistance(hist1->spect_hist[col],
 				      hist2->spect_hist[col],
 				      HIST_LEN);
 	}
-	dist[NBANDS] = hdistance(hist1->beats, hist2->beats, BEAT_LEN);
+	for(col = 0; col < NBANDS; col++) {
+		beat_dist[col] = hdistance(hist1->beats[col],
+				      hist2->beats[col],
+				      BEAT_LEN);
+	}
+#ifdef BEAT_DIST
+  return edistance(beat_dist, NBANDS);
+#else
 	return edistance(dist, NBANDS);
+#endif
 }
 
 void cent_clear(hist_t *hist)
