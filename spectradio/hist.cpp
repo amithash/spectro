@@ -211,12 +211,22 @@ int HistDB::get_next(int ind)
 	if((unsigned int)ind >= len)
 	      return 0;
 
-	unsigned int ret = ind == len - 1 ? 0 : ind + 1;
 	double dist = DBL_MAX;
+	int ret = ind + 1 >= (int)len ? 0 : ind + 1;
+
+	QString ind_title(list[ind].title);
+	QString ind_artist(list[ind].artist);
 
 	list[ind].played = 1;
 	for(unsigned int i = 0; i < len; i++) {
 		if(list[i].played == 1 || i == (unsigned int)ind)
+		      continue;
+		QString i_title(list[ind].title);
+		QString i_artist(list[ind].artist);
+
+		if(ind_title.toLower().compare(i_title.toLower()) == 0 && ind_artist.toLower().compare(i_artist.toLower()) == 0)
+		      continue;
+
 		      continue;
 		double t_dist = distance(ind, i);
 		if(t_dist < dist) {
@@ -224,6 +234,6 @@ int HistDB::get_next(int ind)
 			dist = t_dist;
 		}
 	}
-	return ret;
+	return (int)ret;
 
 }

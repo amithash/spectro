@@ -13,9 +13,10 @@ typedef struct {
 	unsigned int track;
 	unsigned int length;
 	double spect_hist[NBANDS][HIST_LEN];
+	double beats[BEAT_LEN];
 } hist_t;
 
-void spect2hist(hist_t *hist, spect_t *spect);
+int spect2hist(hist_t *hist, spect_t *spect);
 
 int read_hist_db(hist_t **hist, unsigned int *len, char *fname);
 int write_hist_db(hist_t *hist, unsigned int len, char *fname);

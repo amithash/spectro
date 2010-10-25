@@ -1,6 +1,90 @@
 #include "hist.h"
+#include "auto.h"
 #include <pthread.h>
 #include <tag_c.h>
+
+#define SPECT_VAL(spect,i,j) (((double)(spect)->spect[i][j]) / 255.0)
+#define SQR(val) ((val) * (val))
+
+#define SAMPLES_PER_STEP(per_sec) (per_sec * BEAT_STEP / 1000)
+
+static double *absolutes = NULL;
+
+static int compute_absolutes(spect_t *spect) 
+{
+	int i;
+	int j;
+	absolutes = (double *)malloc(spect->len * sizeof(double));
+	if(!absolutes)
+	      return -1;
+
+	for(i = 0; i < spect->len; i++) {
+		double _abs = 0;
+		for(j = 0; j < NBANDS; j++) {
+			_abs += SQR(SPECT_VAL(spect, j, i));
+		}
+		absolutes[i] = sqrt(_abs);
+	}
+	return 0;
+}
+
+int get_beat(spect_t *spect, double beats[BEAT_LEN], int song_len)
+{
+	void *fft_hdl;
+	double *tmp;
+	double *band;
+	double *autoc;
+	int i,j;
+	int rc = 0;
+	int step;
+	int samples_per_sec;
+	TagLib_File *f;
+	double total = 0;
+
+	samples_per_sec = spect->len / song_len;
+
+	fft_hdl = init_fft(spect->len);
+
+
+	if(!fft_hdl) {
+	      rc = -1; goto err1;
+	}
+
+
+	autoc  = (double *)malloc(sizeof(double) * spect->len);
+	if(!autoc) {
+		rc = -1; goto err2;
+	}
+	
+	if(compute_absolutes(spect)) {
+		rc = -1; goto err3;
+	}
+
+	auto_correlation(fft_hdl, absolutes, autoc);
+
+	step = SAMPLES_PER_STEP(samples_per_sec);
+
+	for(i = 0; i < BEAT_LEN; i++) {
+		double avg = 0;
+		for(j = step + (i * step); j < step + ((i + 1) * step); j++) {
+			avg += autoc[j];
+		}
+		total += beats[i] = avg / step;
+	}
+	for(i = 0; i < BEAT_LEN; i++) {
+		beats[i] /= total;
+	}
+
+	free(absolutes);
+err3:
+	free(autoc);
+err2:
+	destroy_fft(fft_hdl);
+err1:
+	return rc;
+	
+}
+
 
 /* Assumption: hist->fname is valid */
 static int set_tags(hist_t *hist)
@@ -65,7 +149,7 @@ static int is_zero(spect_t *spect, int row)
 	return 1;
 }
 
-void spect2hist(hist_t *hist, spect_t *spect)
+int spect2hist(hist_t *hist, spect_t *spect)
 	
 {
 	int i;
@@ -91,6 +175,12 @@ void spect2hist(hist_t *hist, spect_t *spect)
 	}
 	
 	set_tags(hist);
+
+	if(get_beat(spect, hist->beats, hist->length)) {
+		return -1;
+	}
+
+	return 0;
 }
 
 static int read_uint(int fd, unsigned int *val) {
@@ -162,6 +252,10 @@ static int write_hist(int fd, hist_t *hist)
 			return -1;
 		}
 	}
+	if(write_double_vec(fd, hist->beats, BEAT_LEN)) {
+		return -1;
+	}
+
 	return 0;
 }
 
@@ -190,6 +284,9 @@ static int read_hist(int fd, hist_t *hist)
 		if(read_double_vec(fd, hist->spect_hist[i], HIST_LEN)) {
 			return -1;
 		}
+	}
+	if(read_double_vec(fd, hist->beats, BEAT_LEN)) {
+		return -1;
 	}
 	return 0;
 }
@@ -279,7 +376,10 @@ int spectdb2histdb(char * mdb, char *hdb)
 			goto err;
 		}
 
-		spect2hist(&ht, &md);
+		if(spect2hist(&ht, &md)) {
+			spect_error("Conversition failed!");
+			exit(-1);
+		}
 		if(write_hist(fileno(ofp), &ht)) {
 			free_spect(&md);
 			goto err;
