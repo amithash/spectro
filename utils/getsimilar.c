@@ -65,14 +65,15 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
-	printf("Distance\tTitle\tArtist\tAlbum\n");
+	printf("Distance\t%-40s%-30s%-30s\n","Title", "Artist", "Album");
+	printf("---------------------------------------------------------------------------------------------------------------------------------\n");
 	for(i = 1; i < maxes_len; i++) {
 		if(!maxes[i].hist) {
 			printf("WAAAAAAAA\n");
 		      continue;
 		}
 
-		printf("%f\t%s\t%s\t%s\n", maxes[i].dist, maxes[i].hist->title, maxes[i].hist->artist, maxes[i].hist->album);
+		printf("%f\t%-40s%-30s%-30s\n", maxes[i].dist, maxes[i].hist->title, maxes[i].hist->artist, maxes[i].hist->album);
 	}
 	free(hist_list);
 

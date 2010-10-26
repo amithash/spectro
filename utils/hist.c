@@ -1,68 +1,8 @@
 #include "hist.h"
-#include "auto.h"
 #include <pthread.h>
 #include <tag_c.h>
 
-#define SPECT_VAL(spect,i,j) (((double)(spect)->spect[i][j]) / 255.0)
-#define SQR(val) ((val) * (val))
-
-#define SAMPLES_PER_STEP(per_sec) (per_sec * BEAT_STEP / 1000)
-
-static last_samples_per_second = 0;
-
-int get_beat(spect_t *spect, double beats[NBANDS][BEAT_LEN], int song_len)
-{
-	void *fft_hdl;
-	double *tmp;
-	double *band;
-	double *autoc;
-	int i,j,k;
-	int rc = 0;
-	int step;
-	int samples_per_sec;
-	TagLib_File *f;
-	double total = 0;
-
-	samples_per_sec = spect->len / song_len;
-
-	fft_hdl = init_fft(spect->len);
-
-
-	if(!fft_hdl) {
-	      rc = -1; goto err1;
-	}
-
-	autoc  = (double *)malloc(sizeof(double) * spect->len);
-	if(!autoc) {
-		rc = -1; goto err2;
-	}
-	
-	step = SAMPLES_PER_STEP(samples_per_sec);
-
-  for(k = 0; k < NBANDS; k++) {
-    auto_correlation(fft_hdl, spect->spect[i], autoc);
-
-	  for(i = 0; i < BEAT_LEN; i++) {
-		  double avg = 0;
-		  for(j = step + (i * step); j < step + ((i + 1) * step); j++) {
-			  avg += autoc[j];
-		  }
-		  total += beats[k][i] = avg / step;
-	  }
-	  for(i = 0; i < BEAT_LEN; i++) {
-		  beats[k][i] /= total;
-	  }
-  }
-
-	free(autoc);
-err2:
-	destroy_fft(fft_hdl);
-err1:
-	return rc;
-	
-}
-
-
+unsigned int last_samples_per_second = 0;
 /* Assumption: hist->fname is valid */
 static int set_tags(hist_t *hist)
 {
@@ -101,12 +41,14 @@ static int set_tags(hist_t *hist)
 
 }
 
-static void vec2hist(double *hist, unsigned char *vec, int start, int end)
+static void vec2hist(double *hist, unsigned char *vec, unsigned int rlen, unsigned char *avoid)
 {
 	int i;
 	int len = 0;
 	memset(hist, 0, HIST_LEN * sizeof(double));
-	for(i = start; i < end; i++) {
+	for(i = 0; i < rlen; i++) {
+		if(avoid[i])
+		      continue;
 		hist[NUM2BIN(vec[i])]++;
 		len++;
 	}
@@ -126,29 +68,37 @@ static int is_zero(spect_t *spect, int row)
 	return 1;
 }
 
+void get_avoids(unsigned char *avoid, spect_t *spect)
+{
+	int i,j;
+
+	for(i = 0; i < spect->len; i++) {
+		if(is_zero(spect, i)) {
+			avoid[i] = 1;
+		} else {
+			avoid[i] = 0;
+		}
+	}
+}
+
 int spect2hist(hist_t *hist, spect_t *spect)
 	
 {
 	int i;
 	int start = 0;
 	int end = spect->len;
+	unsigned char *avoid;
+	avoid = (unsigned char *)malloc(sizeof(unsigned char) * spect->len);
+	if(!avoid)
+	      return -1;
 
-	/* Cut out silence at start */
-	for(i = 0; i < spect->len; i++)
-		if(!is_zero(spect, i))
-			break;
-	start = i;
-
-	/* Cut out silence at end */
-	for(i = spect->len; i >= 0; i--)
-		if(!is_zero(spect, i))
-			break;
-	end = i;
+	/* Avoid all samples with silence */
+	get_avoids(avoid, spect);
 
 	strcpy(hist->fname, spect->fname);
 
 	for(i = 0; i < NBANDS; i++) {
-		vec2hist(hist->spect_hist[i], spect->spect[i], start, end);
+		vec2hist(hist->spect_hist[i], spect->spect[i], spect->len, avoid);
 	}
 	
 	set_tags(hist);
@@ -158,10 +108,6 @@ int spect2hist(hist_t *hist, spect_t *spect)
 		hist->length = spect->len / last_samples_per_second;
 	} else {
 		last_samples_per_second = spect->len / hist->length;
-	}
-
-	if(get_beat(spect, hist->beats, hist->length)) {
-		return -1;
 	}
 
 	return 0;
@@ -236,12 +182,6 @@ static int write_hist(int fd, hist_t *hist)
 			return -1;
 		}
 	}
-  for(i = 0; i < NBANDS; i++) {
-	  if(write_double_vec(fd, hist->beats[i], BEAT_LEN)) {
-		  return -1;
-	  }
-  }
-
 	return 0;
 }
 
@@ -271,11 +211,6 @@ static int read_hist(int fd, hist_t *hist)
 			return -1;
 		}
 	}
-  for(i = 0; i < NBANDS; i++) {
-	  if(read_double_vec(fd, hist->beats[i], BEAT_LEN)) {
-		  return -1;
-	  }
-  }
 	return 0;
 }
 
