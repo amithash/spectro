@@ -133,12 +133,23 @@ static void gst_spectgen_finish (GstSpectgen *spect);
 /* Default max-width of the output image, or 0 for no rescaling */
 #define MAX_WIDTH_DEFAULT 0
 
+#define USES_BARK_BANDS
+
+#if defined(USE_BARK_BANDS)
 /* We use this table to break up the incoming spectrum into segments */
 static const guint bark_bands[24] 
   = { 100,  200,  300,  400,  510,  630,  770,   920, 
       1080, 1270, 1480, 1720, 2000, 2320, 2700,  3150, 
       3700, 4400, 5300, 6400, 7700, 9500, 12000, 15500 };
-
+#elif defined(USE_MEL_BANDS)
+static const guint bark_bands[24] 
+  = { 65,   174,  298,  440,  603,   788,   1000,  1242, 
+      1519, 1834, 2195, 2607, 3078,  3616,  4230,  4932,
+      5734, 6650, 7696, 8892, 10257, 11817, 13599, 15635
+  };
+#else
+#error "You need either USE_BARK_BANDS or USE_MEL_BANDS defined"
+#endif
 
 /***************************************************************/
 /* GObject boilerplate stuff                                   */
