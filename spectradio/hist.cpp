@@ -46,8 +46,6 @@
 
 HistDB::HistDB(void)
 {
-	list = NULL;
-	len = 0;
 	valid = 0;
 }
 
@@ -60,6 +58,8 @@ void HistDB::LoadDB(const char *dbname)
 {
      std::ifstream ifs(dbname, std::ios::in | std::ios::binary);
      valid = 0;
+     unsigned int len = 0;
+
      if(!ifs.read((char *)&len, sizeof(unsigned int))) {
      	std::cout << "Reading length from " << dbname << std::endl;
 	return;
@@ -67,27 +67,51 @@ void HistDB::LoadDB(const char *dbname)
      if(len <= 0)
 	   return;
 
-     list = new Hist[len];
-     if(!list)
-	   return;
+     int ext_len = list.size();
+     len += ext_len;
+     list.resize(len);
 
-     for(unsigned int i = 0; i < len; i++) {
-	     if(!ifs.read((char *)list[i].fname, sizeof(char) * FNAME_LEN)) {
+     for(unsigned int i = ext_len; i < len; i++) {
+	     char fname[FNAME_LEN];
+	     char title[TITLE_LEN];
+	     char artist[ARTIST_LEN];
+	     char album[ALBUM_LEN];
+
+	     if(!ifs.read((char *)fname, sizeof(char) * FNAME_LEN)) {
 	     	std::cerr << "Error reading element number " << i << std::endl;
 		goto err;
 	     }
-	     if(!ifs.read((char *)list[i].title, sizeof(char) * TITLE_LEN)) {
+	     if(!ifs.read((char *)title, sizeof(char) * TITLE_LEN)) {
 	     	std::cerr << "Error reading element number " << i << std::endl;
 		goto err;
 	     }
-	     if(!ifs.read((char *)list[i].artist, sizeof(char) * ARTIST_LEN)) {
+	     if(title[0] == '\0') {
+		int len = strlen(fname);
+		if(len < TITLE_LEN) {
+			strcpy(title, fname);
+		} else {
+			int ind = len - TITLE_LEN + 1;
+			strcpy(title, &(fname[ind]));
+			len = strlen(title);
+			title[len - 4] = '\0';
+		}
+	     }
+
+	     if(!ifs.read((char *)artist, sizeof(char) * ARTIST_LEN)) {
 	     	std::cerr << "Error reading element number " << i << std::endl;
 		goto err;
 	     }
-	     if(!ifs.read((char *)list[i].album, sizeof(char) * ALBUM_LEN)) {
+	     if(!ifs.read((char *)album, sizeof(char) * ALBUM_LEN)) {
 	     	std::cerr << "Error reading element number " << i << std::endl;
 		goto err;
 	     }
+
+	     list[i].album = album;
+	     list[i].artist = artist;
+	     list[i].title = title;
+	     list[i].fname = fname;
+
+
 	     if(!ifs.read((char *)&list[i].track, sizeof(unsigned int))) {
 	     	std::cerr << "Error reading element number " << i << std::endl;
 		goto err;
@@ -98,15 +122,11 @@ void HistDB::LoadDB(const char *dbname)
 			goto err;
 	     	}
 	     }
-	     if(!ifs.read((char *)list[i].beats, (sizeof(double) * BEAT_LEN) / sizeof(char))) {
-	     	std::cerr << "Error reading element number " << i << std::endl;
-		goto err;
-	    }
      }
      valid = 1;
      return;
 err:
-     delete [] list;
+     list.clear();
 }
 
 HistDB::HistDB(const char *dbname)
@@ -116,17 +136,18 @@ HistDB::HistDB(const char *dbname)
 
 HistDB::~HistDB()
 {
-	if(list)
-		delete [] list;
+	if(list.size() > 0) {
+		list.clear();
+	}
 }
 
 unsigned int HistDB::length()
 {
-	return len;
+	return list.size();
 }
 
 /* Compute the hellinger distance of two pdfs a and b */
-static double hdistance(double *a, double *b, unsigned int len) 
+double HistDB::hdistance(double *a, double *b, unsigned int len) 
 {
 	double dist = 0.0;
 	unsigned int i;
@@ -141,7 +162,7 @@ static double hdistance(double *a, double *b, unsigned int len)
 }
 
 /* Compute the euclidian distance */
-static double edistance(double *dist, unsigned int len) 
+double HistDB::edistance(double *dist, unsigned int len) 
 {
 	unsigned int i;
 	double val = 0;
@@ -159,7 +180,7 @@ double HistDB::distance(unsigned int e1, unsigned int e2)
 {
 	int col;
 	double dist[NBANDS];
-	if(e1 >= len || e1 >= len)
+	if(e1 >= list.size() || e1 >= list.size())
 	      return 0;
 
 	for(col = 0; col < NBANDS; col++) {
@@ -169,69 +190,73 @@ double HistDB::distance(unsigned int e1, unsigned int e2)
 	}
 	return edistance(dist, NBANDS);
 }
-char *HistDB::ind_name(unsigned int ind)
+QString HistDB::ind_name(unsigned int ind)
 {
-	if(ind >= len)
+	if(ind >= list.size())
 	      return NULL;
 	return list[ind].fname;
 }
 
-char*HistDB::ind_title(unsigned int ind)
+QString HistDB::ind_title(unsigned int ind)
 {
-	if(ind >= len)
+	if(ind >= list.size())
 	      return NULL;
 	return list[ind].title;
 }
 
-char *HistDB::ind_artist(unsigned int ind)
+QString HistDB::ind_artist(unsigned int ind)
 {
-	if(ind >= len)
+	if(ind >= list.size())
 	      return NULL;
 	return list[ind].artist;
 }
 
-char *HistDB::ind_album(unsigned int ind)
+QString HistDB::ind_album(unsigned int ind)
 {
-	if(ind >= len)
+	if(ind >= list.size())
 	      return NULL;
 	return list[ind].album;
 }
 
 void HistDB::set_media_source(unsigned int ind, Phonon::MediaSource source)
 {
-	if(ind >= len)
+	if(ind >= list.size())
 	      return;
 	list[ind].media_source = source;
 }
 void HistDB::set_playing(unsigned int current)
 {
-	if(current >= len)
+	if(current >= list.size())
 	      return;
 	list[current].played = 1;
 }
 
 int HistDB::get_next(int ind)
 {
-	if((unsigned int)ind >= len)
+	if((unsigned int)ind >= list.size())
 	      return 0;
 
 	double dist = DBL_MAX;
-	int ret = ind + 1 >= (int)len ? 0 : ind + 1;
+	int ret = ind + 1 >= (int)list.size() ? 0 : ind + 1;
 
 	QString ind_title(list[ind].title);
 	QString ind_artist(list[ind].artist);
 
 	list[ind].played = 1;
-	for(unsigned int i = 0; i < len; i++) {
-		if(list[i].played == 1 || i == (unsigned int)ind)
-		      continue;
-		QString i_title(list[ind].title);
-		QString i_artist(list[ind].artist);
+	for(unsigned int i = 0; i < list.size(); i++) {
+		QString i_title(list[i].title);
+		QString i_artist(list[i].artist);
 
-		if(ind_title.toLower().compare(i_title.toLower()) == 0 && ind_artist.toLower().compare(i_artist.toLower()) == 0)
+		if(list[i].played == 1 || i == (unsigned int)ind) {
+		      std::cout << "Skipping same: " << i_title.toLower().toAscii().data() << std::endl;
 		      continue;
+		}
 
+		if(ind_title.toLower().compare(i_title.toLower()) == 0 && ind_artist.toLower().compare(i_artist.toLower()) == 0) {
+		      std::cout << "SKipping same track " << i_title.toLower().toAscii().data() << "Artist: " <<  i_artist.toLower().toAscii().data() << std::endl;
 		      continue;
+		}
+
 		double t_dist = distance(ind, i);
 		if(t_dist < dist) {
 			ret = i;

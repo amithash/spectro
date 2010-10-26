@@ -41,6 +41,7 @@
 
  #include "../spect-config.h"
 
+ #include <vector>
  #include <phonon/audiooutput.h>
  #include <phonon/seekslider.h>
  #include <phonon/mediaobject.h>
@@ -50,27 +51,27 @@
 class Hist
 {
 	public:
-	char   fname[FNAME_LEN];
-	char   title[TITLE_LEN];
-	char   artist[ARTIST_LEN];
-	char   album[ALBUM_LEN];
+	QString fname;
+	QString title;
+	QString artist;
+	QString album;
 	unsigned int track;
 	double hist[NBANDS][HIST_LEN];
-	double beats[BEAT_LEN];
 	int played;
 	Phonon::MediaSource media_source;
 
 	Hist(void)
-	    {
+	{
 	    	played = 0;
-	    }
+	}
 };
 
 class HistDB
 {
-	Hist *list;
-	unsigned int len;
+	std::vector<Hist> list;
 	unsigned int valid;
+	double hdistance(double *a, double *b, unsigned int len);
+	double edistance(double *dist, unsigned int len);
 
 	public:
 	bool is_valid();
@@ -83,10 +84,10 @@ class HistDB
 	void set_playing(unsigned int ind);
 	int get_next(int current);
 	void LoadDB(const char *dbname);
-	char *ind_name(unsigned int ind);
-	char *ind_title(unsigned int ind);
-	char *ind_artist(unsigned int ind);
-	char *ind_album(unsigned int ind);
+	QString ind_name(unsigned int ind);
+	QString ind_title(unsigned int ind);
+	QString ind_artist(unsigned int ind);
+	QString ind_album(unsigned int ind);
 };
 
 #endif

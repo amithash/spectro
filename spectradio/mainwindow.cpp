@@ -143,6 +143,8 @@ void MainWindow::loadDB()
 		return;
 	}
 
+	int at = htdb.length();
+
 	htdb.LoadDB(dbfile.toAscii().data());
 
 	if(htdb.is_valid() != true) {
@@ -152,14 +154,16 @@ void MainWindow::loadDB()
 
 	sources.reserve(htdb.length());
 	musicTable->hide();
-	for(unsigned int i = 0; i < htdb.length(); i++) {
+	for(unsigned int i = at; i < htdb.length(); i++) {
 		QString string(htdb.ind_name(i));
 		Phonon::MediaSource source(string);
 		htdb.set_media_source(i, source);
 		sources.append(source);
-		addEntry(musicTable, QString(htdb.ind_title(i)), 
-			     QString(htdb.ind_artist(i)), 
-			     QString(htdb.ind_album(i)));
+		if(htdb.ind_title(i).isEmpty()) {
+			addEntry(musicTable, htdb.ind_name(i), htdb.ind_artist(i), htdb.ind_album(i));
+		} else {
+			addEntry(musicTable, htdb.ind_title(i), htdb.ind_artist(i), htdb.ind_album(i));
+		}
 	}
 	musicTable->show();
 	if (musicTable->selectedItems().isEmpty()) {
