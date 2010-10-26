@@ -139,16 +139,18 @@ void MainWindow::loadDB()
 		}
 	}
 	if(dbfile.isEmpty()) {
-		searchBox->setText("Not a valid histdb file!");
+		statusBar->showMessage("Not a valid histdb file!");
 		return;
 	}
 
 	int at = htdb.length();
 
+	statusBar->showMessage("Loading DB");
 	htdb.LoadDB(dbfile.toAscii().data());
+	statusBar->showMessage("Done loading DB");
 
 	if(htdb.is_valid() != true) {
-		searchBox->setText("Error db not read!");
+		statusBar->showMessage("Error! Db not read!");
 		exit(-1);
 	}
 
@@ -173,6 +175,8 @@ void MainWindow::loadDB()
 	musicTable->resizeColumnsToContents();
 	if (musicTable->columnWidth(0) > 300)
 		musicTable->setColumnWidth(0, 300);
+
+	statusBar->showMessage("Enjoy!");
 }
 
 void MainWindow::about()
@@ -385,12 +389,16 @@ void MainWindow::setupUi()
 	searchBox->setText("");
 	connect(searchBox, SIGNAL(editingFinished()), this, SLOT(searchDB()));
 
+	statusBar = new QStatusBar;
+	statusBar->clearMessage();
+
 	QVBoxLayout *mainLayout = new QVBoxLayout;
 	mainLayout->addWidget(searchBox);
 	mainLayout->addWidget(searchTable);
 	mainLayout->addWidget(musicTable);
 	mainLayout->addLayout(seekerLayout);
 	mainLayout->addLayout(playbackLayout);
+	mainLayout->addWidget(statusBar);
 
 	QWidget *widget = new QWidget;
 	widget->setLayout(mainLayout);

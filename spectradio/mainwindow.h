@@ -107,6 +107,7 @@ class MainWindow : public QMainWindow
 		QTableWidget *musicTable;
 		QTableWidget *searchTable;
 		QLineEdit *searchBox;
+		QStatusBar *statusBar;
 };
 
 #endif
