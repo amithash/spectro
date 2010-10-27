@@ -1,4 +1,6 @@
 #include "kmeans.h"
+#include "hist_dist.h"
+#include "hist_ops.h"
 #include <math.h>
 #include <string.h>
 
@@ -7,11 +9,6 @@
 #define ONE 1267
 #define TWO 7653
 #define THR 5432
-
-void cent_copy(hist_t *out, hist_t *in) 
-{
-	memcpy(out, in, sizeof(hist_t));
-}
 
 int main(int argc, char *argv[])
 {
