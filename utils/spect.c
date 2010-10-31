@@ -222,7 +222,6 @@ int read_spectf(char *name, spect_t *spect)
 
 	/* read a char at a time, data is in row order */
 	while((n = read(fileno(fp), &c, sizeof(unsigned char))) > 0) {
-
 		if(i >= max_len) {
 			/* if we need to realloc, 
 			 * realloc for SPECT_WINDOW extra samples */
@@ -234,7 +233,7 @@ int read_spectf(char *name, spect_t *spect)
 		}
 
 		/* populate */
-		spect->spect[j][i] = (unsigned char)c & 0xff;
+		spect->spect[j][i] = c;
 
 		/* Prepare for next band, if last band, reset band index j and 
 		 * prepare for next sample
@@ -289,7 +288,7 @@ static void *thread_routine(void *data)
 	for(i = 0; i < len; i++) {
 		spect_t spect;
 		if((rc = read_spectf(spect_list[i], &spect)) != RM_SUCCESS) {
-			spect_warn("Reading %s resulted in an invalid spect file. rc=%d",spect_list[i], rc);
+			spect_warn("Reading %s resulted in an invalid spect file. err=%s",spect_list[i], RM_RC_STR(rc));
 			continue;
 		}
 		pthread_mutex_lock(&read_spect_mutex);
@@ -300,6 +299,9 @@ static void *thread_routine(void *data)
 			real_len++;
 		}
 		pthread_mutex_unlock(&read_spect_mutex);
+		free_spect(&spect);
+		fsync(fileno(stdout));
+		fsync(fileno(stderr));
 	}
 
 thread_exit:

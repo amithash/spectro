@@ -32,6 +32,21 @@ typedef struct {
 #define RM_UNMATCHED_END_E     -6
 #define RM_MP3_NOT_FOUND       -7
 #define RM_MALLOC_FAILED_E     -8
+#define RM_READ_FAILED_E       -9
+
+static const char *RM_RC[] = {
+	"RM_SUCCESS",
+	"RM_INVALID_PTR_E",
+	"RM_INVALID_FNAME_PTR_E",
+	"RM_INVALID_FNAME_E",
+	"RM_OPEN_FAILED_E",
+	"RM_LENGTH_NOT_SPECT_E",
+	"RM_UNMATCHED_END_E",
+	"RM_MP3_NOT_FOUND",
+	"RM_MALLOC_FAILED_E",
+	"RM_READ_FAILED_E"
+};
+#define RM_RC_STR(rc) RM_RC[-1 * rc]
 
 #define RMFL_SUCCESS                0
 #define RMFL_INVALID_FNAME_PTR_E   -1

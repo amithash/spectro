@@ -30,6 +30,7 @@ int main(int argc, char *argv[])
 	hist_t *hist_list;
 	spect_t ref_spect;
 	hist_t ref_hist;
+	int rc;
 	int maxes_len = NMAX_DEFAULT;
 
 	if(argc < 3) {
@@ -40,8 +41,8 @@ int main(int argc, char *argv[])
 		maxes_len = atoi(argv[3]) + 1;
 	}
 
-	if(read_spectf(argv[2], &ref_spect) < 0) {
-		spect_error("Could not read %s", ref_spect.fname);
+	if((rc = read_spectf(argv[2], &ref_spect)) != RM_SUCCESS) {
+		spect_error("Could not read %s.\terror=%s", ref_spect.fname, RM_RC_STR(rc));
 		exit(-1);
 	}
 	spect2hist(&ref_hist, &ref_spect);
