@@ -58,7 +58,6 @@
 #include <string.h>
 #include <math.h>
 #include <stdio.h>
-#include <fftw3.h>
 
 #include "gstspectgen.h"
 #include "spectrum.h"
@@ -588,47 +587,6 @@ static void normalize (gfloat *vals[NBANDS], guint numvals)
 	}
 }
 
-void cepstrum_mat(gfloat *mat[NBANDS], int len)
-{
-	fftwf_plan plan;
-	float *fftw_in;
-	float *fftw_out;
-	int i,j;
-
-	fftw_in = (float *)fftwf_malloc(sizeof(float) * NBANDS);
-	if(!fftw_in) {
-		return;
-	}
-	fftw_out = (float *)fftwf_malloc(sizeof(float) * NBANDS);
-	if(!fftw_out) {
-		fftwf_free(fftw_in);
-		return;
-	}
-	
-	//plan = fftwf_plan_r2r_1d(NBANDS, fftw_in, fftw_out, FFTW_DHT, FFTW_ESTIMATE);
-	plan = fftwf_plan_r2r_1d(NBANDS, fftw_in, fftw_out, FFTW_DHT, FFTW_MEASURE);
-	//plan = fftwf_plan_r2r_1d(NBANDS, fftw_in, fftw_out, FFTW_REDFT10, FFTW_MEASURE);
-
-	for(i = 0; i < len; i++) {
-		for(j = 0; j < NBANDS; j++) {
-			fftw_in[j] = log(mat[j][i]);
-		}
-		fftwf_execute(plan);
-		for(j = 0; j < NBANDS; j++) {
-			mat[j][i] = fftw_out[j];
-		}
-	}
-
-	fftwf_execute(plan);
-
-
-	fftwf_destroy_plan(plan);
-	fftwf_free(fftw_in);
-	fftwf_free(fftw_out);
-}
-
-
-
 /* This function normalizes all of the cached r,g,b data and 
  * finally pushes a monster buffer with all of our output.
  */
@@ -645,8 +603,6 @@ static void gst_spectgen_finish (GstSpectgen *spect)
 		output_width = spect->numframes;
 	else
 		output_width = spect->max_width;
-
-	cepstrum_mat(spect->bands, spect->numframes);
 
 	normalize(spect->bands, spect->numframes);
 
