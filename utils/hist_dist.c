@@ -28,7 +28,7 @@ static double edistance(double *dist, unsigned int len)
 	for(i = 0; i < len; i++) {
 		val += pow(dist[i], 2);
 	}
-	return sqrt(val / len);
+	return sqrt(val);
 }
 
 double hist_distance(hist_t *hist1, hist_t *hist2)

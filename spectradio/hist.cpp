@@ -173,7 +173,7 @@ double HistDB::edistance(double *dist, unsigned int len)
 	for(i = 0; i < len; i++) {
 		val += pow(dist[i], 2);
 	}
-	return sqrt(val / len);
+	return sqrt(val);
 }
 
 double HistDB::distance(unsigned int e1, unsigned int e2)
@@ -248,7 +248,6 @@ int HistDB::get_next(int ind)
 		QString i_artist(list[i].artist);
 
 		if(list[i].played == 1 || i == (unsigned int)ind) {
-		      std::cout << "Skipping same: " << i_title.toLower().toAscii().data() << std::endl;
 		      continue;
 		}
 
