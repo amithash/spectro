@@ -41,14 +41,12 @@ static int set_tags(hist_t *hist)
 
 }
 
-static void vec2hist(double *hist, unsigned char *vec, unsigned int rlen, unsigned char *avoid)
+static void vec2hist(double *hist, unsigned char *vec, unsigned int rlen)
 {
 	int i;
 	int len = 0;
 	memset(hist, 0, HIST_LEN * sizeof(double));
 	for(i = 0; i < rlen; i++) {
-		if(avoid[i])
-		      continue;
 		hist[NUM2BIN(vec[i])]++;
 		len++;
 	}
@@ -57,6 +55,7 @@ static void vec2hist(double *hist, unsigned char *vec, unsigned int rlen, unsign
 	}
 }
 
+#if 0
 static int is_zero(spect_t *spect, int row)
 {
 	int i;
@@ -80,6 +79,7 @@ void get_avoids(unsigned char *avoid, spect_t *spect)
 		}
 	}
 }
+#endif
 
 int spect2hist(hist_t *hist, spect_t *spect)
 	
@@ -87,18 +87,19 @@ int spect2hist(hist_t *hist, spect_t *spect)
 	int i;
 	int start = 0;
 	int end = spect->len;
+#if 0
 	unsigned char *avoid;
 	avoid = (unsigned char *)malloc(sizeof(unsigned char) * spect->len);
 	if(!avoid)
 	      return -1;
-
 	/* Avoid all samples with silence */
 	get_avoids(avoid, spect);
+#endif
 
 	strcpy(hist->fname, spect->fname);
 
 	for(i = 0; i < NBANDS; i++) {
-		vec2hist(hist->spect_hist[i], spect->spect[i], spect->len, avoid);
+		vec2hist(hist->spect_hist[i], spect->spect[i], spect->len);
 	}
 	
 	set_tags(hist);
