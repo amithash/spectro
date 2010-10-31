@@ -2,7 +2,7 @@
 
 NUMCPU=4
 
-find . -type f -regextype posix-awk -iregex '.*\.(mp3|ogg|flac|wma)' | while read i ; do
+find . -type f -regextype posix-awk -iregex '.*\.(mp3|ogg|flac)' | while read i ; do
 
         if [ `jobs -p | wc -l` -ge $NUMCPU ] ; then
                wait
