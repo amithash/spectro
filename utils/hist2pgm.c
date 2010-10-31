@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-
 #include "hist.h"
 
 int main(int argc, char *argv[]) {
@@ -19,8 +18,8 @@ int main(int argc, char *argv[]) {
 		printf("USAGE: %s FILE.spect4 (Optional output pgm file default: tmp.pgm)\n", argv[0]);
 		exit(-1);
 	}
-	if((rc = read_spectf(argv[i], &spect)) != 0) {
-		printf("Reading spect file %s failed with rc=%d",argv[1], rc);
+	if((rc = read_spectf(argv[1], &spect)) != 0) {
+		printf("Reading spect file %s failed with error=%s\n",argv[1], RM_RC_STR(rc));
 		exit(-1);
 	}
 	spect2hist(&hist, &spect);
@@ -43,8 +42,8 @@ int main(int argc, char *argv[]) {
 			}
 		}
 		for(j = 0; j < HIST_LEN; j++) {
-			unsigned int ui_val = (unsigned int)((hist.spect_hist[i][j] / max_val[i]) * 255);
-			unsigned char val = (unsigned int)ui_val;
+			unsigned int ui_val = (unsigned int)(hist.spect_hist[i][j] * 255);
+			unsigned char val = (unsigned char)(ui_val & 0xff);
 			if(write(fileno(pgf), &val, sizeof(unsigned char)) != sizeof(unsigned char)) {
 				printf("Write error!\n");
 			}
