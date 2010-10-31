@@ -1,19 +1,17 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#define SEP ","
+#include "../spect-config.h"
 
-#ifndef NBANDS
-#define NBANDS 24
-#endif
+#define SEP " "
 
 int main(void)
 {
 	int n = 0;
 	unsigned char c;
 	int ind = 0;
-	while((n = read(fileno(stdin), &c, sizeof(char))) > 0) {
-		printf("%d", (unsigned int)c & 0xFF);
+	while((n = read(fileno(stdin), &c, sizeof(unsigned char))) > 0) {
+		printf("%d",((unsigned int)c) & 0xFF);
 
 		if(++ind == NBANDS) {
 			printf("\n");
