@@ -42,6 +42,22 @@ static int set_tags(hist_t *hist)
 
 }
 
+#define ZERO_1D(ptr,len) do {				\
+	int __i;					\
+	for(__i = 0; __i < len; __i++) {		\
+		ptr[__i] = 0;				\
+	}						\
+}while(0)
+
+#define ZERO_2D(ptr, lenx, leny) do {			\
+	int __i, __j;					\
+	for(__i = 0; __i < lenx; __i++) {		\
+		for(__j = 0; __j < leny; __j++) {	\
+			ptr[__i][__j] = 0;		\
+		}					\
+	}						\
+}while(0)
+
 int per_hist(hist_t *hist, spect_t *spect, unsigned int len)
 {
 	int i,j;
@@ -71,20 +87,20 @@ int per_hist(hist_t *hist, spect_t *spect, unsigned int len)
 			}
 		}
 	}
-	for(j = 0; j < PHIST_LEN; j++) {
-		hist->phist[j] = 0;
-	}
-	for(i = 0; i < NBANDS; i++) {
-		period[i] = 0;
-	}
+
+	ZERO_2D(hist->per_hist, PERIOD_LEN, PHIST_LEN);
+
+	ZERO_1D(period, NBANDS);
+
 	for(i = 1; i < spect->len; i++) {
 		for(j = 0; j < NBANDS; j++) {
-			if(out[j][i] > 0) {
-				unsigned int ind = period[j];
+			/* The beat */
+			if(out[j][i] == 1) {
+				unsigned int ind = period[j] >= PERIOD_LEN ? PERIOD_LEN - 1 : (unsigned int)period[j];
+				unsigned int powind = NUM2BIN(spect->spect[j][i]);
 				period[j] = 0;
-				if(ind > PHIST_LEN)
-				      ind = PHIST_LEN - 1;
-				hist->phist[ind]++;
+				
+				hist->per_hist[ind][powind]++;
 			} else {
 				period[j]++;
 			}
@@ -98,19 +114,24 @@ int per_hist(hist_t *hist, spect_t *spect, unsigned int len)
 	}
 
 
-	for(i = 0; i < min_len; i++) {
-		hist->phist[i] = 0;
-	}
+	/* Zero out entries corrosponding to unresonalble beats/minutes
+	 * that is greater than 240bpm */
+	ZERO_2D(hist->per_hist, min_len, PHIST_LEN);
 
-	for(i = 0; i < PHIST_LEN; i++) {
-		total += hist->phist[i];
-	}
-	for(i = 0; i < PHIST_LEN; i++) {
-		hist->phist[i] /= total;
+	/* Convert to probabilities */
+	for(i = 0; i < PERIOD_LEN; i++) {
+		double total = 0;
+		for(j = 0; j < PHIST_LEN; j++) {
+			total += hist->per_hist[i][j];
+		}
+		for(j = 0; j < PHIST_LEN; j++) {
+			hist->per_hist[i][j] /= total;
+		}
 	}
 cleanup:
 	for(i = 0; i < NBANDS; i++) {
-		free(out[i]);
+		if(out[i])
+			free(out[i]);
 	}
 
 	return rc;
@@ -180,14 +201,14 @@ int spect2hist(hist_t *hist, spect_t *spect)
 	
 	set_tags(hist);
 
-	per_hist(hist, spect, hist->length);
-
 	if(hist->length == 0) {
 		/* guess based on last processed track */
 		hist->length = spect->len / last_samples_per_second;
 	} else {
 		last_samples_per_second = spect->len / hist->length;
 	}
+
+	per_hist(hist, spect, hist->length);
 
 	return 0;
 }
@@ -261,8 +282,10 @@ static int write_hist(int fd, hist_t *hist)
 			return -1;
 		}
 	}
-	if(write_double_vec(fd, hist->phist, PHIST_LEN)) {
-		return -1;
+	for(i = 0; i < PERIOD_LEN; i++) {
+		if(write_double_vec(fd, hist->per_hist[i], PHIST_LEN)) {
+			return -1;
+		}
 	}
 	return 0;
 }
@@ -293,8 +316,10 @@ static int read_hist(int fd, hist_t *hist)
 			return -1;
 		}
 	}
-	if(read_double_vec(fd, hist->phist, PHIST_LEN)) {
-		return -1;
+	for(i = 0; i < PERIOD_LEN; i++) {
+		if(read_double_vec(fd, hist->per_hist[i], PHIST_LEN)) {
+			return -1;
+		}
 	}
 	return 0;
 }

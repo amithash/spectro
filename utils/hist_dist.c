@@ -34,13 +34,17 @@ static double edistance(double *dist, unsigned int len)
 double hist_distance(hist_t *hist1, hist_t *hist2)
 {
 	int col;
-	double dist[NBANDS+1];
+	double dist[NBANDS+PERIOD_LEN];
 	for(col = 0; col < NBANDS; col++) {
 		dist[col] = hdistance(hist1->spect_hist[col],
 				      hist2->spect_hist[col],
 				      HIST_LEN);
 	}
-	dist[NBANDS] = hdistance(hist1->phist, hist2->phist, PHIST_LEN);
-	return edistance(dist, NBANDS + 1);
+	for(col = 0; col < PERIOD_LEN; col++) {
+		dist[NBANDS + col] = hdistance(hist1->per_hist[col],
+					       hist2->per_hist[col],
+					       PERIOD_LEN);
+	}
+	return edistance(dist, NBANDS + PERIOD_LEN);
 }
 
