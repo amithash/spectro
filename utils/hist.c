@@ -1,6 +1,7 @@
 #include "hist.h"
 #include <pthread.h>
 #include <tag_c.h>
+#include <stdint.h>
 
 unsigned int last_samples_per_second = 0;
 /* Assumption: hist->fname is valid */
@@ -40,6 +41,81 @@ static int set_tags(hist_t *hist)
 	return 0;
 
 }
+
+int per_hist(hist_t *hist, spect_t *spect, unsigned int len)
+{
+	int i,j;
+	uint8_t *out[NBANDS] = {NULL};
+	double period[NBANDS];
+	int min_len = 10; /* Default min len */
+	double total = 0;
+	int rc = 0;
+
+	for(i = 0; i < NBANDS; i++) {
+		out[i] = (uint8_t *)malloc(sizeof(uint8_t) * spect->len);
+		if(!out[i])  {
+			rc = -1; goto cleanup;
+		}
+	}
+
+	for(j = 0; j < NBANDS; j++) {
+		out[j][0] = 0;
+	}
+	for(i = 1; i < spect->len; i++) {
+		for(j = 0; j < NBANDS; j++) {
+			double val = (double)spect->spect[j][i] - (double)spect->spect[j][i-1];
+			if(val <= 0) {
+				out[j][i] = 0;
+			} else {
+				out[j][i] = 1;
+			}
+		}
+	}
+	for(j = 0; j < PHIST_LEN; j++) {
+		hist->phist[j] = 0;
+	}
+	for(i = 0; i < NBANDS; i++) {
+		period[i] = 0;
+	}
+	for(i = 1; i < spect->len; i++) {
+		for(j = 0; j < NBANDS; j++) {
+			if(out[j][i] > 0) {
+				unsigned int ind = period[j];
+				period[j] = 0;
+				if(ind > PHIST_LEN)
+				      ind = PHIST_LEN - 1;
+				hist->phist[ind]++;
+			} else {
+				period[j]++;
+			}
+		}
+	}
+	if(len > 0) {
+		/* Assume maximum beats per second = 240 bpm = 4 bps */
+		min_len = (spect->len / len) / 4;
+	} else {
+		spect_warn("Using default min_len = %d", min_len);
+	}
+
+
+	for(i = 0; i < min_len; i++) {
+		hist->phist[i] = 0;
+	}
+
+	for(i = 0; i < PHIST_LEN; i++) {
+		total += hist->phist[i];
+	}
+	for(i = 0; i < PHIST_LEN; i++) {
+		hist->phist[i] /= total;
+	}
+cleanup:
+	for(i = 0; i < NBANDS; i++) {
+		free(out[i]);
+	}
+
+	return rc;
+}
+
 
 static void vec2hist(double *hist, unsigned char *vec, unsigned int rlen)
 {
@@ -103,6 +179,8 @@ int spect2hist(hist_t *hist, spect_t *spect)
 	}
 	
 	set_tags(hist);
+
+	per_hist(hist, spect, hist->length);
 
 	if(hist->length == 0) {
 		/* guess based on last processed track */
@@ -183,6 +261,9 @@ static int write_hist(int fd, hist_t *hist)
 			return -1;
 		}
 	}
+	if(write_double_vec(fd, hist->phist, PHIST_LEN)) {
+		return -1;
+	}
 	return 0;
 }
 
@@ -211,6 +292,9 @@ static int read_hist(int fd, hist_t *hist)
 		if(read_double_vec(fd, hist->spect_hist[i], HIST_LEN)) {
 			return -1;
 		}
+	}
+	if(read_double_vec(fd, hist->phist, PHIST_LEN)) {
+		return -1;
 	}
 	return 0;
 }

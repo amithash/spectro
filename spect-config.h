@@ -18,10 +18,6 @@
 #define ARTIST_LEN 64
 #define ALBUM_LEN  64
 
-/* All in milli seconds */
-#define BEAT_STEP 100
-#define BEAT_MIN  200
-#define BEAT_MAX  (4000 + BEAT_STEP)
-#define BEAT_LEN  ((BEAT_MAX - BEAT_MIN) / BEAT_STEP)
+#define PHIST_LEN 100
 
 #endif
