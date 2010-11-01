@@ -92,7 +92,7 @@ int per_hist(hist_t *hist, spect_t *spect, unsigned int len)
 	}
 	if(len > 0) {
 		/* Assume maximum beats per second = 240 bpm = 4 bps */
-		min_len = (spect->len / len) / 4;
+		min_len = spect->len / (4 * len);
 	} else {
 		spect_warn("Using default min_len = %d", min_len);
 	}
