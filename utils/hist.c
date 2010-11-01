@@ -97,7 +97,7 @@ int per_hist(hist_t *hist, spect_t *spect, unsigned int len)
 			/* The beat */
 			if(out[j][i] == 1) {
 				unsigned int ind = period[j] >= PERIOD_LEN ? PERIOD_LEN - 1 : (unsigned int)period[j];
-				unsigned int powind = NUM2BIN(spect->spect[j][i]);
+				unsigned int powind = NUM2PBIN(spect->spect[j][i]);
 				period[j] = 0;
 				
 				hist->per_hist[ind][powind]++;
