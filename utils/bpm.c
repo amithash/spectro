@@ -15,6 +15,7 @@ int spect2bpm(double bpm[BPM_LEN], spect_t *spect)
 	int rc = 0;
 	int i,j;
 	fftw_plan plan;
+	double total = 0;
 
 	tf = taglib_file_new(spect->fname);
 	seconds = taglib_audioproperties_length(taglib_file_audioproperties(tf));
@@ -74,6 +75,10 @@ int spect2bpm(double bpm[BPM_LEN], spect_t *spect)
 		if(bpm_nr[i] > 1) {
 			bpm[i] = bpm[i] / bpm_nr[i];
 		}
+		total += bpm[i];
+	}
+	for(i = 0; i < BPM_LEN; i++) {
+		bpm[i] /= total;
 	}
 
 	fftw_destroy_plan(plan);
