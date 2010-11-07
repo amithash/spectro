@@ -13,7 +13,6 @@ typedef struct {
 	unsigned int track;
 	unsigned int length;
 	double spect_hist[NBANDS][HIST_LEN];
-	double per_hist[PERIOD_LEN][PHIST_LEN];
 } hist_t;
 
 int spect2hist(hist_t *hist, spect_t *spect);

@@ -40,104 +40,6 @@ static int set_tags(hist_t *hist)
 
 }
 
-#define ZERO_1D(ptr,len) do {				\
-	int __i;					\
-	for(__i = 0; __i < len; __i++) {		\
-		ptr[__i] = 0;				\
-	}						\
-}while(0)
-
-#define ZERO_2D(ptr, lenx, leny) do {			\
-	int __i, __j;					\
-	for(__i = 0; __i < lenx; __i++) {		\
-		for(__j = 0; __j < leny; __j++) {	\
-			ptr[__i][__j] = 0;		\
-		}					\
-	}						\
-}while(0)
-
-int per_hist(hist_t *hist, spect_t *spect, unsigned int len)
-{
-	int i,j;
-	uint8_t *out[NBANDS] = {NULL};
-	double period[NBANDS];
-	int min_len = 10; /* Default min len */
-	int rc = 0;
-
-	for(i = 0; i < NBANDS; i++) {
-		out[i] = (uint8_t *)malloc(sizeof(uint8_t) * spect->len);
-		if(!out[i])  {
-			rc = -1; goto cleanup;
-		}
-	}
-
-	for(j = 0; j < NBANDS; j++) {
-		out[j][0] = 0;
-	}
-	for(i = 1; i < spect->len; i++) {
-		for(j = 0; j < NBANDS; j++) {
-			double val = (double)spect->spect[j][i] - (double)spect->spect[j][i-1];
-			if(val <= 0) {
-				out[j][i] = 0;
-			} else {
-				out[j][i] = 1;
-			}
-		}
-	}
-
-	ZERO_2D(hist->per_hist, PERIOD_LEN, PHIST_LEN);
-
-	ZERO_1D(period, NBANDS);
-
-	for(i = 1; i < spect->len; i++) {
-		for(j = 0; j < NBANDS; j++) {
-			/* The beat */
-			if(out[j][i] == 1) {
-				unsigned int ind = period[j] >= PERIOD_LEN ? PERIOD_LEN - 1 : (unsigned int)period[j];
-				unsigned int powind = NUM2PBIN(spect->spect[j][i]);
-				period[j] = 0;
-				hist->per_hist[ind][powind]++;
-			} else {
-				period[j]++;
-			}
-		}
-	}
-	if(len > 0) {
-		/* Assume maximum beats per second = 240 bpm = 4 bps */
-		min_len = spect->len / (4 * len);
-	} else {
-		spect_warn("Using default min_len = %d", min_len);
-	}
-
-
-	/* Zero out entries corrosponding to unresonalble beats/minutes
-	 * that is greater than 240bpm */
-#if 0
-	ZERO_2D(hist->per_hist, min_len, PHIST_LEN);
-
-	/* Convert to probabilities */
-	for(i = 0; i < PERIOD_LEN; i++) {
-		double total = 0;
-		for(j = 0; j < PHIST_LEN; j++) {
-			total += hist->per_hist[i][j];
-		}
-		if(total <= 0)
-		      continue;
-		for(j = 0; j < PHIST_LEN; j++) {
-			hist->per_hist[i][j] /= total;
-		}
-	}
-#endif
-cleanup:
-	for(i = 0; i < NBANDS; i++) {
-		if(out[i])
-			free(out[i]);
-	}
-
-	return rc;
-}
-
-
 static void vec2hist(double *hist, spect_e_type *vec, unsigned int rlen)
 {
 	int i;
@@ -212,8 +114,6 @@ int spect2hist(hist_t *hist, spect_t *spect)
 		last_samples_per_second = spect->len / hist->length;
 	}
 
-	per_hist(hist, spect, hist->length);
-
 	return 0;
 }
 
@@ -286,11 +186,6 @@ static int write_hist(int fd, hist_t *hist)
 			return -1;
 		}
 	}
-	for(i = 0; i < PERIOD_LEN; i++) {
-		if(write_double_vec(fd, hist->per_hist[i], PHIST_LEN)) {
-			return -1;
-		}
-	}
 	return 0;
 }
 
@@ -317,11 +212,6 @@ static int read_hist(int fd, hist_t *hist)
 	}
 	for(i = 0; i < NBANDS; i++) {
 		if(read_double_vec(fd, hist->spect_hist[i], HIST_LEN)) {
-			return -1;
-		}
-	}
-	for(i = 0; i < PERIOD_LEN; i++) {
-		if(read_double_vec(fd, hist->per_hist[i], PHIST_LEN)) {
 			return -1;
 		}
 	}
