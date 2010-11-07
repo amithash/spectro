@@ -21,4 +21,5 @@ int read_hist_db(hist_t **hist, unsigned int *len, char *fname);
 int write_hist_db(hist_t *hist, unsigned int len, char *fname);
 int spectdb2histdb(char * mdb, char *hdb);
 
+void plot_hist(hist_t *hist);
 #endif

@@ -22,6 +22,7 @@ BSPECT_OBJS = bspect.o
 TEST_OBJS  = test.o
 BPM_OBJS = bpm.o
 PLOTBPM_OBJS = plotbpm.o
+PLOTHIST_OBJS = plothist.o
 
 SPECT2CSV_EXE = spect2csv
 GENSPECTDB_EXE = genspectdb
@@ -29,11 +30,12 @@ SPECT2HIST_EXE = spect2hist
 HIST2PGM_EXE = hist2pgm
 GETSIMILAR_EXE = getsimilar
 PLOTBPM_EXE    = plotbpm
+PLOTHIST_EXE = plothist
 
 INSTALL_DIR = /usr/local/bin
 
 
-all: spect2csv genspectdb spect2hist hist2pgm getsimilar plotbpm
+all: spect2csv genspectdb spect2hist hist2pgm getsimilar plotbpm plothist
 
 spect2csv: $(SPECT_OBJS) $(SPECT2CSV_OBJS)
 	$(CC)  -o $(SPECT2CSV_EXE)  $(LIBS) $(SPECT_OBJS) $(SPECT2CSV_OBJS)
@@ -53,10 +55,15 @@ getsimilar: $(SPECT_OBJS) $(HIST_OBJS) $(HIST_DIST_OBJS) $(GETSIMILAR_OBJS)
 plotbpm: $(SPECT_OBJS) $(BPM_OBJS) $(PLOTBPM_OBJS)
 	$(CC) -o $(PLOTBPM_EXE) $(LIBS) $(TAGLIB_LIB) $(FFTW_LIB) $(SPECT_OBJS) $(PLOTBPM_OBJS) $(BPM_OBJS)
 
+plothist: $(SPECT_OBJS) $(HIST_OBJS) $(PLOTHIST_OBJS)
+	$(CC) -o $(PLOTHIST_EXE) $(LIBS) $(TAGLIB_LIB) $(SPECT_OBJS) $(HIST_OBJS) $(PLOTHIST_OBJS)
+
 clean:
-	rm -f $(SPECT2CSV_EXE) $(GENSPECTDB_EXE) $(SPECT2HIST_EXE) $(HIST2PGM_EXE) $(GETSIMILAR_EXE) $(PLOTBPM_EXE)
+	rm -f $(SPECT2CSV_EXE) $(GENSPECTDB_EXE) $(SPECT2HIST_EXE) $(HIST2PGM_EXE)
+	rm -f $(GETSIMILAR_EXE) $(PLOTBPM_EXE) $(PLOTHIST_EXE)
 	rm -f $(SPECT2CSV_OBJS) $(SPECT_OBJS) $(GENSPECTDB_OBJS) $(SPECT2HIST_OBJS) $(BPM_OBJS)
 	rm -f $(HIST_OBJS) $(HIST2PGM_OBJS) $(HIST_DIST_OBJS) $(GETSIMILAR_OBJS) $(PLOTBPM_OBJS)
+	rm -f $(PLOTHIST_OBJS)
 
 install:
 	cp --target-directory $(INSTALL_DIR) $(SPECT2CSV_EXE) $(GENSPECTDB_EXE) $(SPECT2HIST_EXE) $(HIST2PGM_EXE) $(GETSIMILAR_EXE)

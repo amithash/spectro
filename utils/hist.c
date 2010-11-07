@@ -323,3 +323,32 @@ err:
 	return errno;
 }
 
+void plot_hist(hist_t *hist)
+{
+	int i,j;
+	FILE *f;
+	f = fopen("__out.txt", "w");
+	for(i = 0; i < HIST_LEN; i++) {
+		for(j = 0; j < NBANDS; j++) {
+			fprintf(f,"%f ",hist->spect_hist[j][i]);
+		}
+		fprintf(f,"\n");
+	}
+	fclose(f);
+	f = fopen("__out.gp", "w");
+	fprintf(f, "plot \\\n");
+	for(i = 0; i < NBANDS; i++) {
+		fprintf(f, "\"__out.txt\" using %d with lines", i + 1);
+		if(i < (NBANDS - 1)) {
+		      fprintf(f, ", \\");
+		}
+		fprintf(f, "\n");
+	}
+	fprintf(f,"pause -1\n");
+	fclose(f);
+	
+	system("gnuplot __out.gp");
+
+	system("rm -f __out.gp __out.txt");
+}
+
