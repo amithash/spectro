@@ -495,160 +495,46 @@ static GstFlowReturn gst_spectgen_chain (GstPad *pad, GstBuffer *buf)
 }
 
 
-/* The normalization code was copied from Gav Wood's Exscalibar
- * library, normalise.cpp
- */
-static void normalize (gfloat *vals[NBANDS], guint numvals)
-{
-	gfloat mini, maxi, tu = 0.f, tb = 0.f;
-	gfloat avgu = 0.f, avgb = 0.f, delta, avg = 0.f;
-	gfloat avguu = 0.f, avgbb = 0.f;
-	guint i,j;
-	gint t = 0;
-
-	if (!numvals) 
-		return;
-
-	/* Find global min and max */
-	mini = maxi = vals[0][0];
-	for(i = 0; i < NBANDS; i++) {
-		for (j = 0; j < numvals; j++) {
-			vals[i][j] = finite(vals[i][j]) ? vals[i][j] : 0.f;
-			if (vals[i][j] > maxi) 
-				maxi = vals[i][j];
-			else if (vals[i][j] < mini) 
-				mini = vals[i][j];
-		}
-	}
-
-	/* Find global average */
-	for( i = 0; i < NBANDS; i++) {
-		for (j = 0; j < numvals; j++) {
-			if(vals[i][j] == mini || vals[i][j] == maxi)
-			      continue;
-
-			avg += vals[i][j]; 
-			t++; 
-		}
-	}
-	avg /= (gfloat)t;
-
-	/* Find low and high averages */
-	for(i = 0; i < NBANDS; i++) {
-		for (j = 0; j < numvals; j++) {
-			if (vals[i][j] == mini || vals[i][j] == maxi)
-			      continue;
-
-			if (vals[i][j] > avg) { 
-				avgu += vals[i][j]; 
-				tu++;
-			} else {
-				avgb += vals[i][j]; 
-				tb++;
-			}
-		}
-	}
-	avgu /= (gfloat) tu;
-	avgb /= (gfloat) tb;
-
-	tu = 0.f; 
-	tb = 0.f;
-	/* Find low-low and high-high average */
-	for(i = 0; i < NBANDS; i++) {
-		for (j = 0; j < numvals; j++) {
-			if (vals[i][j] == mini || vals[i][j] == maxi)
-			      continue;
-
-			if (vals[i][j] > avgu) { 
-				avguu += vals[i][j]; 
-				tu++;
-			} else if (vals[i][j] < avgb) { 
-				avgbb += vals[i][j]; 
-				tb++;
-			}
-		}
-	}
-	avguu /= (gfloat) tu;
-	avgbb /= (gfloat) tb;
-
-	mini = MAX (avg + (avgb - avg) * 2.f, avgbb);
-	maxi = MIN (avg + (avgu - avg) * 2.f, avguu);
-	delta = maxi - mini;
-
-	if (delta == 0.f)
-		delta = 1.f;
-
-	for(i = 0; i < NBANDS; i++) {
-		for (j = 0; j < numvals; j++) {
-			vals[i][j] = finite (vals[i][j]) ?
-				MIN(1.f, MAX(0.f, (vals[i][j] - mini) / delta)) :
-				0.f;
-		}
-	}
-}
-
 /* This function normalizes all of the cached r,g,b data and 
  * finally pushes a monster buffer with all of our output.
  */
+typedef float spect_e_type;
+#define MUL_BY 1.0
 static void gst_spectgen_finish (GstSpectgen *spect)
 {
 	GstBuffer *buf;
-	guchar *data;
+	spect_e_type *data;
 	guint output_width;
-	guint i, j, n, k;
-	gfloat rgb[NBANDS];
-	guint start, end;
+	guint i, j;
+	GstCaps *caps = gst_caps_copy (gst_pad_get_caps (spect->srcpad));
+	gboolean res;
 
-	if (spect->max_width == 0 || spect->numframes <= spect->max_width)
-		output_width = spect->numframes;
-	else
-		output_width = spect->max_width;
-
-	normalize(spect->bands, spect->numframes);
+	output_width = spect->numframes;
 
 	buf = gst_buffer_new_and_alloc 
-		(output_width * NBANDS * sizeof (guchar));
+		(output_width * NBANDS * sizeof (spect_e_type));
 	if (!buf)
 		return;
 
 	/* Don't set the timestamp, duration, etc. since it's irrelevant */
 	GST_BUFFER_OFFSET (buf) = 0;
-	data = (guchar *) GST_BUFFER_DATA (buf);
+	data = (spect_e_type *) GST_BUFFER_DATA (buf);
 
 	for (i = 0; i < output_width; ++i) {
-		for(k = 0; k < NBANDS; k++) {
-			rgb[k] = 0.f;
-		}
-		start = i * spect->numframes / output_width;
-		end = (i + 1) * spect->numframes / output_width;
-		if ( start == end )
-			end = start + 1;
-
-		for( j = start; j < end; j++ ) {
-			for(k = 0; k < NBANDS; k++) {
-				rgb[k] += spect->bands[k][j] * 255.f;
-			}
-		}
-		n = end - start;
-
-		for(k = 0; k < NBANDS; k++) {
-			*(data++) = (guchar)(rgb[k] / ((gfloat) n));
+		for(j = 0; j < NBANDS; j++) {
+			*(data++) = (spect_e_type)(spect->bands[j][i] * MUL_BY);
 		}
 	}
 
-	{
-		/* Now we (finally) know the width of the image we're pushing */
-		GstCaps *caps = gst_caps_copy (gst_pad_get_caps (spect->srcpad));
-		gboolean res;
-		gst_caps_set_simple (caps, "width", G_TYPE_INT, output_width, NULL);
-		gst_caps_set_simple (caps, "height", G_TYPE_INT, spect->height, NULL);
-		res = gst_pad_set_caps (spect->srcpad, caps);
-		if (res)
-			gst_buffer_set_caps (buf, caps);
-			gst_caps_unref (caps);
-		if (!res)
-			return;
-	}
+	/* Now we (finally) know the width of the image we're pushing */
+	gst_caps_set_simple (caps, "width", G_TYPE_INT, output_width, NULL);
+	gst_caps_set_simple (caps, "height", G_TYPE_INT, spect->height, NULL);
+	res = gst_pad_set_caps (spect->srcpad, caps);
+	if (res)
+		gst_buffer_set_caps (buf, caps);
+		gst_caps_unref (caps);
+	if (!res)
+		return;
 
 	gst_pad_push (spect->srcpad, buf);
 }

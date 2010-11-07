@@ -613,7 +613,8 @@ gst_fftwspectrum_2_chain (GstPad * pad, GstBuffer * buf)
       fftwf_execute (conv->fftw_plan);
       { /* Normalize */
 	gint i;
-	gfloat root = sqrtf (conv->size);
+	//gfloat root = sqrtf (conv->size);
+	gfloat root = (conv->size);
 	for (i = 0; i < 2*(conv->size/2+1); ++i)
 	  conv->fftw_out[i] /= root;
       }
