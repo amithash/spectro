@@ -6,7 +6,6 @@
 
 int main(int argc, char *argv[])
 {
-	unsigned int len;
 	int rc;
 
 	if(argc != 3) {

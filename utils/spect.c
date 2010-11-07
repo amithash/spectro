@@ -2,6 +2,20 @@
 #include <pthread.h>
 #include<sys/stat.h>
 
+
+const char *RM_RC[] = {
+	"RM_SUCCESS",
+	"RM_INVALID_PTR_E",
+	"RM_INVALID_FNAME_PTR_E",
+	"RM_INVALID_FNAME_E",
+	"RM_OPEN_FAILED_E",
+	"RM_LENGTH_NOT_SPECT_E",
+	"RM_UNMATCHED_END_E",
+	"RM_MP3_NOT_FOUND",
+	"RM_MALLOC_FAILED_E",
+	"RM_READ_FAILED_E"
+};
+
 /* Types */
 typedef struct {
 	int tid;
@@ -103,8 +117,8 @@ static int remove_nline(char *name, int maxlen) {
 	return 0;
 }
 
-#define UC_MALLOC(size)  (unsigned char *)malloc(size * sizeof(unsigned char))
-#define UC_REALLOC(ptr, size) (unsigned char *)realloc(ptr, size * sizeof(unsigned char))
+#define SET_MALLOC(size)  (spect_e_type *)malloc(size * sizeof(spect_e_type))
+#define SET_REALLOC(ptr, size) (spect_e_type *)realloc(ptr, size * sizeof(spect_e_type))
 #define SPECT_WINDOW 1024
 
 /* Allocates spect's members with len elements */
@@ -112,7 +126,7 @@ static int alloc_spect(spect_t *spect, int len)
 {
 	int i;
 	for(i = 0; i < NBANDS; i++) {
-		if(!(spect->spect[i] = UC_MALLOC(len))) {
+		if(!(spect->spect[i] = SET_MALLOC(len))) {
 			return -1;
 		}
 	}
@@ -123,7 +137,7 @@ static int realloc_spect(spect_t *spect, int len)
 {
 	int i;
 	for(i = 0; i < NBANDS; i++) {
-		if(!(spect->spect[i] = UC_REALLOC(spect->spect[i], len))) {
+		if(!(spect->spect[i] = SET_REALLOC(spect->spect[i], len))) {
 			return -1;
 		}
 	}
@@ -134,7 +148,7 @@ static int final_resize_spect(spect_t *spect)
 {
 	int i; 
 	for(i = 0; i < NBANDS; i++) {
-		if(!(spect->spect[i] = UC_REALLOC(spect->spect[i], spect->len))) {
+		if(!(spect->spect[i] = SET_REALLOC(spect->spect[i], spect->len))) {
 			return -1;
 		}
 	}
@@ -148,9 +162,9 @@ static int write_uint(int fd, unsigned int val) {
 	return 0;
 }
 
-static int write_uchar_vec(int fd, unsigned char *vec, unsigned int len) 
+static int write_spect_e_type_vec(int fd, spect_e_type *vec, unsigned int len) 
 {
-	if(write(fd, vec, sizeof(unsigned char) * len) != (len * sizeof(unsigned char))) {
+	if(write(fd, vec, sizeof(spect_e_type) * len) != (len * sizeof(spect_e_type))) {
 		return -1;
 	}
 	return 0;
@@ -171,9 +185,9 @@ static int read_uint(int fd, unsigned int *val) {
 	return 0;
 }
 
-static int read_uchar_vec(int fd, unsigned char *vec, unsigned int len) 
+static int read_spect_e_type_vec(int fd, spect_e_type *vec, unsigned int len) 
 {
-	if(read(fd, vec, sizeof(unsigned char) * len) != (len * sizeof(unsigned char))) {
+	if(read(fd, vec, sizeof(spect_e_type) * len) != (len * sizeof(spect_e_type))) {
 		return -1;
 	}
 	return 0;
@@ -199,7 +213,7 @@ void free_spect(spect_t *spect)
 int read_spectf(char *name, spect_t *spect)
 {
 	int i = 0, j = 0, n = 0;
-	unsigned char c;
+	spect_e_type c;
 	FILE *fp;
 	int rc = RM_SUCCESS;
 	unsigned int max_len;
@@ -221,7 +235,13 @@ int read_spectf(char *name, spect_t *spect)
 	max_len = SPECT_WINDOW;
 
 	/* read a char at a time, data is in row order */
-	while((n = read(fileno(fp), &c, sizeof(unsigned char))) > 0) {
+	while((n = read(fileno(fp), &c, sizeof(spect_e_type))) > 0) {
+
+		if(n != sizeof(spect_e_type)) {
+			rc = RM_READ_FAILED_E;
+			goto bail_out;
+		}
+
 		if(i >= max_len) {
 			/* if we need to realloc, 
 			 * realloc for SPECT_WINDOW extra samples */
@@ -441,7 +461,7 @@ int write_spect(int fd, spect_t *spect) {
 		return -1;
 	}
 	for(i = 0; i < NBANDS; i++) {
-		if(write_uchar_vec(fd, spect->spect[i], spect->len)) {
+		if(write_spect_e_type_vec(fd, spect->spect[i], spect->len)) {
 			return -1;
 		}
 	}
@@ -465,7 +485,7 @@ int read_spect(int fd, spect_t *spect)
 	}
 
 	for(i = 0; i < NBANDS; i++) {
-		if(read_uchar_vec(fd, spect->spect[i], spect->len)) {
+		if(read_spect_e_type_vec(fd, spect->spect[i], spect->len)) {
 			return -1;
 		}
 	}

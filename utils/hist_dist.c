@@ -40,11 +40,15 @@ double hist_distance(hist_t *hist1, hist_t *hist2)
 				      hist2->spect_hist[col],
 				      HIST_LEN);
 	}
+#if 0
 	for(col = 0; col < PERIOD_LEN; col++) {
+		int i;
 		dist[NBANDS + col] = hdistance(hist1->per_hist[col],
 					       hist2->per_hist[col],
-					       PERIOD_LEN);
+					       PHIST_LEN);
 	}
 	return edistance(dist, NBANDS + PERIOD_LEN);
+#endif
+	return edistance(dist, NBANDS);
 }
 

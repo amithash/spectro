@@ -15,13 +15,13 @@
 #define spect_error(fmt, par...) fprintf(stderr, "ERROR: " fmt "\n", ##par)
 #define spect_warn(fmt, par...) fprintf(stderr, "ERROR: " fmt "\n", ##par)
 
+typedef float spect_e_type;
+
 typedef struct {
 	unsigned int len;
 	char         fname[FNAME_LEN];
-	unsigned char *spect[NBANDS];
+	spect_e_type *spect[NBANDS];
 } spect_t;
-
-
 
 #define RM_SUCCESS             0
 #define RM_INVALID_PTR_E       -1
@@ -34,18 +34,7 @@ typedef struct {
 #define RM_MALLOC_FAILED_E     -8
 #define RM_READ_FAILED_E       -9
 
-static const char *RM_RC[] = {
-	"RM_SUCCESS",
-	"RM_INVALID_PTR_E",
-	"RM_INVALID_FNAME_PTR_E",
-	"RM_INVALID_FNAME_E",
-	"RM_OPEN_FAILED_E",
-	"RM_LENGTH_NOT_SPECT_E",
-	"RM_UNMATCHED_END_E",
-	"RM_MP3_NOT_FOUND",
-	"RM_MALLOC_FAILED_E",
-	"RM_READ_FAILED_E"
-};
+extern const char *RM_RC[];
 #define RM_RC_STR(rc) RM_RC[-1 * rc]
 
 #define RMFL_SUCCESS                0
@@ -73,6 +62,10 @@ int read_spectf(char *name, spect_t *spect);
  * when done, call free_spect(spect).
  */
 int read_spect(int fd, spect_t *spect);
+
+/* Write spect entry to db file.
+ */
+int write_spect(int fd, spect_t *spect);
 
 /* takes spect file list in ifname, and spect db name in ofname.
  * Generates spectdb (*.sdb) as of name

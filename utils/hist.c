@@ -10,10 +10,8 @@ static int set_tags(hist_t *hist)
 	char *p_title;
 	char *p_album;
 	char *p_artist;
-	unsigned int track;
 	TagLib_Tag *tag;
 	TagLib_File *f = taglib_file_new(hist->fname);
-	TagLib_AudioProperties *aprop;
 
 	if(f == NULL) {
 		printf("Cannot open %s\n",hist->fname);
@@ -64,7 +62,6 @@ int per_hist(hist_t *hist, spect_t *spect, unsigned int len)
 	uint8_t *out[NBANDS] = {NULL};
 	double period[NBANDS];
 	int min_len = 10; /* Default min len */
-	double total = 0;
 	int rc = 0;
 
 	for(i = 0; i < NBANDS; i++) {
@@ -99,7 +96,6 @@ int per_hist(hist_t *hist, spect_t *spect, unsigned int len)
 				unsigned int ind = period[j] >= PERIOD_LEN ? PERIOD_LEN - 1 : (unsigned int)period[j];
 				unsigned int powind = NUM2PBIN(spect->spect[j][i]);
 				period[j] = 0;
-				
 				hist->per_hist[ind][powind]++;
 			} else {
 				period[j]++;
@@ -116,6 +112,7 @@ int per_hist(hist_t *hist, spect_t *spect, unsigned int len)
 
 	/* Zero out entries corrosponding to unresonalble beats/minutes
 	 * that is greater than 240bpm */
+#if 0
 	ZERO_2D(hist->per_hist, min_len, PHIST_LEN);
 
 	/* Convert to probabilities */
@@ -124,10 +121,13 @@ int per_hist(hist_t *hist, spect_t *spect, unsigned int len)
 		for(j = 0; j < PHIST_LEN; j++) {
 			total += hist->per_hist[i][j];
 		}
+		if(total <= 0)
+		      continue;
 		for(j = 0; j < PHIST_LEN; j++) {
 			hist->per_hist[i][j] /= total;
 		}
 	}
+#endif
 cleanup:
 	for(i = 0; i < NBANDS; i++) {
 		if(out[i])
@@ -138,12 +138,18 @@ cleanup:
 }
 
 
-static void vec2hist(double *hist, unsigned char *vec, unsigned int rlen)
+static void vec2hist(double *hist, spect_e_type *vec, unsigned int rlen)
 {
 	int i;
 	int len = 0;
 	memset(hist, 0, HIST_LEN * sizeof(double));
 	for(i = 0; i < rlen; i++) {
+		if(vec[i] == 0)
+		      continue;
+#if 0
+		if(vec[i] == 0 || vec[i] == 255)
+		      continue;
+#endif
 		hist[NUM2BIN(vec[i])]++;
 		len++;
 	}
@@ -182,8 +188,6 @@ int spect2hist(hist_t *hist, spect_t *spect)
 	
 {
 	int i;
-	int start = 0;
-	int end = spect->len;
 #if 0
 	unsigned char *avoid;
 	avoid = (unsigned char *)malloc(sizeof(unsigned char) * spect->len);
