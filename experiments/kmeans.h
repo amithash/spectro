@@ -1,12 +1,13 @@
 #ifndef __KMEANS_H_
 #define __KMEANS_H_
-#include "hist_dist.h"
 
-typedef double (* dist_t)(hist_t *a, hist_t *b);
-typedef void (*zero_t)(hist_t *a);
-typedef void (*copy_t)(hist_t *out, hist_t *in);
-typedef void (*cent_accum_t)(hist_t *out, hist_t *in);
-typedef void (*cent_final_t)(hist_t *out, hist_t *in, unsigned int len);
+typedef float (* dist_t)(void *a, void *b);
+typedef void (*zero_t)(void *a);
+typedef void (*copy_t)(void *out, void *in);
+typedef void (*cent_accum_t)(void *out, void *in);
+typedef void (*cent_final_t)(void *out, void *in, unsigned int len);
+typedef void *(*index_t)(void *in, int ind);
+typedef void *(*calloc_t)(int len);
 
 typedef struct {
 	dist_t dist;
@@ -14,15 +15,17 @@ typedef struct {
 	copy_t copy;
 	cent_accum_t caccum;
 	cent_final_t cfinal;
+	index_t index;
+	calloc_t calloc;
 } kmeans_ops_t;
 
 typedef struct {
-	hist_t *data;
+	void *data;
 	int id;
 } clustered_data_t;
 
 
 
-int hist_cluster(int km, hist_t *data, int len, kmeans_ops_t ops, clustered_data_t **clustered_out);
+int hist_cluster(int km, void *data, int len, kmeans_ops_t ops, clustered_data_t **clustered_out);
 
 #endif

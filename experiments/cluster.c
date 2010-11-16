@@ -4,7 +4,7 @@
 #include <math.h>
 #include <string.h>
 
-#define DBNAME "./db.hdb"
+#define DBNAME "../Music.hdb"
 
 #define ONE 1267
 #define TWO 7653
@@ -31,11 +31,13 @@ int main(int argc, char *argv[])
 
 
 
-	ops.dist = hist_distance;
+	ops.dist = hist_dist;
 	ops.zero = cent_clear;
 	ops.copy = cent_copy;
 	ops.caccum = cent_accum;
 	ops.cfinal = cent_final;
+	ops.calloc = hist_calloc;
+	ops.index = hist_ind;
 
 	if(read_hist_db(&list, &len, argv[1])) {
 		printf("ERROR Reading db!\n");
@@ -58,8 +60,9 @@ int main(int argc, char *argv[])
 		printf("----------------------------------------\n");
 		for(j = 0; j < len; j++) {
 			if(out[j].id == i) {
-				out[j].data->fname[255] = '\0';
-				printf("%s\n",out[j].data->fname);
+				hist_t *dt = (hist_t *)out[j].data;
+				dt->fname[255] = '\0';
+				printf("%s\n",dt->fname);
 			}
 		}
 	}

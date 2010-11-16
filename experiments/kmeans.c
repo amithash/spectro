@@ -8,38 +8,37 @@
 
 #define MAX_ITERS 40
 
-static int naked_man(hist_t *centroids, hist_t *data, int cent_len, int data_len, kmeans_ops_t ops)
+static int naked_man(void *centroids, void *data, int cent_len, int data_len, kmeans_ops_t ops)
 {
 	int i,j,k;
 	/* centroids selection = naked man's algo */
 	printf("Choosing a centroid\n");
 
-	ops.copy(&centroids[0], &data[rand() % data_len]);
+	ops.copy(ops.index(centroids,0), ops.index(data, rand() % data_len));
 
 	for(i = 1; i < cent_len; i++) {
 		double min_distance = DBL_MAX;
-		hist_t *point;
+		void *point;
 		for(k = 0; k < data_len; k++) {
 			double total = 0;
 			for(j = 0; j < i; j++) {
-				double d = ops.dist(&data[k], &centroids[j]);
+				double d = ops.dist(ops.index(data, k), ops.index(centroids, j));
 				total += d > 0 ? (1 / pow(d,2)) : DBL_MAX;
 			}
 			if(total < min_distance) {
 				min_distance = total;
-				point = &data[k];
+				point = ops.index(data,k);
 			}
 		}
 		if(!point) {
 			return -1;
 		}
-		ops.copy(&centroids[i], point);
-		printf("Choosing %d: %s\n",i, centroids[i].fname);
+		ops.copy(ops.index(centroids, i), point);
 	}
 	return 0;
 }
 
-static int kmeans(hist_t *centroids, hist_t *new_centroids, clustered_data_t *clustered, int len, int km,  kmeans_ops_t ops)
+static int kmeans(void *centroids, void *new_centroids, clustered_data_t *clustered, int len, int km,  kmeans_ops_t ops)
 {
 	int i,j,k;
 	int changed = 0;
@@ -52,7 +51,7 @@ static int kmeans(hist_t *centroids, hist_t *new_centroids, clustered_data_t *cl
 
 	/* For each data point */
 	for(i = 0; i < km; i++) {
-		ops.zero(&new_centroids[i]);
+		ops.zero(ops.index(new_centroids, i));
 		lengths[i] = 0;
 	}
 
@@ -61,7 +60,7 @@ static int kmeans(hist_t *centroids, hist_t *new_centroids, clustered_data_t *cl
 		double min_distance = DBL_MAX;
 		int clust = -1;
 		for(k = 0; k < km; k++) {
-			double distance = ops.dist(clustered[j].data, &centroids[k]);
+			double distance = ops.dist(clustered[j].data, ops.index(centroids, k));
 			if(distance < min_distance) {
 				min_distance = distance;
 				clust = k;
@@ -72,24 +71,24 @@ static int kmeans(hist_t *centroids, hist_t *new_centroids, clustered_data_t *cl
 			changed++;
 		}
 		lengths[clust]++;
-		ops.caccum(&new_centroids[clust], clustered[j].data);
+		ops.caccum(ops.index(new_centroids, clust), clustered[j].data);
 	}
 	for(k = 0; k < km; k++) {
-		ops.cfinal(&centroids[k], &new_centroids[k], lengths[k]);
+		ops.cfinal(ops.index(centroids, k), ops.index(new_centroids, k), lengths[k]);
 	}
 	return changed;
 }
-	
 
-int hist_cluster(int km, hist_t *data, int len, kmeans_ops_t ops, clustered_data_t **clustered_out)
+
+int hist_cluster(int km, void *data, int len, kmeans_ops_t ops, clustered_data_t **clustered_out)
 
 {
 	int i;
 	int iter;
 	int errno = 0;
 	clustered_data_t *clustered;
-	hist_t *centroids = calloc(km, sizeof(hist_t));
-	hist_t *new_centroids = calloc(km, sizeof(hist_t));
+	void *centroids = ops.calloc(km);
+	void *new_centroids = ops.calloc(km);
 	if(centroids == NULL || new_centroids == NULL) {
 		return -1;
 	}
@@ -107,7 +106,7 @@ int hist_cluster(int km, hist_t *data, int len, kmeans_ops_t ops, clustered_data
 		return -1;
 	}
 	for(i = 0; i < len; i++) {
-		clustered[i].data = &data[i];
+		clustered[i].data = ops.index(data, i);
 		clustered[i].id   = -1;
 	}
 	/* kmeans */

@@ -3,7 +3,6 @@
 
 #include "hist.h"
 
-
 float hist_distance(hist_t *hist1, hist_t *hist2);
 
 #endif
