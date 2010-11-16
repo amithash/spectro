@@ -12,7 +12,6 @@ static int naked_man(void *centroids, void *data, int cent_len, int data_len, km
 {
 	int i,j,k;
 	/* centroids selection = naked man's algo */
-	printf("Choosing a centroid\n");
 
 	ops.copy(ops.index(centroids,0), ops.index(data, rand() % data_len));
 
@@ -102,7 +101,7 @@ int cluster(int km, void *data, int len, kmeans_ops_t ops, clustered_data_t **cl
 
 	*clustered_out = clustered = calloc(len, sizeof(clustered_data_t));
 	if(clustered == NULL) {
-		printf("Malloc failed!\n");
+		fprintf(stderr, "Malloc failed!\n");
 		return -1;
 	}
 	for(i = 0; i < len; i++) {
@@ -110,17 +109,12 @@ int cluster(int km, void *data, int len, kmeans_ops_t ops, clustered_data_t **cl
 		clustered[i].id   = -1;
 	}
 	/* kmeans */
-	printf("Starting kmeans!\n");
 	for(iter = 0; iter < MAX_ITERS; iter++) {
 		int changed;
-		printf("Iter %d\n",iter);
 		if((changed = kmeans(centroids, new_centroids, clustered, len, km, ops)) == 0) {
 			break;
 		}
-		printf("%d changed groups... re-trying\n",changed);
 	}
-
-	printf("%d iterations done.\n", iter);
 
 	if(iter == MAX_ITERS)  {
 		errno = -2;
