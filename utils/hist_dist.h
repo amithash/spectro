@@ -4,6 +4,6 @@
 #include "hist.h"
 
 
-double hist_distance(hist_t *hist1, hist_t *hist2);
+float hist_distance(hist_t *hist1, hist_t *hist2);
 
 #endif

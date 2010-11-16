@@ -32,16 +32,16 @@ int main(int argc, char *argv[]) {
 		printf("Creating %s failed!\n", outf_name);
 		exit(-1);
 	}
-	sprintf(buf, "P5\n%d %d\n255\n", HIST_LEN, NBANDS);
+	sprintf(buf, "P5\n%d %d\n255\n", SPECT_HIST_LEN, NBANDS);
 	write(fileno(pgf), buf, strlen(buf) * sizeof(char));
 	for(i = 0; i < NBANDS; i++) {
 		max_val[i] = 0;
-		for(j = 0; j < HIST_LEN; j++) {
+		for(j = 0; j < SPECT_HIST_LEN; j++) {
 			if(hist.spect_hist[i][j] > max_val[i]) {
 				max_val[i] = hist.spect_hist[i][j];
 			}
 		}
-		for(j = 0; j < HIST_LEN; j++) {
+		for(j = 0; j < SPECT_HIST_LEN; j++) {
 			unsigned int ui_val = (unsigned int)(hist.spect_hist[i][j] * 255);
 			unsigned char val = (unsigned char)(ui_val & 0xff);
 			if(write(fileno(pgf), &val, sizeof(unsigned char)) != sizeof(unsigned char)) {

@@ -2,9 +2,9 @@
 #include <float.h>
 
 /* Compute the hellinger distance of two pdfs a and b */
-static double hdistance(double *a, double *b, unsigned int len) 
+static float hdistance(float *a, float *b, unsigned int len) 
 {
-	double dist = 0.0;
+	float dist = 0.0;
 	int i;
 	if(a == NULL || b == NULL) {
 		return 0;
@@ -16,11 +16,11 @@ static double hdistance(double *a, double *b, unsigned int len)
 	return sqrt(1 - dist);
 }
 
-/* Compute the euclidian distance */
-static double edistance(double *dist, unsigned int len) 
+/* Compute the scaled euclidian distance from the origin */
+static float edistance(float *dist, unsigned int len) 
 {
 	int i;
-	double val = 0;
+	float val = 0;
 	if(dist == NULL) {
 		return 0;
 	}
@@ -28,27 +28,26 @@ static double edistance(double *dist, unsigned int len)
 	for(i = 0; i < len; i++) {
 		val += pow(dist[i], 2);
 	}
-	return sqrt(val);
+	return sqrt(val / len);
 }
 
-double hist_distance(hist_t *hist1, hist_t *hist2)
+/* Compute the distance between two song signatures */
+float hist_distance(hist_t *hist1, hist_t *hist2)
 {
 	int col;
-	double dist[NBANDS+PERIOD_LEN];
+	float dist_spect[NBANDS];
+	float dist_ceps[NBANDS/2];
 	for(col = 0; col < NBANDS; col++) {
-		dist[col] = hdistance(hist1->spect_hist[col],
-				      hist2->spect_hist[col],
-				      HIST_LEN);
+		dist_spect[col] = hdistance(hist1->spect_hist[col],
+				            hist2->spect_hist[col],
+				            SPECT_HIST_LEN);
 	}
-#if 0
-	for(col = 0; col < PERIOD_LEN; col++) {
-		int i;
-		dist[NBANDS + col] = hdistance(hist1->per_hist[col],
-					       hist2->per_hist[col],
-					       PHIST_LEN);
+	for(col = 0; col < NBANDS/2; col++) {
+		dist_ceps[col] = hdistance(hist1->ceps_hist[col],
+				           hist2->ceps_hist[col],
+				           CEPS_HIST_LEN);
 	}
-	return edistance(dist, NBANDS + PERIOD_LEN);
-#endif
-	return edistance(dist, NBANDS);
+	return 
+	    sqrt(pow(edistance(dist_spect, NBANDS),2) + pow(edistance(dist_ceps, NBANDS/2), 2));
 }
 

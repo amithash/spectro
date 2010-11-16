@@ -56,7 +56,8 @@ class Hist
 	QString artist;
 	QString album;
 	unsigned int track;
-	double hist[NBANDS][HIST_LEN];
+	float spect_hist[NBANDS][SPECT_HIST_LEN];
+	float ceps_hist[NBANDS][CEPS_HIST_LEN];
 	int played;
 	Phonon::MediaSource media_source;
 
@@ -70,8 +71,8 @@ class HistDB
 {
 	std::vector<Hist> list;
 	unsigned int valid;
-	double hdistance(double *a, double *b, unsigned int len);
-	double edistance(double *dist, unsigned int len);
+	float hdistance(float *a, float *b, unsigned int len);
+	float edistance(float *dist, unsigned int len);
 
 	public:
 	bool is_valid();
@@ -79,7 +80,7 @@ class HistDB
 	HistDB(const char *dbname);
 	~HistDB();
 	unsigned int length(void);
-	double distance(unsigned int e1, unsigned int e2);
+	float distance(unsigned int e1, unsigned int e2);
 	void set_media_source(unsigned int ind, Phonon::MediaSource source);
 	void set_playing(unsigned int ind);
 	int get_next(int current);

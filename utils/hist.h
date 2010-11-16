@@ -12,7 +12,8 @@ typedef struct {
 	char album[ALBUM_LEN];
 	unsigned int track;
 	unsigned int length;
-	double spect_hist[NBANDS][HIST_LEN];
+	float spect_hist[NBANDS][SPECT_HIST_LEN];
+	float ceps_hist[NBANDS/2][CEPS_HIST_LEN];
 } hist_t;
 
 int spect2hist(hist_t *hist, spect_t *spect);

@@ -1,7 +1,16 @@
 #include "hist.h"
+#include "bpm.h"
 #include <pthread.h>
 #include <tag_c.h>
 #include <stdint.h>
+#include "ceps.h"
+
+#define BIN_WIDTH     ((SPECT_MAX_VAL - SPECT_MIN_VAL) / SPECT_HIST_LEN)
+
+#define FLOOR_MIN(val) ((val) < SPECT_MIN_VAL ? SPECT_MIN_VAL : (val))
+#define CEIL_MAX(val)  ((val) >= SPECT_MAX_VAL ? (SPECT_MAX_VAL - BIN_WIDTH) : (val))
+
+#define NUM2BIN(val)    (unsigned int)(FLOOR_MIN(CEIL_MAX(val)) / BIN_WIDTH)
 
 unsigned int last_samples_per_second = 0;
 /* Assumption: hist->fname is valid */
@@ -40,22 +49,98 @@ static int set_tags(hist_t *hist)
 
 }
 
-static void vec2hist(double *hist, spect_e_type *vec, unsigned int rlen)
+#define MAX(a,b) ((a) > (b) ? (a) : (b))
+#define MIN(a,b) ((a) < (b) ? (a) : (b))
+
+static void normalize (float *vals, int numvals)
+{
+	float mini, maxi, tu = 0.f, tb = 0.f;
+	float avgu = 0.f, avgb = 0.f, delta, avg = 0.f;
+	float avguu = 0.f, avgbb = 0.f;
+	int i;
+	int t = 0;
+
+	if (!numvals) 
+		return;
+
+	mini = maxi = vals[0];
+
+	for (i = 1; i < numvals; i++) {
+		if (vals[i] > maxi) 
+			maxi = vals[i];
+		else if (vals[i] < mini) 
+			mini = vals[i];
+	}
+
+	for (i = 0; i < numvals; i++) {
+		if(vals[i] != mini && vals[i] != maxi) {
+			avg += vals[i] / ((float) numvals); 
+			t++; 
+		}
+	}
+
+	for (i = 0; i < numvals; i++) {
+		if (vals[i] == mini || vals[i] == maxi)
+		      continue;
+		if (vals[i] > avg) { 
+			avgu += vals[i]; 
+			tu++; 
+		} else { 
+			avgb += vals[i]; 
+			tb++; 
+		}
+	}
+
+	avgu /= (float) tu;
+	avgb /= (float) tb;
+
+	tu = 0.f; 
+	tb = 0.f;
+	for (i = 0; i < numvals; i++) {
+		if (vals[i] == mini || vals[i] == maxi)
+		      continue;
+		if (vals[i] > avgu) { 
+			avguu += vals[i]; 
+			tu++; 
+		} else if (vals[i] < avgb) { 
+			avgbb += vals[i]; 
+			tb++; 
+		}
+	}
+
+	avguu /= (float) tu;
+	avgbb /= (float) tb;
+
+	mini = MAX (avg + (avgb - avg) * 2.f, avgbb);
+	maxi = MIN (avg + (avgu - avg) * 2.f, avguu);
+	delta = maxi - mini;
+
+	if (delta == 0.f)
+		delta = 1.f;
+
+	for (i = 0; i < numvals; i++)
+		vals[i] = finite (vals[i]) ? 
+		    	MIN(1.f, MAX(0.f, (vals[i] - mini) / delta))
+                        : 0.f;
+}
+
+static void normalize_spect(spect_t *spect) {
+	int i;
+	for(i = 0; i < NBANDS; i++) {
+		normalize(spect->spect[i], spect->len);
+	}
+}
+
+static void vec2hist(float *hist, spect_e_type *vec, unsigned int rlen)
 {
 	int i;
 	int len = 0;
-	memset(hist, 0, HIST_LEN * sizeof(double));
+	memset(hist, 0, SPECT_HIST_LEN * sizeof(float));
 	for(i = 0; i < rlen; i++) {
-		if(vec[i] == 0)
-		      continue;
-#if 0
-		if(vec[i] == 0 || vec[i] == 255)
-		      continue;
-#endif
 		hist[NUM2BIN(vec[i])]++;
 		len++;
 	}
-	for(i = 0; i < HIST_LEN; i++) {
+	for(i = 0; i < SPECT_HIST_LEN; i++) {
 		hist[i] = hist[i] / len;
 	}
 }
@@ -114,6 +199,10 @@ int spect2hist(hist_t *hist, spect_t *spect)
 		last_samples_per_second = spect->len / hist->length;
 	}
 
+	if(spect2chist(hist->ceps_hist, spect)) {
+		return -1;
+	}
+
 	return 0;
 }
 
@@ -145,16 +234,16 @@ static int write_char_vec(int fd, char *vec, unsigned int len)
 	return 0;
 }
 
-static int read_double_vec(int fd, double *vec, unsigned int len) 
+static int read_float_vec(int fd, float *vec, unsigned int len) 
 {
-	if(read(fd, vec, sizeof(double) * len) != (len * sizeof(double))) {
+	if(read(fd, vec, sizeof(float) * len) != (len * sizeof(float))) {
 		return -1;
 	}
 	return 0;
 }
-static int write_double_vec(int fd, double *vec, unsigned int len) 
+static int write_float_vec(int fd, float *vec, unsigned int len) 
 {
-	if(write(fd, vec, sizeof(double) * len) != (len * sizeof(double))) {
+	if(write(fd, vec, sizeof(float) * len) != (len * sizeof(float))) {
 		return -1;
 	}
 	return 0;
@@ -182,7 +271,12 @@ static int write_hist(int fd, hist_t *hist)
 		return -1;
 	}
 	for(i = 0; i < NBANDS; i++) {
-		if(write_double_vec(fd, hist->spect_hist[i], HIST_LEN)) {
+		if(write_float_vec(fd, hist->spect_hist[i], SPECT_HIST_LEN)) {
+			return -1;
+		}
+	}
+	for(i = 0; i < NBANDS/2; i++) {
+		if(write_float_vec(fd, hist->ceps_hist[i], CEPS_HIST_LEN)) {
 			return -1;
 		}
 	}
@@ -211,7 +305,12 @@ static int read_hist(int fd, hist_t *hist)
 		return -1;
 	}
 	for(i = 0; i < NBANDS; i++) {
-		if(read_double_vec(fd, hist->spect_hist[i], HIST_LEN)) {
+		if(read_float_vec(fd, hist->spect_hist[i], SPECT_HIST_LEN)) {
+			return -1;
+		}
+	}
+	for(i = 0; i < NBANDS/2; i++) {
+		if(read_float_vec(fd, hist->ceps_hist[i], CEPS_HIST_LEN)) {
 			return -1;
 		}
 	}
@@ -328,7 +427,7 @@ void plot_hist(hist_t *hist)
 	int i,j;
 	FILE *f;
 	f = fopen("__out.txt", "w");
-	for(i = 0; i < HIST_LEN; i++) {
+	for(i = 0; i < SPECT_HIST_LEN; i++) {
 		for(j = 0; j < NBANDS; j++) {
 			fprintf(f,"%f ",hist->spect_hist[j][i]);
 		}

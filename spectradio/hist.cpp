@@ -117,8 +117,14 @@ void HistDB::LoadDB(const char *dbname)
 		goto err;
 	     }
 	     for(int j = 0; j < NBANDS; j++) {
-	     	if(!ifs.read((char *)list[i].hist[j], (sizeof(double) * HIST_LEN) / sizeof(char))) {
-	     		std::cerr << "Error reading element number " << i << "Band: " << j << std::endl;
+	     	if(!ifs.read((char *)list[i].spect_hist[j], (sizeof(float) * SPECT_HIST_LEN) / sizeof(char))) {
+	     		std::cerr << "Error reading sh element number " << i << "Band: " << j << std::endl;
+			goto err;
+	     	}
+	     }
+	     for(int j = 0; j < NBANDS/2; j++) {
+	     	if(!ifs.read((char *)list[i].ceps_hist[j], (sizeof(float) * CEPS_HIST_LEN) / sizeof(char))) {
+	     		std::cerr << "Error reading ch element number " << i << "Band: " << j << std::endl;
 			goto err;
 	     	}
 	     }
@@ -147,9 +153,9 @@ unsigned int HistDB::length()
 }
 
 /* Compute the hellinger distance of two pdfs a and b */
-double HistDB::hdistance(double *a, double *b, unsigned int len) 
+float HistDB::hdistance(float *a, float *b, unsigned int len) 
 {
-	double dist = 0.0;
+	float dist = 0.0;
 	unsigned int i;
 	if(a == NULL || b == NULL) {
 		return 0;
@@ -162,10 +168,10 @@ double HistDB::hdistance(double *a, double *b, unsigned int len)
 }
 
 /* Compute the euclidian distance */
-double HistDB::edistance(double *dist, unsigned int len) 
+float HistDB::edistance(float *dist, unsigned int len) 
 {
 	unsigned int i;
-	double val = 0;
+	float val = 0;
 	if(dist == NULL) {
 		return 0;
 	}
@@ -173,22 +179,31 @@ double HistDB::edistance(double *dist, unsigned int len)
 	for(i = 0; i < len; i++) {
 		val += pow(dist[i], 2);
 	}
-	return sqrt(val);
+	return sqrt(val / len);
 }
 
-double HistDB::distance(unsigned int e1, unsigned int e2)
+float HistDB::distance(unsigned int e1, unsigned int e2)
 {
 	int col;
-	double dist[NBANDS];
+	float spect[NBANDS];
+	float ceps[NBANDS/2];
+	float spect_dist, ceps_dist;
 	if(e1 >= list.size() || e1 >= list.size())
 	      return 0;
 
 	for(col = 0; col < NBANDS; col++) {
-		dist[col] = hdistance(list[e1].hist[col],
-				      list[e2].hist[col],
-				      HIST_LEN);
+		spect[col] = hdistance(list[e1].spect_hist[col],
+				      list[e2].spect_hist[col],
+				      SPECT_HIST_LEN);
 	}
-	return edistance(dist, NBANDS);
+	for(col = 0; col < NBANDS/2; col++) {
+		ceps[col] = hdistance(list[e1].ceps_hist[col],
+				      list[e2].ceps_hist[col],
+				      CEPS_HIST_LEN);
+	}
+	spect_dist = edistance(spect, NBANDS);
+	ceps_dist  = edistance(ceps,  NBANDS/2);
+	return sqrt(spect_dist * spect_dist + ceps_dist * ceps_dist);
 }
 QString HistDB::ind_name(unsigned int ind)
 {
@@ -236,8 +251,9 @@ int HistDB::get_next(int ind)
 	if((unsigned int)ind >= list.size())
 	      return 0;
 
-	double dist = DBL_MAX;
+	float dist = DBL_MAX;
 	int ret = ind + 1 >= (int)list.size() ? 0 : ind + 1;
+	int found = 0;
 
 	QString ind_title(list[ind].title);
 	QString ind_artist(list[ind].artist);
@@ -256,12 +272,15 @@ int HistDB::get_next(int ind)
 		      continue;
 		}
 
-		double t_dist = distance(ind, i);
+		float t_dist = distance(ind, i);
 		if(t_dist < dist) {
+			found = 1;
 			ret = i;
 			dist = t_dist;
 		}
 	}
+	if(!found)
+	      std::cout << "Did not find anything.... probable bug...." << std::endl;
 	return (int)ret;
 
 }
