@@ -19,6 +19,7 @@ int main(int argc, char *argv[])
 		spect_error("Conversion failed!");
 		goto cleanup_spect;
 	}
+	smooth_bpm(bpm);
 
 	plot_bpm(bpm);
 
