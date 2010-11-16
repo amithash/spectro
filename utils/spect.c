@@ -122,7 +122,7 @@ static int remove_nline(char *name, int maxlen) {
 #define SPECT_WINDOW 1024
 
 /* Allocates spect's members with len elements */
-static int alloc_spect(spect_t *spect, int len)
+int alloc_spect(spect_t *spect, int len)
 {
 	int i;
 	for(i = 0; i < NBANDS; i++) {

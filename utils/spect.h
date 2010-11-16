@@ -77,4 +77,7 @@ int combine_spect_list(char *ifname,
 /* Free members which are allocated */
 void free_spect(spect_t *spect);
 
+/* Allocate members with specified len 0 on success */
+int alloc_spect(spect_t *spect, int len);
+
 #endif
