@@ -5,5 +5,6 @@
 
 int spect2bpm(double bpm[BPM_LEN], spect_t *spect);
 void plot_bpm(double bpm[BPM_LEN]);
+void smooth_bpm(double bpm[BPM_LEN]);
 
 #endif
