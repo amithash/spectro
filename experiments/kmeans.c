@@ -71,16 +71,16 @@ static int kmeans(void *centroids, void *new_centroids, clustered_data_t *cluste
 			changed++;
 		}
 		lengths[clust]++;
-		ops.caccum(ops.index(new_centroids, clust), clustered[j].data);
+		ops.accum(ops.index(new_centroids, clust), clustered[j].data);
 	}
 	for(k = 0; k < km; k++) {
-		ops.cfinal(ops.index(centroids, k), ops.index(new_centroids, k), lengths[k]);
+		ops.final(ops.index(centroids, k), ops.index(new_centroids, k), lengths[k]);
 	}
 	return changed;
 }
 
 
-int hist_cluster(int km, void *data, int len, kmeans_ops_t ops, clustered_data_t **clustered_out)
+int cluster(int km, void *data, int len, kmeans_ops_t ops, clustered_data_t **clustered_out)
 
 {
 	int i;

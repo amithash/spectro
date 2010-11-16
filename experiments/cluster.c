@@ -34,8 +34,8 @@ int main(int argc, char *argv[])
 	ops.dist = hist_dist;
 	ops.zero = cent_clear;
 	ops.copy = cent_copy;
-	ops.caccum = cent_accum;
-	ops.cfinal = cent_final;
+	ops.accum = cent_accum;
+	ops.final = cent_final;
 	ops.calloc = hist_calloc;
 	ops.index = hist_ind;
 
@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
 		printf("ERROR Reading db!\n");
 		exit(-1);
 	}
-	errno = hist_cluster(km, list, len, ops, &out);
+	errno = cluster(km, list, len, ops, &out);
 
 	if(errno != 0) {
 		printf("Something went wrong\n");
