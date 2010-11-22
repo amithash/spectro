@@ -71,7 +71,7 @@ class HistDB
 {
 	std::vector<Hist> list;
 	unsigned int valid;
-	float hdistance(float *a, float *b, unsigned int len);
+	float bdistance(float *a, float *b, unsigned int len);
 	float edistance(float *dist, unsigned int len);
 
 	public:

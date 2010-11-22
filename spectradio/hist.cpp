@@ -56,83 +56,76 @@ bool HistDB::is_valid()
 
 void HistDB::LoadDB(const char *dbname)
 {
-     std::ifstream ifs(dbname, std::ios::in | std::ios::binary);
-     valid = 0;
-     unsigned int len = 0;
+	std::ifstream ifs(dbname, std::ios::in | std::ios::binary);
+	valid = 0;
+	unsigned int len = 0;
 
-     if(!ifs.read((char *)&len, sizeof(unsigned int))) {
-     	std::cout << "Reading length from " << dbname << std::endl;
-	return;
-     }
-     if(len <= 0)
-	   return;
+	if(!ifs.read((char *)&len, sizeof(unsigned int))) {
+		std::cout << "Reading length from " << dbname << std::endl;
+		return;
+	}
+	if(len <= 0)
+		return;
 
-     int ext_len = list.size();
-     len += ext_len;
-     list.resize(len);
+	int ext_len = list.size();
+	len += ext_len;
+	list.resize(len);
 
-     for(unsigned int i = ext_len; i < len; i++) {
-	     char fname[FNAME_LEN];
-	     char title[TITLE_LEN];
-	     char artist[ARTIST_LEN];
-	     char album[ALBUM_LEN];
+	for(unsigned int i = ext_len; i < len; i++) {
+		char fname[FNAME_LEN];
+		char title[TITLE_LEN];
+		char artist[ARTIST_LEN];
+		char album[ALBUM_LEN];
 
-	     if(!ifs.read((char *)fname, sizeof(char) * FNAME_LEN)) {
-	     	std::cerr << "Error reading element number " << i << std::endl;
-		goto err;
-	     }
-	     if(!ifs.read((char *)title, sizeof(char) * TITLE_LEN)) {
-	     	std::cerr << "Error reading element number " << i << std::endl;
-		goto err;
-	     }
-	     if(title[0] == '\0') {
-		int len = strlen(fname);
-		if(len < TITLE_LEN) {
-			strcpy(title, fname);
-		} else {
-			int ind = len - TITLE_LEN + 1;
-			strcpy(title, &(fname[ind]));
-			len = strlen(title);
-			title[len - 4] = '\0';
+		if(!ifs.read((char *)fname, sizeof(char) * FNAME_LEN)) {
+			std::cerr << "Error reading element number " << i << std::endl;
+			goto err;
 		}
-	     }
-
-	     if(!ifs.read((char *)artist, sizeof(char) * ARTIST_LEN)) {
-	     	std::cerr << "Error reading element number " << i << std::endl;
-		goto err;
-	     }
-	     if(!ifs.read((char *)album, sizeof(char) * ALBUM_LEN)) {
-	     	std::cerr << "Error reading element number " << i << std::endl;
-		goto err;
-	     }
-
-	     list[i].album = album;
-	     list[i].artist = artist;
-	     list[i].title = title;
-	     list[i].fname = fname;
-
-
-	     if(!ifs.read((char *)&list[i].track, sizeof(unsigned int))) {
-	     	std::cerr << "Error reading element number " << i << std::endl;
-		goto err;
-	     }
-	     for(int j = 0; j < NBANDS; j++) {
-	     	if(!ifs.read((char *)list[i].spect_hist[j], (sizeof(float) * SPECT_HIST_LEN) / sizeof(char))) {
-	     		std::cerr << "Error reading sh element number " << i << "Band: " << j << std::endl;
+		if(!ifs.read((char *)title, sizeof(char) * TITLE_LEN)) {
+			std::cerr << "Error reading element number " << i << std::endl;
 			goto err;
-	     	}
-	     }
-	     for(int j = 0; j < NBANDS/2; j++) {
-	     	if(!ifs.read((char *)list[i].ceps_hist[j], (sizeof(float) * CEPS_HIST_LEN) / sizeof(char))) {
-	     		std::cerr << "Error reading ch element number " << i << "Band: " << j << std::endl;
+		}
+		if(title[0] == '\0') {
+			int len = strlen(fname);
+			if(len < TITLE_LEN) {
+				strcpy(title, fname);
+			} else {
+				int ind = len - TITLE_LEN + 1;
+				strcpy(title, &(fname[ind]));
+				len = strlen(title);
+				title[len - 4] = '\0';
+			}
+		}
+
+		if(!ifs.read((char *)artist, sizeof(char) * ARTIST_LEN)) {
+			std::cerr << "Error reading element number " << i << std::endl;
 			goto err;
-	     	}
-	     }
-     }
-     valid = 1;
-     return;
+		}
+		if(!ifs.read((char *)album, sizeof(char) * ALBUM_LEN)) {
+			std::cerr << "Error reading element number " << i << std::endl;
+			goto err;
+		}
+
+		list[i].album = album;
+		list[i].artist = artist;
+		list[i].title = title;
+		list[i].fname = fname;
+
+		if(!ifs.read((char *)&list[i].track, sizeof(unsigned int))) {
+			std::cerr << "Error reading element number " << i << std::endl;
+			goto err;
+		}
+		for(int j = 0; j < NBANDS; j++) {
+			if(!ifs.read((char *)list[i].spect_hist[j], (sizeof(float) * SPECT_HIST_LEN) / sizeof(char))) {
+				std::cerr << "Error reading sh element number " << i << "Band: " << j << std::endl;
+				goto err;
+			}
+		}
+	}
+	valid = 1;
+	return;
 err:
-     list.clear();
+	list.clear();
 }
 
 HistDB::HistDB(const char *dbname)
@@ -153,7 +146,7 @@ unsigned int HistDB::length()
 }
 
 /* Compute the hellinger distance of two pdfs a and b */
-float HistDB::hdistance(float *a, float *b, unsigned int len) 
+float HistDB::bdistance(float *a, float *b, unsigned int len) 
 {
 	float dist = 0.0;
 	unsigned int i;
@@ -164,7 +157,8 @@ float HistDB::hdistance(float *a, float *b, unsigned int len)
 	for(i = 0; i < len; i++) {
 		dist += sqrt(a[i] * b[i]);
 	}
-	return sqrt(1 - dist);
+	dist = -1 * log(dist);
+	return finite(dist) ? dist : FLT_MAX;
 }
 
 /* Compute the euclidian distance */
@@ -179,31 +173,22 @@ float HistDB::edistance(float *dist, unsigned int len)
 	for(i = 0; i < len; i++) {
 		val += pow(dist[i], 2);
 	}
-	return sqrt(val / len);
+	return sqrt(val);
 }
 
 float HistDB::distance(unsigned int e1, unsigned int e2)
 {
 	int col;
 	float spect[NBANDS];
-	float ceps[NBANDS/2];
-	float spect_dist, ceps_dist;
 	if(e1 >= list.size() || e1 >= list.size())
 	      return 0;
 
 	for(col = 0; col < NBANDS; col++) {
-		spect[col] = hdistance(list[e1].spect_hist[col],
+		spect[col] = bdistance(list[e1].spect_hist[col],
 				      list[e2].spect_hist[col],
 				      SPECT_HIST_LEN);
 	}
-	for(col = 0; col < NBANDS/2; col++) {
-		ceps[col] = hdistance(list[e1].ceps_hist[col],
-				      list[e2].ceps_hist[col],
-				      CEPS_HIST_LEN);
-	}
-	spect_dist = edistance(spect, NBANDS);
-	ceps_dist  = edistance(ceps,  NBANDS/2);
-	return sqrt(spect_dist * spect_dist + ceps_dist * ceps_dist);
+	return edistance(spect, NBANDS);
 }
 QString HistDB::ind_name(unsigned int ind)
 {
