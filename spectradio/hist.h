@@ -57,7 +57,6 @@ class Hist
 	QString album;
 	unsigned int track;
 	float spect_hist[NBANDS][SPECT_HIST_LEN];
-	float ceps_hist[NBANDS][CEPS_HIST_LEN];
 	int played;
 	Phonon::MediaSource media_source;
 
