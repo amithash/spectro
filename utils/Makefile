@@ -14,7 +14,7 @@ CFLAGS += -DMEMORY_SIZE=$(MEMORY_KB)
 
 SPECT_OBJS = spect.o file_vecio.o
 SPECT2CSV_OBJS = spect2csv.o
-HIST_OBJS = hist.o ceps.o
+HIST_OBJS = hist.o
 SPECT2HIST_OBJS = spect2hist.o
 GENSPECTDB_OBJS = genspectdb.o
 HIST2PGM_OBJS = hist2pgm.o

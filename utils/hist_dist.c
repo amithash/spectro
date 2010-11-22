@@ -15,11 +15,6 @@ static float bcoefficient(float *a, float *b, unsigned int len)
 	return dist;
 }
 
-/* Compute the hellinger distance of two pdfs a and b */
-static float hdistance(float *a, float *b, unsigned int len) 
-{
-	return sqrt(1 - bcoefficient(a,b,len));
-}
 /* Compute the bhattacharya distance of two pdfs a and b */
 static float bdistance(float *a, float *b, unsigned int len) 
 {

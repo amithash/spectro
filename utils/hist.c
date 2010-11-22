@@ -3,7 +3,6 @@
 #include <pthread.h>
 #include <tag_c.h>
 #include <stdint.h>
-#include "ceps.h"
 #include "file_vecio.h"
 
 #define BIN_WIDTH     ((SPECT_MAX_VAL - SPECT_MIN_VAL) / SPECT_HIST_LEN)
@@ -87,10 +86,6 @@ int spect2hist(hist_t *hist, spect_t *spect)
 		last_samples_per_second = spect->len / hist->length;
 	}
 
-	if(spect2chist(hist->ceps_hist, spect)) {
-		return -1;
-	}
-
 	return 0;
 }
 
@@ -120,11 +115,6 @@ static int write_hist(int fd, hist_t *hist)
 			return -1;
 		}
 	}
-	for(i = 0; i < NBANDS/2; i++) {
-		if(write_float_vec(fd, hist->ceps_hist[i], CEPS_HIST_LEN)) {
-			return -1;
-		}
-	}
 	return 0;
 }
 
@@ -151,11 +141,6 @@ static int read_hist(int fd, hist_t *hist)
 	}
 	for(i = 0; i < NBANDS; i++) {
 		if(read_float_vec(fd, hist->spect_hist[i], SPECT_HIST_LEN)) {
-			return -1;
-		}
-	}
-	for(i = 0; i < NBANDS/2; i++) {
-		if(read_float_vec(fd, hist->ceps_hist[i], CEPS_HIST_LEN)) {
 			return -1;
 		}
 	}
