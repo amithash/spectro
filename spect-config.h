@@ -1,26 +1,15 @@
 #ifndef __HIST_CONFIG_H
 #define __HIST_CONFIG_H
 
-#ifndef NBANDS
 #define NBANDS 24
-#endif
-#if 0
-#ifndef BIN_IND
-#define BIN_IND  
-#endif
-#endif
-
-#ifndef PBIN_IND
-#define PBIN_IND 6
-#endif
 
 #define SPECT_MIN_VAL (0.0)
 #define SPECT_MAX_VAL (1.0)
-#define SPECT_HIST_LEN      25
+#define SPECT_HIST_LEN      64
 
 #define CEPS_MIN_VAL 0
 #define CEPS_MAX_VAL 0.5
-#define CEPS_HIST_LEN 50
+#define CEPS_HIST_LEN 64
 
 #define FNAME_LEN 256
 #define TITLE_LEN  64

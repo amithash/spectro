@@ -28,9 +28,7 @@ int main(int argc, char *argv[])
 	unsigned int len;
 	int i,j;
 	hist_t *hist_list;
-	spect_t ref_spect;
-	hist_t ref_hist;
-	int rc;
+	hist_t *ref_hist = NULL;
 	int maxes_len = NMAX_DEFAULT;
 
 	if(argc < 3) {
@@ -41,23 +39,26 @@ int main(int argc, char *argv[])
 		maxes_len = atoi(argv[3]) + 1;
 	}
 
-	if((rc = read_spectf(argv[2], &ref_spect)) != RM_SUCCESS) {
-		spect_error("Could not read %s.\terror=%s", ref_spect.fname, RM_RC_STR(rc));
-		exit(-1);
-	}
-	spect2hist(&ref_hist, &ref_spect);
-
-	free_spect(&ref_spect);
-
 	if(read_hist_db(&hist_list, &len, argv[1])) {
 		spect_error("Could not read hist db: %s", argv[1]);
+		exit(-1);
+	}
+	for(i = 0; i < len; i++) {
+		if(strcmp(hist_list[i].fname, argv[2]) == 0) {
+			printf("Found at index %d\n", i);
+			ref_hist = &hist_list[i];
+			break;
+		}
+	}
+	if(!ref_hist) {
+		spect_error("Cound not find %s in db",argv[2]);
 		exit(-1);
 	}
 
 	init_nmax(maxes_len);
 
 	for(i = 0; i < len; i++) {
-		double idist = hist_distance(&ref_hist, &hist_list[i]);
+		double idist = hist_distance(ref_hist, &hist_list[i]);
 		for(j = 0; j < maxes_len; j++) {
 			if(idist < maxes[j].dist) {
 				maxes[j].dist = idist;
@@ -77,6 +78,7 @@ int main(int argc, char *argv[])
 		printf("%f\t%-40s%-30s%-30s\n", maxes[i].dist, maxes[i].hist->title, maxes[i].hist->artist, maxes[i].hist->album);
 	}
 	free(hist_list);
+	free(maxes);
 
 	return 0;
 }

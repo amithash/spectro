@@ -15,12 +15,10 @@
 #define spect_error(fmt, par...) fprintf(stderr, "ERROR: " fmt "\n", ##par)
 #define spect_warn(fmt, par...) fprintf(stderr, "ERROR: " fmt "\n", ##par)
 
-typedef float spect_e_type;
-
 typedef struct {
 	unsigned int len;
 	char         fname[FNAME_LEN];
-	spect_e_type *spect[NBANDS];
+	float        *spect[NBANDS];
 } spect_t;
 
 #define RM_SUCCESS             0
@@ -73,6 +71,14 @@ int write_spect(int fd, spect_t *spect);
 int combine_spect_list(char *ifname, 
 		    char *ofname,
 		   int nthreads);
+
+/* Read or write the length from or to a spect db file */
+int read_spect_db_len(int fd, unsigned int *len);
+int write_spect_db_len(int fd, unsigned int len);
+
+/* Get real start and end of spectrogram (the meat when there is content
+ * other than 0's in the spectrogram */
+void spect_get_edges(int *_start, int *_end, spect_t *spect);
 
 /* Free members which are allocated */
 void free_spect(spect_t *spect);

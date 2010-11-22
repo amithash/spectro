@@ -4,6 +4,7 @@
 #include <tag_c.h>
 #include <stdint.h>
 #include "ceps.h"
+#include "file_vecio.h"
 
 #define BIN_WIDTH     ((SPECT_MAX_VAL - SPECT_MIN_VAL) / SPECT_HIST_LEN)
 
@@ -49,89 +50,7 @@ static int set_tags(hist_t *hist)
 
 }
 
-#define MAX(a,b) ((a) > (b) ? (a) : (b))
-#define MIN(a,b) ((a) < (b) ? (a) : (b))
-
-static void normalize (float *vals, int numvals)
-{
-	float mini, maxi, tu = 0.f, tb = 0.f;
-	float avgu = 0.f, avgb = 0.f, delta, avg = 0.f;
-	float avguu = 0.f, avgbb = 0.f;
-	int i;
-	int t = 0;
-
-	if (!numvals) 
-		return;
-
-	mini = maxi = vals[0];
-
-	for (i = 1; i < numvals; i++) {
-		if (vals[i] > maxi) 
-			maxi = vals[i];
-		else if (vals[i] < mini) 
-			mini = vals[i];
-	}
-
-	for (i = 0; i < numvals; i++) {
-		if(vals[i] != mini && vals[i] != maxi) {
-			avg += vals[i] / ((float) numvals); 
-			t++; 
-		}
-	}
-
-	for (i = 0; i < numvals; i++) {
-		if (vals[i] == mini || vals[i] == maxi)
-		      continue;
-		if (vals[i] > avg) { 
-			avgu += vals[i]; 
-			tu++; 
-		} else { 
-			avgb += vals[i]; 
-			tb++; 
-		}
-	}
-
-	avgu /= (float) tu;
-	avgb /= (float) tb;
-
-	tu = 0.f; 
-	tb = 0.f;
-	for (i = 0; i < numvals; i++) {
-		if (vals[i] == mini || vals[i] == maxi)
-		      continue;
-		if (vals[i] > avgu) { 
-			avguu += vals[i]; 
-			tu++; 
-		} else if (vals[i] < avgb) { 
-			avgbb += vals[i]; 
-			tb++; 
-		}
-	}
-
-	avguu /= (float) tu;
-	avgbb /= (float) tb;
-
-	mini = MAX (avg + (avgb - avg) * 2.f, avgbb);
-	maxi = MIN (avg + (avgu - avg) * 2.f, avguu);
-	delta = maxi - mini;
-
-	if (delta == 0.f)
-		delta = 1.f;
-
-	for (i = 0; i < numvals; i++)
-		vals[i] = finite (vals[i]) ? 
-		    	MIN(1.f, MAX(0.f, (vals[i] - mini) / delta))
-                        : 0.f;
-}
-
-static void normalize_spect(spect_t *spect) {
-	int i;
-	for(i = 0; i < NBANDS; i++) {
-		normalize(spect->spect[i], spect->len);
-	}
-}
-
-static void vec2hist(float *hist, spect_e_type *vec, unsigned int rlen)
+static void vec2hist(float *hist, float *vec, unsigned int rlen)
 {
 	int i;
 	int len = 0;
@@ -145,49 +64,18 @@ static void vec2hist(float *hist, spect_e_type *vec, unsigned int rlen)
 	}
 }
 
-#if 0
-static int is_zero(spect_t *spect, int row)
-{
-	int i;
-	for(i = 0; i < NBANDS; i++) {
-		if(spect->spect[i][row] != 0) {
-			return 0;
-		}
-	}
-	return 1;
-}
-
-void get_avoids(unsigned char *avoid, spect_t *spect)
-{
-	int i,j;
-
-	for(i = 0; i < spect->len; i++) {
-		if(is_zero(spect, i)) {
-			avoid[i] = 1;
-		} else {
-			avoid[i] = 0;
-		}
-	}
-}
-#endif
-
 int spect2hist(hist_t *hist, spect_t *spect)
 	
 {
 	int i;
-#if 0
-	unsigned char *avoid;
-	avoid = (unsigned char *)malloc(sizeof(unsigned char) * spect->len);
-	if(!avoid)
-	      return -1;
-	/* Avoid all samples with silence */
-	get_avoids(avoid, spect);
-#endif
+	int start, end;
 
 	strcpy(hist->fname, spect->fname);
 
+	spect_get_edges(&start, &end, spect);
+
 	for(i = 0; i < NBANDS; i++) {
-		vec2hist(hist->spect_hist[i], spect->spect[i], spect->len);
+		vec2hist(hist->spect_hist[i], &spect->spect[i][start], end - start);
 	}
 	
 	set_tags(hist);
@@ -203,49 +91,6 @@ int spect2hist(hist_t *hist, spect_t *spect)
 		return -1;
 	}
 
-	return 0;
-}
-
-static int read_uint(int fd, unsigned int *val) {
-	if(read(fd, val, sizeof(unsigned int)) != sizeof(unsigned int)) {
-		return -1;
-	}
-	return 0;
-}
-
-static int write_uint(int fd, unsigned int val) {
-	if(write(fd, &val, sizeof(unsigned int)) != sizeof(unsigned int)) {
-		return -1;
-	}
-	return 0;
-}
-static int read_char_vec(int fd, char *vec, unsigned int len) 
-{
-	if(read(fd, vec, sizeof(char) * len) != (len * sizeof(char))) {
-		return -1;
-	}
-	return 0;
-}
-static int write_char_vec(int fd, char *vec, unsigned int len) 
-{
-	if(write(fd, vec, sizeof(char) * len) != (len * sizeof(char))) {
-		return -1;
-	}
-	return 0;
-}
-
-static int read_float_vec(int fd, float *vec, unsigned int len) 
-{
-	if(read(fd, vec, sizeof(float) * len) != (len * sizeof(float))) {
-		return -1;
-	}
-	return 0;
-}
-static int write_float_vec(int fd, float *vec, unsigned int len) 
-{
-	if(write(fd, vec, sizeof(float) * len) != (len * sizeof(float))) {
-		return -1;
-	}
 	return 0;
 }
 
@@ -437,7 +282,7 @@ void plot_hist(hist_t *hist)
 	f = fopen("__out.gp", "w");
 	fprintf(f, "plot \\\n");
 	for(i = 0; i < NBANDS; i++) {
-		fprintf(f, "\"__out.txt\" using %d with lines", i + 1);
+		fprintf(f, "\"__out.txt\" using %d with lines title 'Band %d'", i + 1, i);
 		if(i < (NBANDS - 1)) {
 		      fprintf(f, ", \\");
 		}

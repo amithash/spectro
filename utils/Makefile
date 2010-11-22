@@ -8,8 +8,11 @@ FFTW_LIB = -lfftw3f
 
 CFLAGS += $(TAGLIB_CFLAGS)
 
+MEMORY_KB := `cat /proc/meminfo | grep "MemTotal:" | perl -e '$$x = <stdin>; if($$x =~ /(\d+)/){$$x=$$1;} print "$$x";'`
+CFLAGS += -DMEMORY_SIZE=$(MEMORY_KB)
 
-SPECT_OBJS = spect.o
+
+SPECT_OBJS = spect.o file_vecio.o
 SPECT2CSV_OBJS = spect2csv.o
 HIST_OBJS = hist.o ceps.o
 SPECT2HIST_OBJS = spect2hist.o
@@ -19,10 +22,11 @@ HIST_DIST_OBJS = hist_dist.o
 GETSIMILAR_OBJS = getsimilar.o
 SPECT2BSPECT_OBJS = spect2bspect.o
 BSPECT_OBJS = bspect.o
-TEST_OBJS  = test.o
 BPM_OBJS = bpm.o
 PLOTBPM_OBJS = plotbpm.o
 PLOTHIST_OBJS = plothist.o
+SPECT_BOUNDS_OBJS = spect_bounds.o
+NORM_SPECT_OBJS = norm_spect.o
 
 SPECT2CSV_EXE = spect2csv
 GENSPECTDB_EXE = genspectdb
@@ -31,17 +35,24 @@ HIST2PGM_EXE = hist2pgm
 GETSIMILAR_EXE = getsimilar
 PLOTBPM_EXE    = plotbpm
 PLOTHIST_EXE = plothist
+NORM_SPECT_EXE = normspectdb
 
 INSTALL_DIR = /usr/local/bin
 
 
-all: spect2csv genspectdb spect2hist hist2pgm getsimilar plotbpm plothist
+all: spect2csv genspectdb spect2hist hist2pgm getsimilar plotbpm plothist normspectdb
+
+test: $(TEST_OBJS)
+	$(CC) -o $(TEST_EXE) $(LIBS) $(TEST_OBJS)
 
 spect2csv: $(SPECT_OBJS) $(SPECT2CSV_OBJS)
 	$(CC)  -o $(SPECT2CSV_EXE)  $(LIBS) $(SPECT_OBJS) $(SPECT2CSV_OBJS)
 
 genspectdb: $(SPECT_OBJS) $(GENSPECTDB_OBJS)
 	$(CC)  -o $(GENSPECTDB_EXE)  $(LIBS) $(SPECT_OBJS) $(GENSPECTDB_OBJS)
+
+normspectdb: $(SPECT_OBJS) $(SPECT_BOUNDS_OBJS) $(NORM_SPECT_OBJS)
+	$(CC)  -o $(NORM_SPECT_EXE)  $(LIBS) $(SPECT_OBJS) $(SPECT_BOUNDS_OBJS) $(NORM_SPECT_OBJS)
 
 spect2hist: $(SPECT_OBJS) $(HIST_OBJS) $(SPECT2HIST_OBJS) $(BPM_OBJS)
 	$(CC)  -o $(SPECT2HIST_EXE)  $(LIBS) $(TAGLIB_LIB) $(SPECT_OBJS) $(HIST_OBJS) $(SPECT2HIST_OBJS) $(BPM_OBJS)
@@ -58,12 +69,13 @@ plotbpm: $(SPECT_OBJS) $(BPM_OBJS) $(PLOTBPM_OBJS)
 plothist: $(SPECT_OBJS) $(HIST_OBJS) $(PLOTHIST_OBJS) $(BPM_OBJS)
 	$(CC) -o $(PLOTHIST_EXE) $(LIBS) $(TAGLIB_LIB) $(SPECT_OBJS) $(HIST_OBJS) $(PLOTHIST_OBJS) $(BPM_OBJS)
 
+
 clean:
 	rm -f $(SPECT2CSV_EXE) $(GENSPECTDB_EXE) $(SPECT2HIST_EXE) $(HIST2PGM_EXE)
-	rm -f $(GETSIMILAR_EXE) $(PLOTBPM_EXE) $(PLOTHIST_EXE)
+	rm -f $(GETSIMILAR_EXE) $(PLOTBPM_EXE) $(PLOTHIST_EXE) $(NORM_SPECT_EXE)
 	rm -f $(SPECT2CSV_OBJS) $(SPECT_OBJS) $(GENSPECTDB_OBJS) $(SPECT2HIST_OBJS) $(BPM_OBJS)
 	rm -f $(HIST_OBJS) $(HIST2PGM_OBJS) $(HIST_DIST_OBJS) $(GETSIMILAR_OBJS) $(PLOTBPM_OBJS)
-	rm -f $(PLOTHIST_OBJS)
+	rm -f $(PLOTHIST_OBJS) $(SPECT_BOUNDS_OBJS) $(NORM_SPECT_OBJS)
 
 install:
 	cp --target-directory $(INSTALL_DIR) $(SPECT2CSV_EXE) $(GENSPECTDB_EXE) $(SPECT2HIST_EXE) $(HIST2PGM_EXE) $(GETSIMILAR_EXE)

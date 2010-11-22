@@ -5,22 +5,15 @@
 
 #define SEP " "
 
-#if 0
-typedef unsigned char spect_e_type;
-#define PRINT_FORMAT "%d"
-#define TRANSFORM(val) (((unsigned int)(val))&0xff)
-#endif
-
-typedef float spect_e_type;
 #define PRINT_FORMAT "%f"
 #define TRANSFORM(val) val
 
 int main(void)
 {
 	int n = 0;
-	spect_e_type c;
+	float c;
 	int ind = 0;
-	while((n = read(fileno(stdin), &c, sizeof(spect_e_type))) > 0) {
+	while((n = read(fileno(stdin), &c, sizeof(float))) > 0) {
 		printf(PRINT_FORMAT, TRANSFORM(c));
 
 		if(++ind == NBANDS) {

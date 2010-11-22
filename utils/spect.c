@@ -1,6 +1,7 @@
 #include "spect.h"
 #include <pthread.h>
 #include<sys/stat.h>
+#include "file_vecio.h"
 
 
 const char *RM_RC[] = {
@@ -18,10 +19,10 @@ const char *RM_RC[] = {
 
 /* Types */
 typedef struct {
-	int tid;
-	char **start;
-	int    len;
-	int fd;
+	int       tid;
+	char      **start;
+	int       len;
+	int       fd;
 	pthread_t thread;
 } mthread_t;
 
@@ -117,8 +118,8 @@ static int remove_nline(char *name, int maxlen) {
 	return 0;
 }
 
-#define SET_MALLOC(size)  (spect_e_type *)malloc(size * sizeof(spect_e_type))
-#define SET_REALLOC(ptr, size) (spect_e_type *)realloc(ptr, size * sizeof(spect_e_type))
+#define SET_MALLOC(size)  (float *)malloc(size * sizeof(float))
+#define SET_REALLOC(ptr, size) (float *)realloc(ptr, size * sizeof(float))
 #define SPECT_WINDOW 1024
 
 /* Allocates spect's members with len elements */
@@ -155,52 +156,6 @@ static int final_resize_spect(spect_t *spect)
 	return 0;
 }
 
-static int write_uint(int fd, unsigned int val) {
-	if(write(fd, &val, sizeof(unsigned int)) != sizeof(unsigned int)) {
-		return -1;
-	}
-	return 0;
-}
-
-static int write_spect_e_type_vec(int fd, spect_e_type *vec, unsigned int len) 
-{
-	if(write(fd, vec, sizeof(spect_e_type) * len) != (len * sizeof(spect_e_type))) {
-		return -1;
-	}
-	return 0;
-}
-
-static int write_char_vec(int fd, char *vec, unsigned int len) 
-{
-	if(write(fd, vec, sizeof(char) * len) != (len * sizeof(char))) {
-		return -1;
-	}
-	return 0;
-}
-
-static int read_uint(int fd, unsigned int *val) {
-	if(read(fd, val, sizeof(unsigned int)) != sizeof(unsigned int)) {
-		return -1;
-	}
-	return 0;
-}
-
-static int read_spect_e_type_vec(int fd, spect_e_type *vec, unsigned int len) 
-{
-	if(read(fd, vec, sizeof(spect_e_type) * len) != (len * sizeof(spect_e_type))) {
-		return -1;
-	}
-	return 0;
-}
-
-static int read_char_vec(int fd, char *vec, unsigned int len) 
-{
-	if(read(fd, vec, sizeof(char) * len) != (len * sizeof(char))) {
-		return -1;
-	}
-	return 0;
-}
-
 void free_spect(spect_t *spect)
 {
 	int i;
@@ -213,7 +168,7 @@ void free_spect(spect_t *spect)
 int read_spectf(char *name, spect_t *spect)
 {
 	int i = 0, j = 0, n = 0;
-	spect_e_type c;
+	float c;
 	FILE *fp;
 	int rc = RM_SUCCESS;
 	unsigned int max_len;
@@ -235,9 +190,9 @@ int read_spectf(char *name, spect_t *spect)
 	max_len = SPECT_WINDOW;
 
 	/* read a char at a time, data is in row order */
-	while((n = read(fileno(fp), &c, sizeof(spect_e_type))) > 0) {
+	while((n = read(fileno(fp), &c, sizeof(float))) > 0) {
 
-		if(n != sizeof(spect_e_type)) {
+		if(n != sizeof(float)) {
 			rc = RM_READ_FAILED_E;
 			goto bail_out;
 		}
@@ -461,7 +416,7 @@ int write_spect(int fd, spect_t *spect) {
 		return -1;
 	}
 	for(i = 0; i < NBANDS; i++) {
-		if(write_spect_e_type_vec(fd, spect->spect[i], spect->len)) {
+		if(write_float_vec(fd, spect->spect[i], spect->len)) {
 			return -1;
 		}
 	}
@@ -485,10 +440,62 @@ int read_spect(int fd, spect_t *spect)
 	}
 
 	for(i = 0; i < NBANDS; i++) {
-		if(read_spect_e_type_vec(fd, spect->spect[i], spect->len)) {
+		if(read_float_vec(fd, spect->spect[i], spect->len)) {
 			return -1;
 		}
 	}
 	return 0;
+}
+
+int read_spect_db_len(int fd, unsigned int *len)
+{
+	if(read_uint(fd, len))
+	      return -1;
+	
+	return 0;
+}
+
+int write_spect_db_len(int fd, unsigned int len)
+{
+	if(write_uint(fd, len))
+	      return -1;
+	return 0;
+}
+#define PREC 0.000001
+void spect_get_edges(int *_start, int *_end, spect_t *spect)
+{
+	int i,j;
+	/* Make sure there are no negative values */
+	for(i = 0; i < NBANDS; i++) {
+		for(j = 0; j < spect->len; j++) {
+			if(spect->spect[i][j] < PREC)
+				spect->spect[i][j] = 0;
+		}
+	}
+	/* Search for song start */
+	for(i = 0; i < spect->len; i++) {
+		int start_reached = 0;
+		for(j = 0; j < NBANDS; j++) {
+			if(spect->spect[j][i] > PREC) {
+				start_reached = 1;
+				break;
+			}
+		}
+		if(start_reached)
+			break;
+	}
+	*_start = i;
+	for(i = spect->len - 1; i > *_start; i--) {
+		int end_reached = 0;
+		for(j = 0; j < NBANDS; j++) {
+			if(spect->spect[j][i] > PREC) {
+				end_reached = 1;
+				break;
+			}
+		}
+		if(end_reached)
+			break;
+	}
+	*_end = i;
 }
 
