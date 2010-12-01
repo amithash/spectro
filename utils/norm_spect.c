@@ -72,6 +72,7 @@ int main(int argc, char *argv[])
 
 	for(i = 0; i < len; i++) {
 		off_t pos = current_pos(fd);
+		progress(100.0 * (float)i / (float)len);
 		if(read_spect(fd, &spect)) {
 			spect_error("Read record %d failed",i);
 			exit(-1);
@@ -85,6 +86,7 @@ int main(int argc, char *argv[])
 		fflush(fp);
 		free_spect(&spect);
 	}
+	progress(100.0);
 
 	return 0;
 }

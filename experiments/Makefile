@@ -11,7 +11,7 @@ CFLAGS += $(TAGLIB_CFLAGS)
 KMEANS_OBJS = kmeans.o
 HIST_OPS_OBJS = hist_ops.o
 CLUSTER_OBJS = hist_cluster.o
-EXT_OBJS = ../utils/hist.o ../utils/hist_dist.o ../utils/spect.o ../utils/ceps.o
+EXT_OBJS = ../utils/hist.o ../utils/hist_dist.o ../utils/spect.o
 TEST_KMEANS_OBJS = test_kmeans.o
 
 CLUSTER_EXE = cluster
@@ -19,7 +19,7 @@ TEST_KMEANS_EXE = test_kmeans
 
 INSTALL_DIR = /usr/local/bin
 
-all: test
+default: test
 
 cluster: $(KMEANS_OBJS) $(HIST_OPS_OBJS) $(CLUSTER_OBJS) $(EXT_OBJS)
 	$(CC)  -o $(CLUSTER_EXE)  $(LIBS) $(TAGLIB_LIB) $(KMEANS_OBJS) $(HIST_OPS_OBJS) $(CLUSTER_OBJS) $(EXT_OBJS)

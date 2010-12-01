@@ -2,41 +2,25 @@
 #include <pthread.h>
 #include <float.h>
 
-
-typedef struct {
-	hist_t *hist;
-	double dist;
-} max_type;
-
 #define NMAX_DEFAULT 10
 #define INIT_DIST DBL_MAX
 
-max_type *maxes;
-
-void init_nmax(int len)
-{
-	int i;
-	maxes = (max_type *)calloc(len, sizeof(max_type));
-	for(i = 0; i < len; i++) {
-		maxes[i].hist = NULL;
-		maxes[i].dist = INIT_DIST;
-	}
-}
 
 int main(int argc, char *argv[])
 {
 	unsigned int len;
-	int i,j;
+	int i;
 	hist_t *hist_list;
-	hist_t *ref_hist = NULL;
+	int ref_ind = -1;
 	int maxes_len = NMAX_DEFAULT;
+	similar_t *similar = NULL;
 
 	if(argc < 3) {
 		spect_error("USAGE: HIST_DB ref_spect_file.spect");
 		exit(-1);
 	}
 	if(argc == 4) {
-		maxes_len = atoi(argv[3]) + 1;
+		maxes_len = atoi(argv[3]);
 	}
 
 	if(read_hist_db(&hist_list, &len, argv[1])) {
@@ -46,39 +30,35 @@ int main(int argc, char *argv[])
 	for(i = 0; i < len; i++) {
 		if(strcmp(hist_list[i].fname, argv[2]) == 0) {
 			printf("Found at index %d\n", i);
-			ref_hist = &hist_list[i];
+			ref_ind = i;
 			break;
 		}
 	}
-	if(!ref_hist) {
+	if(ref_ind == -1) {
 		spect_error("Cound not find %s in db",argv[2]);
 		exit(-1);
 	}
 
-	init_nmax(maxes_len);
-
-	for(i = 0; i < len; i++) {
-		double idist = hist_distance(ref_hist, &hist_list[i]);
-		for(j = 0; j < maxes_len; j++) {
-			if(idist < maxes[j].dist) {
-				maxes[j].dist = idist;
-				maxes[j].hist = &hist_list[i];
-				break;
-			}
-		}
+	if(get_most_similar(hist_list, len, ref_ind, maxes_len, &similar)) {
+		spect_error("Malloc failed!\n");
+		exit(-1);
 	}
+
 	printf("Distance\t%-40s%-30s%-30s\n","Title", "Artist", "Album");
 	printf("---------------------------------------------------------------------------------------------------------------------------------\n");
-	for(i = 1; i < maxes_len; i++) {
-		if(!maxes[i].hist) {
+	for(i = 0; i < maxes_len; i++) {
+		if(similar[i].ind == -1) {
 			printf("WAAAAAAAA\n");
 		      continue;
 		}
 
-		printf("%f\t%-40s%-30s%-30s\n", maxes[i].dist, maxes[i].hist->title, maxes[i].hist->artist, maxes[i].hist->album);
+		printf("%f\t%-40s%-30s%-30s\n", similar[i].dist, 
+					hist_list[similar[i].ind].title, 
+					hist_list[similar[i].ind].artist, 
+					hist_list[similar[i].ind].album);
 	}
 	free(hist_list);
-	free(maxes);
+	free(similar);
 
 	return 0;
 }

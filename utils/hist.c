@@ -1,6 +1,9 @@
 #include "hist.h"
 #include "bpm.h"
 #include <pthread.h>
+
+#define NDEBUG
+
 #include <tag_c.h>
 #include <stdint.h>
 #include "file_vecio.h"
@@ -11,6 +14,8 @@
 #define CEIL_MAX(val)  ((val) >= SPECT_MAX_VAL ? (SPECT_MAX_VAL - BIN_WIDTH) : (val))
 
 #define NUM2BIN(val)    (unsigned int)(FLOOR_MIN(CEIL_MAX(val)) / BIN_WIDTH)
+
+#define PREC 0.00001
 
 unsigned int last_samples_per_second = 0;
 /* Assumption: hist->fname is valid */
@@ -62,19 +67,34 @@ static void vec2hist(float *hist, float *vec, unsigned int rlen)
 		hist[i] = hist[i] / len;
 	}
 }
+static void remove_zero(float *v, unsigned int len)
+{
+	int i;
+	for(i = 0; i < len; i++) {
+		v[i] = (v[i] + PREC) / (1 + ((float)len * PREC));
+	}
+}
+
 
 int spect2hist(hist_t *hist, spect_t *spect)
 	
 {
 	int i;
 	int start, end;
+	int len;
 
 	strcpy(hist->fname, spect->fname);
 
 	spect_get_edges(&start, &end, spect);
 
+	len = end - start;
+	if(len <= 0) {
+		start = 0;
+		len = end = spect->len;
+	}
 	for(i = 0; i < NBANDS; i++) {
-		vec2hist(hist->spect_hist[i], &spect->spect[i][start], end - start);
+		vec2hist(hist->spect_hist[i], &spect->spect[i][start], len);
+		remove_zero(hist->spect_hist[i], SPECT_HIST_LEN);
 	}
 	
 	set_tags(hist);
@@ -231,12 +251,14 @@ int spectdb2histdb(char * mdb, char *hdb)
 	for(i = 0; i < len; i++) {
 		spect_t md;
 		hist_t ht;
+		progress(100.0 * (float)i / (float)len);
 		if(read_spect(fileno(ifp), &md)) {
 			goto err;
 		}
 
 		if(spect2hist(&ht, &md)) {
 			spect_error("Conversition failed!");
+			fflush(stdout);
 			exit(-1);
 		}
 		if(write_hist(fileno(ofp), &ht)) {
@@ -245,6 +267,7 @@ int spectdb2histdb(char * mdb, char *hdb)
 		}
 		free_spect(&md);
 	}
+	progress(100.0);
 	errno = 0;
 err:
 	fclose(ifp);

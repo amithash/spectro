@@ -46,4 +46,27 @@
 #define END(fmt)
 #endif
 
+#define progress(perc)						\
+do {								\
+	int ____i;						\
+	int ____perc = ((int)perc)/2;				\
+	printf("[");						\
+	for(____i = 0; ____i < ____perc; ____i++) {		\
+		printf("#");					\
+	}							\
+	for(____i = ____perc; ____i < 50; ____i++) {		\
+		printf("-");					\
+	}							\
+	printf("] %.2f%% Done",perc);				\
+	if(____perc == 50) {					\
+		printf("\n");					\
+	} else {						\
+		printf("\r");					\
+	}							\
+	fflush(stdout);						\
+} while(0)
+
+
+
+
 #endif

@@ -145,50 +145,33 @@ unsigned int HistDB::length()
 	return list.size();
 }
 
-/* Compute the hellinger distance of two pdfs a and b */
-float HistDB::bdistance(float *a, float *b, unsigned int len) 
+float HistDB::skldistance(float *a, float *b, unsigned int len)
 {
-	float dist = 0.0;
-	unsigned int i;
+	float dist = 0;
+	float log_2 = log(2);
+	int i;
 	if(a == NULL || b == NULL) {
 		return 0;
 	}
-
 	for(i = 0; i < len; i++) {
-		dist += sqrt(a[i] * b[i]);
+		dist += (a[i] - b[i]) * log(a[i] / b[i]) / log_2;
 	}
-	dist = -1 * log(dist);
-	return finite(dist) ? dist : FLT_MAX;
-}
-
-/* Compute the euclidian distance */
-float HistDB::edistance(float *dist, unsigned int len) 
-{
-	unsigned int i;
-	float val = 0;
-	if(dist == NULL) {
-		return 0;
-	}
-
-	for(i = 0; i < len; i++) {
-		val += pow(dist[i], 2);
-	}
-	return sqrt(val);
+	return dist;
 }
 
 float HistDB::distance(unsigned int e1, unsigned int e2)
 {
 	int col;
-	float spect[NBANDS];
+	float dist = 0;
 	if(e1 >= list.size() || e1 >= list.size())
 	      return 0;
 
 	for(col = 0; col < NBANDS; col++) {
-		spect[col] = bdistance(list[e1].spect_hist[col],
+		dist += skldistance(list[e1].spect_hist[col],
 				      list[e2].spect_hist[col],
 				      SPECT_HIST_LEN);
 	}
-	return edistance(spect, NBANDS);
+	return dist;
 }
 QString HistDB::ind_name(unsigned int ind)
 {

@@ -9,13 +9,13 @@ int main(int argc, char *argv[]) {
 	hist_t *hist_list = NULL;
 	int rc;
 	FILE *pgf;
-	char outf_name[256] = "./tmp.pgm";
+	char outf_name[256] = "./tmp.ppm";
 	char buf[100];
 	int i,j;
 	unsigned int len;
 
 	if(argc < 3) {
-		printf("USAGE: %s <spectdb> FILE.spect4 (Optional output pgm file default: tmp.pgm)\n", argv[0]);
+		printf("USAGE: %s <spectdb> FILE.spect4 (Optional output ppm file default: tmp.ppm)\n", argv[0]);
 		exit(-1);
 	}
 	if((rc = read_hist_db(&hist_list, &len, argv[1])) != 0) {
@@ -43,13 +43,18 @@ int main(int argc, char *argv[]) {
 		printf("Creating %s failed!\n", outf_name);
 		exit(-1);
 	}
-	sprintf(buf, "P5\n%d %d\n255\n", SPECT_HIST_LEN, NBANDS);
+	sprintf(buf, "P6\n%d %d\n255\n", SPECT_HIST_LEN, NBANDS);
 	write(fileno(pgf), buf, strlen(buf) * sizeof(char));
 	for(i = 0; i < NBANDS; i++) {
 		for(j = 0; j < SPECT_HIST_LEN; j++) {
-			unsigned int ui_val = (unsigned int)(hist->spect_hist[i][j] * 255);
-			unsigned char val = (unsigned char)(ui_val & 0xff);
-			if(write(fileno(pgf), &val, sizeof(unsigned char)) != sizeof(unsigned char)) {
+			unsigned int ui_val = (unsigned int)(hist->spect_hist[i][j] * 0x1000000);
+			unsigned char val[3];
+
+			val[0] = (unsigned char)((ui_val >> 0) & 0xff);
+			val[1] = (unsigned char)((ui_val >> 8) & 0xff);
+			val[2] = (unsigned char)((ui_val >> 16) & 0xff);
+
+			if(write(fileno(pgf), &val, 3 * sizeof(unsigned char)) != 3 * sizeof(unsigned char)) {
 				printf("Write error!\n");
 			}
 		}

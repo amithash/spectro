@@ -239,6 +239,20 @@ bail_out:
 	return rc;
 }
 
+int total_req = 0;
+int total_done = 0;
+
+static void *progress_routine(void *unused)
+{
+	while(total_done < total_req) {
+		progress(100 * (float)total_done / (float)total_req);
+		sleep(1);
+	}
+	progress(100.0);
+
+	pthread_exit(NULL);
+}
+
 static void *thread_routine(void *data) 
 {
 	int rc;
@@ -262,8 +276,19 @@ static void *thread_routine(void *data)
 
 	for(i = 0; i < len; i++) {
 		spect_t spect;
+
+		pthread_mutex_lock(&read_spect_mutex);
+		total_done++;
+		pthread_mutex_unlock(&read_spect_mutex);
+
 		if((rc = read_spectf(spect_list[i], &spect)) != RM_SUCCESS) {
 			spect_warn("Reading %s resulted in an invalid spect file. err=%s",spect_list[i], RM_RC_STR(rc));
+			pthread_mutex_unlock(&read_spect_mutex);
+			continue;
+		}
+		if(spect.len < 1) {
+			spect_warn("Reading %s resulted in an empty spect file.", spect_list[i]);
+			pthread_mutex_unlock(&read_spect_mutex);
 			continue;
 		}
 		pthread_mutex_lock(&read_spect_mutex);
@@ -343,6 +368,8 @@ int combine_spect_list(char *ifname,
 	FILE *ofp;
 	mthread_t *mthread;
 	unsigned int len = 0;
+	void *status;
+	pthread_t progress_thread;
 
 	if(!ifname || !ofname) {
 		return RMFL_INVALID_FNAME_PTR_E;
@@ -366,6 +393,7 @@ int combine_spect_list(char *ifname,
 	if(!mthread) {
 		return RMFL_MALLOC_FAILED_E;
 	}
+	total_req = len;
 
 	for(i = 0; i < nthreads; i++) {
 		mthread[i].fd = fileno(ofp);
@@ -378,9 +406,13 @@ int combine_spect_list(char *ifname,
 			return RMFL_THREAD_CREATE_E;
 		}
 	}
+	if(pthread_create(&progress_thread, NULL, progress_routine, NULL)) {
+		return RMFL_THREAD_CREATE_E;
+	}
+
+	pthread_join(progress_thread, &status);
 
 	for(i = 0; i < nthreads; i++) {
-		void *status;
 		pthread_join(mthread[i].thread, &status);
 	}
 	free(mthread);
@@ -465,6 +497,10 @@ int write_spect_db_len(int fd, unsigned int len)
 void spect_get_edges(int *_start, int *_end, spect_t *spect)
 {
 	int i,j;
+	if(spect->len < 1) {
+		*_start = *_end = 0;
+		return;
+	}
 	/* Make sure there are no negative values */
 	for(i = 0; i < NBANDS; i++) {
 		for(j = 0; j < spect->len; j++) {

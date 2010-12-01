@@ -1,51 +1,61 @@
 #include "hist_dist.h"
 #include <float.h>
 
-static float bcoefficient(float *a, float *b, unsigned int len)
+static float sy_kl_distance(float *a, float *b, unsigned int len)
 {
-	float dist = 0.0;
+	float dist = 0;
 	int i;
-	if(a == NULL || b == NULL) {
-		return 0;
-	}
-
+	float log_2 = log(2);
 	for(i = 0; i < len; i++) {
-		dist += sqrt(a[i] * b[i]);
+		dist += (a[i] - b[i]) * log(a[i] / b[i]) / log_2;
 	}
 	return dist;
-}
-
-/* Compute the bhattacharya distance of two pdfs a and b */
-static float bdistance(float *a, float *b, unsigned int len) 
-{
-	return -1 * log(bcoefficient(a,b,len));
-}
-
-/* Compute the scaled euclidian distance from the origin */
-static float edistance(float *dist, unsigned int len) 
-{
-	int i;
-	float val = 0;
-	if(dist == NULL) {
-		return 0;
-	}
-
-	for(i = 0; i < len; i++) {
-		val += pow(dist[i], 2);
-	}
-	return sqrt(val);
 }
 
 float hist_distance(hist_t *hist1, hist_t *hist2)
 {
 	int col;
-	float dist_spect[NBANDS];
+	float dist = 0;
 
 	for(col = 0; col < NBANDS; col++) {
-		dist_spect[col] = bdistance(hist1->spect_hist[col],
+		dist += sy_kl_distance(hist1->spect_hist[col],
 				            hist2->spect_hist[col],
 				            SPECT_HIST_LEN);
 	}
-	return edistance(dist_spect, NBANDS);
+	return dist;
+}
+
+int get_most_similar(hist_t *list, unsigned int len, int this_i, int n, similar_t **_out)
+{
+	similar_t *out = NULL;
+	int i,j;
+	*_out = NULL;
+	if((out = calloc(n, sizeof(similar_t))) == NULL) {
+		return -1;
+	}
+	for(i = 0; i < n; i++) {
+		out[i].ind = -1;
+		out[i].dist = FLT_MAX;
+	}
+
+	for(i = 0; i < len; i++) {
+		if(i == this_i)
+		      continue;
+		if(
+			strcmp(list[i].artist, list[this_i].artist) == 0 &&
+			strcmp(list[i].title, list[this_i].title) == 0)
+		      continue;
+		float idist = hist_distance(&list[this_i], &list[i]);
+		for(j = 0; j < n; j++) {
+			if(idist < out[j].dist) {
+				out[j].dist = idist;
+				out[j].ind  = i;
+				break;
+			}
+		}
+	}
+
+	*_out = out;
+	return 0;
 }
 

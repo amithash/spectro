@@ -4,9 +4,15 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/mman.h>
+#include <pthread.h>
 
 #include "spect.h"
 #include "spect_bounds.h"
+
+#ifndef MEMORY_SIZE
+/* Default to 100MB */
+#define MEMORY_SIZE (1024 * 100)
+#endif
 
 int ofd[NBANDS];
 float *bands[NBANDS];
@@ -117,32 +123,27 @@ static void find_quantile(float *_quantile, float *band, unsigned int len,
 static void _process_band(float *band, unsigned int len, float *above, float *below)
 {
 	float max,min;
-	float median;
 	
 	find_max_min(&max, &min, band, len);
 
 	find_quantile(above, band, len, ABOVE_QUANTILE, max, min);
 	find_quantile(below, band, len, BELOW_QUANTILE, max, min);
-	find_quantile(&median, band, len, 0.5, max, min);
 }
 
-static void process_band(int i, float bounds[2]) {
+static void process_band(int i, float bounds[2], int in_mem) {
 	float *band;
-	unsigned int kb = bands_len[i] * sizeof(float) / 1024;
 	/* usable mem is 3/4th of total memory */
-	unsigned int usable_mem = (3 * MEMORY_SIZE) / 4;
-	int in_mem = 0;
-	if(kb > usable_mem) {
-		band = bands[i]; /* Work with the file */
-	} else {
+	if(in_mem) {
 		band = (float *)malloc(sizeof(float) * bands_len[i]);
-		if(!band) {
-			band = bands[i]; /* Malloc failed, work with file */
-		} else {
+		if(band) {
 			memcpy(band, bands[i], sizeof(float) * bands_len[i]);
-			in_mem = 1;
+		} else {
+			in_mem = 0;
 		}
 	}
+	/* in_mem might be changed in the above block */
+	if(!in_mem)
+		band = bands[i];
 #ifdef DEBUG
 	if(in_mem == 1) {
 		printf("Processing in memory\n");
@@ -150,7 +151,6 @@ static void process_band(int i, float bounds[2]) {
 		printf("Memory not avaliable, processing in i/o\n");
 	}
 #endif
-	
 	_process_band(band, bands_len[i], &bounds[1], &bounds[0]);
 
 	if(in_mem)
@@ -200,25 +200,76 @@ static int munmap_bands(void)
 	return rc;
 }
 
+typedef struct {
+	int tid;
+	int end_band;
+	int start_band;
+	pthread_t thread;
+	int in_mem;
+	float *spect_bands[NBANDS];
+} mthread_t;
+
+static void *thread_routine(void *data)
+{
+	mthread_t *mthread = (mthread_t *)data;
+	int i;
+	for(i = mthread->start_band; i < mthread->end_band; i++) {
+		process_band(i, mthread->spect_bands[i], mthread->in_mem);
+	}
+	pthread_exit(NULL);
+}
 
 static void process_bands(float spect_bands[NBANDS][2])
 {
-	/*Either create 24 threads, each processing a single band.. or do all here */
 	int i;
 	int rc;
+	unsigned int kb_per_band;
+	unsigned int usable_mem = (3 * MEMORY_SIZE) / 4;
+	int in_mem = 0;
+	int nr_threads;
+	int t;
+	mthread_t *mthread;
 
 	if((rc = mmap_bands())) {
 		spect_error("Mapping bands failed. rc=%d",rc);
 		return;
 	}
-	for(i = 0; i < NBANDS; i++) {
-#ifdef DEBUG
-		printf("Band:%d\n", i);
-#endif
-		fsync(fileno(stdout));
-		process_band(i, spect_bands[i]);
+	kb_per_band = bands_len[0] * sizeof(float) / 1024;
+	if(kb_per_band < usable_mem) {
+		in_mem = 1;
 	}
-	printf("\n");
+	nr_threads = usable_mem / kb_per_band;
+	if(!nr_threads)
+	      nr_threads = 1;
+	if(nr_threads > NBANDS)
+	      nr_threads = NBANDS;
+
+	printf("Spawning %d threads\n", nr_threads);
+
+	mthread = (mthread_t *)calloc(nr_threads, sizeof(mthread_t));
+
+	for(t = 0; t < nr_threads; t++) {
+		int start = t * (NBANDS / nr_threads);
+		int end   = (t + 1) * (NBANDS / nr_threads);
+		if(t == nr_threads - 1)
+		      end = NBANDS;
+		mthread[t].tid = t;
+		mthread[t].start_band = start;
+		mthread[t].end_band   = end;
+		for(i = start; i < end; i++) {
+			mthread[t].spect_bands[i] = (float *)&spect_bands[i][0];
+		}
+		mthread[t].in_mem = in_mem;
+		if(pthread_create(&(mthread[t].thread), NULL, thread_routine, &mthread[t])) {
+			spect_error("Thread creation failed!!!!");
+			exit(-1);
+		}
+	}
+	for(t = 0; t < nr_threads; t++) {
+		void *status;
+		pthread_join(mthread[t].thread, &status);
+	}
+	free(mthread);
 
 	if((rc = munmap_bands())) {
 		spect_error("Un-Mapping bands failed. rc=%d",rc);
@@ -276,13 +327,14 @@ static int populate_band_files(spect_t *spect)
 	int i;
 	spect_get_edges(&start, &end, spect);
 	len = end - start;
+	int bytes_wrote = 0;
 	if(len == 0) {
 		spect_warn("%s resulted in an empty file",spect->fname);
 		return 0;
 	}
 	nbytes = sizeof(float) * len;
 	for(i = 0; i < NBANDS; i++) {
-		if(write(ofd[i], &(spect->spect[i][start]), nbytes) != nbytes) {
+		if((bytes_wrote = write(ofd[i], &(spect->spect[i][start]), nbytes)) != nbytes) {
 			return -1;
 		}
 	}
@@ -316,6 +368,7 @@ static int create_band_files(char *spect_db_name)
 		return -1;
 	}
 	for(i = 0; i < len; i++) {
+		progress(100.0 * (float)i / (float)len);
 		if(read_spect(ifd, &spect)) {
 			spect_error("Read of %dth record failed!\n",i);
 			return -1;
@@ -327,6 +380,7 @@ static int create_band_files(char *spect_db_name)
 		}
 		free_spect(&spect);
 	}
+	progress(100.0);
 	close_bands();
 
 	return 0;
