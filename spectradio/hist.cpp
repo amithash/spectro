@@ -149,7 +149,7 @@ float HistDB::skldistance(float *a, float *b, unsigned int len)
 {
 	float dist = 0;
 	float log_2 = log(2);
-	int i;
+	unsigned int i;
 	if(a == NULL || b == NULL) {
 		return 0;
 	}
