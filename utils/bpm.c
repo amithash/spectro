@@ -97,6 +97,40 @@ float **alloc_out(int len)
 	return out;
 }
 
+int hp_filter(float *vec, int len, float cut)
+{
+  fftwf_plan plan;
+  fftwf_complex *out;
+  unsigned int out_len = (len / 2) + 1;
+  unsigned int end =  (unsigned int)((float)out_len * cut);
+  unsigned int pre_end = end - (out_len / 10);
+  float scale;
+  int i;
+  if(cut < 0 || cut >= 1.0)
+    return -1;
+  out = (fftwf_complex *)fftwf_malloc(sizeof(fftwf_complex) * out_len);
+  if(!out)
+    return -1;
+  plan = fftwf_plan_dft_r2c_1d(len, vec, out, FFTW_ESTIMATE);
+  fftw_execute(plan);
+  fftwf_destroy_plan(plan);
+  for(i = 0; i < pre_end; i++) {
+    out[i][0] = out[i][1] = 0;
+  }
+  for(i = pre_end; i < end; i++) {
+    scale = (float)(i - pre_end) / (float)(end - pre_end);
+    out[i][0] *= scale;
+    out[i][1] *= scale;
+   
+  }
+  /*XXX: Check if the parmeter should be out_len instead of len */
+  memset(vec, 0, sizeof(float)*len);
+  plan = fftwf_plan_dft_c2r_1d(len, out, in, FFTW_ESTIMATE);
+  fftwf_execute(plan);
+  fftwf_destroy_plan(plan);
+  return 0;
+}
+
 int spect_fft(int *_out_len, float ***_out, spect_t *spect)
 {
 	fftwf_plan fftw_plan;
