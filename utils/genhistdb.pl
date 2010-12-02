@@ -41,6 +41,7 @@ unless(SpectAppsExist()) {
 	print "Spect apps do not exist. Please perform 'make install' in spectro dir as root\n";
 	exit;
 }
+my $sec_per_song = 402;
 my $cpus = NumCpus();
 my $io_bound_threads = $cpus * 2;
 my $cpu_bound_threads = $cpus;
@@ -68,7 +69,7 @@ my $total_start_time = time;
 print "#################################################################################\n";
 print "Analyzing your MP3 files.\n";
 print "This process is I/O intensive (Reading and analyzing each and every\n";
-print "mp3 file can be a bit intensive) and can take up to 8-10 hours for 8000 mp3 files\n\n";
+print "mp3 file can be a bit intensive)\n\n";
 print "#################################################################################\n";
 $start_time = time;
 find sub {
@@ -81,12 +82,20 @@ find sub {
 	}
 }, ($MusicDir);
 
+
 # Parallel this block
 my @cmds;
 for(my $i = 0; $i <= $#MP3Files; $i++) {
 	my $c = spectgen($MP3Files[$i]);
 	push @cmds, $c if($c ne "");
 }
+
+my $time = ReqTime(scalar(@MP3Files));
+my $space = ReqSpace(scalar(@MP3Files), scalar(@cmds)) / (1024 * 1024);
+GetUserPermission(sprintf("This requires %.2fGB of space and takes %.2f hours to complete.\nDo you want to continue?",$space, $time));
+
+CheckSpace($MusicDir, $space);
+
 ExecuteCmdsParallel(\@cmds, $io_bound_threads);
 $end_time = time;
 PrintFormatTime("Generation of spect files time: ", $end_time - $start_time);
@@ -311,4 +320,80 @@ sub PrintFormatTime
 	$min = $min % 60;
 
 	print "$txt $hour hours, $min minutes, $sec seconds\n";
+}
+
+sub DiskSpace
+{
+  my $dir = shift;
+  open DF, "df |" or die "Could not run df\n";
+  my %mounts;
+  while(my $line = <DF>) {
+    chomp($line);
+    if($line =~ /\s+(\d+)\s+\d+%\s+(\/.+)$/) {
+      my $sz    = $1;
+      my $mount = $2;
+      $mounts{$mount} = $sz;
+    }
+
+  }
+  close(DF);
+
+  my @matched_mounts;
+  foreach my $mount (sort keys %mounts) {
+        if($dir =~ /$mount/){
+                push @matched_mounts, $mount;
+        }
+  }
+  if(scalar(@matched_mounts) == 0) {
+        return ("", 0);
+  }
+  if(scalar(@matched_mounts) == 1) {
+        return ($matched_mounts[0], $mounts{$matched_mounts[0]});
+  }
+  my @tmp = sort @matched_mounts;
+  my $end_most = $tmp[$#tmp];
+  return ($end_most, $mounts{$end_most});
+}
+
+sub ReqSpace
+{
+	my $mp3_files = shift;
+	my $spect_files = shift;
+	my $kb_per_mp3 = 1.15 * 1024;
+	my $kb_per_spect = $kb_per_mp3;
+	return ($kb_per_spect * $spect_files) + ($kb_per_mp3 * $mp3_files) + 2048;
+}
+sub ReqTime
+{
+	my $mp3_files = shift;
+	my $time = 2.9 * $mp3_files;
+	return $time / (60 * 60);
+}
+
+
+sub CheckSpace
+{
+	my $music_dir = shift;
+	my $req_space = shift;
+	my $mb_req = $req_space / 1024;
+
+	my $avail_space_mb = DiskSpace($music_dir) / 1024;
+
+	if($mb_req > $avail_space_mb) {
+		my $more = $mb_req - $avail_space_mb;
+		print "Space is not sufficient. You need ${more}MB more disk space\n";
+		exit;
+	}
+}
+
+sub GetUserPermission
+{
+	my $msg = shift;
+	print "$msg (y/n): ";
+	my $ans = <stdin>;
+	chomp($ans);
+	if($ans =~ /^[yY]([Ee][Ss])?/) {
+		return;
+	}
+	exit;
 }
