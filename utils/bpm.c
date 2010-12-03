@@ -27,6 +27,57 @@
 #define PREC 0.000001
 #define FLOAT_EQUAL(val1, val2) (((val1) < ((val2) + PREC)) && ((val1 > ((val2) - PREC))))
 
+#define MAX_PEAKS 20
+#define BPM 0
+#define PROB 1
+
+int find_peaks(float peaks[MAX_PEAKS][2], float *bpm, int len)
+{
+  int i;
+  float *tmp_peaks;
+  float sum = 0;
+  unsigned int cur_peak = 0;
+  for(i = 0; i < MAX_PEAKS; i++) {
+    peaks[i][BPM] = peaks[i][PROB] = 0;
+  }
+  tmp_peaks = (float *)calloc(len, sizeof(float));
+  if(!tmp_peaks)
+    return -1;
+  for(i = 1; i < len - 1; i++) {
+    if(bpm[i] > bpm[i-1] && bpm[i] > bpm[i+1]) {
+      tmp_peaks[i] = 1;
+    } else {
+      tmp_peaks[i] = 0;
+    }
+  }
+  tmp_peaks[0] = tmp_peaks[len - 1] = 0;
+  for(i = 0; i < len; i++) {
+    bpm[i] = bpm[i] * tmp_peaks[i];
+  }
+  for(i = 0; i < len; i++) {
+    sum += bpm[i];
+  }
+  /* empty music file */
+  if(!sum)
+    return 0;
+
+  for(i = 0; i < len; i++) {
+    bpm[i] = bpm[i] / sum;
+  }
+
+
+  for(i = 0; i < len; i++) {
+    if(bpm[i] > 0) {
+      peaks[cur_peak][BPM] = i;
+      peaks[cur_peak][PROB] = bpm[i];
+      cur_peak++;
+      if(cur_peak >= MAX_PEAKS)
+        break;
+    }
+  }
+  return 0;
+}
+
 int is_zero(spect_t *spect, int ind)
 {
 	int i; 
