@@ -112,7 +112,7 @@ int hp_filter(float *vec, int len, float cut)
   if(!out)
     return -1;
   plan = fftwf_plan_dft_r2c_1d(len, vec, out, FFTW_ESTIMATE);
-  fftw_execute(plan);
+  fftwf_execute(plan);
   fftwf_destroy_plan(plan);
   for(i = 0; i < pre_end; i++) {
     out[i][0] = out[i][1] = 0;
@@ -125,7 +125,7 @@ int hp_filter(float *vec, int len, float cut)
   }
   /*XXX: Check if the parmeter should be out_len instead of len */
   memset(vec, 0, sizeof(float)*len);
-  plan = fftwf_plan_dft_c2r_1d(len, out, in, FFTW_ESTIMATE);
+  plan = fftwf_plan_dft_c2r_1d(len, out, vec, FFTW_ESTIMATE);
   fftwf_execute(plan);
   fftwf_destroy_plan(plan);
   return 0;
@@ -202,12 +202,12 @@ unsigned int get_sampling_rate(spect_t *spect)
 	tf = taglib_file_new(spect->fname);
 	seconds = taglib_audioproperties_length(taglib_file_audioproperties(tf));
 	taglib_file_free(tf);
-	return (unsigned int)((((double)spect->len) / ((double)seconds)) + 0.5);
+	return (unsigned int)((((float)spect->len) / ((float)seconds)) + 0.5);
 }
 
-int _spect2bpm(double bpm[NBANDS][BPM_LEN], spect_t *spect)
+int _spect2bpm(float bpm[NBANDS][BPM_LEN], spect_t *spect)
 {
-	double bpm_nr[NBANDS][BPM_LEN];
+	float bpm_nr[NBANDS][BPM_LEN];
 	unsigned int sampling_rate;
 	int rc = -1;
 	int i, band;
@@ -217,8 +217,8 @@ int _spect2bpm(double bpm[NBANDS][BPM_LEN], spect_t *spect)
 	sampling_rate = get_sampling_rate(spect);
 
 	for(i = 0; i < NBANDS; i++) {
-		memset(bpm[i], 0, sizeof(double) * BPM_LEN);
-		memset(bpm_nr[i], 0, sizeof(double) * BPM_LEN);
+		memset(bpm[i], 0, sizeof(float) * BPM_LEN);
+		memset(bpm_nr[i], 0, sizeof(float) * BPM_LEN);
 	}
 
 	if(spect_fft(&out_len, &out, spect))
@@ -226,7 +226,7 @@ int _spect2bpm(double bpm[NBANDS][BPM_LEN], spect_t *spect)
 
 	for(band = 0; band < NBANDS; band++) {
 		float min = FLT_MAX;
-		double total = 0;
+		float total = 0;
 		for(i = 1; i < out_len; i++) {
 			unsigned int b = FREQ2BPM(i, spect->len, sampling_rate);
 			if(b >= BPM_LEN)
@@ -262,9 +262,9 @@ spect_fft_failed:
 }
 
 
-int spect2bpm(double bpm[BPM_LEN], spect_t *spect)
+int spect2bpm(float bpm[BPM_LEN], spect_t *spect)
 {
-	double _bpm[NBANDS][BPM_LEN];
+	float _bpm[NBANDS][BPM_LEN];
 	int rc;
 	int i,j;
 	rc = _spect2bpm(_bpm, spect);
@@ -284,18 +284,18 @@ int spect2bpm(double bpm[BPM_LEN], spect_t *spect)
 
 #define WINDOW_LEN 3
 
-void smooth_bpm(double bpm[BPM_LEN])
+void smooth_bpm(float bpm[BPM_LEN])
 {
 	int i,j;
 	for(i = 0; i < BPM_LEN - WINDOW_LEN; i++) {
-		double val = 0;
+		float val = 0;
 		for(j = i; j < i + WINDOW_LEN; j++) {
 			val += bpm[j];
 		}
 		bpm[i] = val / WINDOW_LEN;
 	}
 	for(i = BPM_LEN - WINDOW_LEN; i < BPM_LEN; i++) {
-		double count = 0, val = 0;
+		float count = 0, val = 0;
 		for(j = i; j < BPM_LEN; j++) {
 			val += bpm[j];
 			count = count + 1;
@@ -304,14 +304,40 @@ void smooth_bpm(double bpm[BPM_LEN])
 	}
 }
 
-void plot_bpm(double bpm[BPM_LEN])
+void plot_bpm(float bpm[BPM_LEN])
 {
 	FILE *f;
 	int i;
+	float mean = 0;
 	f = fopen("__out.txt", "w");
 	if(!f) {
 		spect_error("FOPEN failed!");
 		return;
+	}
+	bpm[BPM_LEN-1] = 0;
+	/* High pass filter */
+	hp_filter(bpm, BPM_LEN, 0.99);
+	/* Full wave rectifier */
+	for(i = 0; i < BPM_LEN; i++) {
+		bpm[i] = bpm[i] > 0 ? bpm[i] : -1 * bpm[i];
+	}
+
+	for(i = 0; i < BPM_LEN; i++) {
+		mean += bpm[i];
+	}
+	mean /= (float)BPM_LEN;
+	for(i = 0; i < BPM_LEN; i++) {
+		bpm[i] = bpm[i] - mean;
+		bpm[i] = bpm[i] > 0 ? bpm[i] : 0;
+	}
+	mean = 0;
+	for(i = 0; i < BPM_LEN; i++) {
+		mean += bpm[i];
+	}
+	mean /= (float)BPM_LEN;
+	for(i = 0; i < BPM_LEN; i++) {
+		bpm[i] = bpm[i] - mean;
+		bpm[i] = bpm[i] > 0 ? bpm[i] : 0;
 	}
 
 	for(i = 0; i < BPM_LEN; i++) {
@@ -327,7 +353,7 @@ void plot_bpm(double bpm[BPM_LEN])
 	system("rm -f __out.gp __out.txt");
 }
 
-void _plot_bpm(double bpm[NBANDS][BPM_LEN])
+void _plot_bpm(float bpm[NBANDS][BPM_LEN])
 {
 	FILE *f;
 	int i, j;
