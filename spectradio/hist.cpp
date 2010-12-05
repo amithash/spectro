@@ -41,7 +41,7 @@ void HistDB::LoadDB(const char *dbname)
 	unsigned int len = 0;
 
 	if(!ifs.read((char *)&len, sizeof(unsigned int))) {
-		std::cout << "Reading length from " << dbname << std::endl;
+		std::cout << "Reading length from " << dbname << " Failed" << std::endl;
 		return;
 	}
 	if(len <= 0)
@@ -212,12 +212,12 @@ int HistDB::get_next(int ind)
 		QString i_artist(list[i].artist);
 
 		if(list[i].played == 1 || i == (unsigned int)ind) {
-		      continue;
+			std::cout << "Skipping already played: " << i_title.toAscii().data() << std::endl;
+			continue;
 		}
 
 		if(ind_title.toLower().compare(i_title.toLower()) == 0 && ind_artist.toLower().compare(i_artist.toLower()) == 0) {
-		      std::cout << "SKipping same track " << i_title.toLower().toAscii().data() << "Artist: " <<  i_artist.toLower().toAscii().data() << std::endl;
-		      continue;
+			continue;
 		}
 
 		float t_dist = distance(ind, i);
@@ -228,7 +228,9 @@ int HistDB::get_next(int ind)
 		}
 	}
 	if(!found)
-	      std::cout << "Did not find anything.... probable bug...." << std::endl;
+		std::cout << "Did not find anything.... probable bug...." << std::endl;
+	if(dist > 8) {
+		std::cout << "Min distance of " << dist << "is too large, Expect deveation" << std::endl;
+	}
 	return (int)ret;
-
 }
