@@ -252,12 +252,7 @@ void MainWindow::tableClicked(int row, int /* column */)
 
 	htdb.set_playing(row);
 	mediaObject->setCurrentSource(sources[row]);
-	QString windowTitle;
-	windowTitle = musicTable->item(row, 0)->text() +
-		" : Artist: " + musicTable->item(row,1)->text() +
-		" : Album: " + musicTable->item(row,2)->text();
-
-	setWindowTitle(windowTitle);
+	setTitle(row);
 
 	if (wasPlaying)
 		mediaObject->play();
@@ -267,7 +262,10 @@ void MainWindow::tableClicked(int row, int /* column */)
 
 void MainWindow::sourceChanged(const Phonon::MediaSource &source)
 {
-	musicTable->selectRow(sources.indexOf(source));
+	int row = sources.indexOf(source);
+	musicTable->selectRow(row);
+	setTitle(row);
+
 	timeLcd->display("00:00");
 }
 
@@ -276,9 +274,18 @@ void MainWindow::aboutToFinish()
 	int index = sources.indexOf(mediaObject->currentSource());
 	index = htdb.get_next(index);
 	if (sources.size() > index) {
-		setWindowTitle(htdb.ind_name(index));
+		setTitle(index);
 		mediaObject->enqueue(sources.at(index));
 	}
+}
+
+void MainWindow::setTitle(int index)
+{
+	QString windowTitle;
+	windowTitle = musicTable->item(index, 0)->text() +
+		      " by " + musicTable->item(index,1)->text();
+
+	setWindowTitle(windowTitle);
 }
 
 void MainWindow::setupActions()

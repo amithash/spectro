@@ -84,6 +84,7 @@ class MainWindow : public QMainWindow
 		void setupUi();
 		void addEntry(QTableWidget *table, QString title, QString artist, QString album);
 		void clearSearchWindow();
+		void setTitle(int ind);
 
 		Phonon::SeekSlider *seekSlider;
 		Phonon::MediaObject *mediaObject;
