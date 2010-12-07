@@ -232,11 +232,11 @@ sub progress
 
         # Print Progress
 	print "|";
-	for(my $k=0;$k<$percent;$k=$k+5)
+	for(my $k=0;$k<$percent;$k=$k+2)
 	{
 		print "#";						
 	}
-	for(my $k=$percent;$k<100;$k=$k+5){
+	for(my $k=$percent;$k<100;$k=$k+2){
 		print "-";
 	}
 	print "|";
