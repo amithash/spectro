@@ -29,14 +29,33 @@ required to compile the package:
 0. Compilers - gcc, g++, make
 1. gstreamer and its development libs.
 2. mp3 support in gstreamer (This is usually in the bad and ugly libs) = If you want mp3s
-3. Qt 4.7 development libs. (Including qmake)
-4. Anything else configure complains about :-)
-5. TagLib for the utils.
+3. fftw, taglib libs.
+4. Qt 4.7 development libs. (Including qmake)
+5. Anything else configure complains about :-)
 
+===============================================================================
+			Automated DB Generation
+===============================================================================
+1. Make sure you have run make install as root in the root dir.
+2. Run genhistdb.pl /path/to/Music/Dir
+
+Notes:
+1. This is a _very_ heavy and time consuming process. It performs all the 
+   manual steps described below. Please disable all power management, 
+   if you have an external fan, it would not hurt putting your laptop on it.
+   :-) 
+
+2. Depending on your music collection, you need quite a bit of disk space.
+   You need at least 58% of your music collection (Assuming they are MP3 files)
+   as free space. After the process is done, a total of 19% is already consumed.
+   (A lot of that 58% is temp files).
 
 ===============================================================================
 		Steps to perform before using spectradio
 ===============================================================================
+If the above process fails, use the manual procedure described  below.
+I use this more often, as I keep a lot of the temp files around for experimenting
+with different procedures, algorithms and formulas.
 
 Usage:
 ------
@@ -49,8 +68,15 @@ Usage:
 	collection, it takes ~7 hours on a dual core machine. This is best done
 	before bed time and if on a laptop = connect the damn charger!
 
-	It generates files which are 192KB per song (Song duration does not matter).
-	So make sure you have disk space. (For 8000 tracks the total space = 1.5 GB)
+	It generates files which are ~1.2MB per song (depends on song duration).
+	So make sure you have disk space. (For 8300 tracks the total space = 9.2 GB)
+	
+	The generated *.spect files are hidden. If you mp3 is "01 - 2112.mp3", then
+	the spect files will be ".01 - 2112.spect".
+	(The first 19% of the space requirement, these are the files which are 
+	recommended to be kept around in case you want to update your music 
+	collection.) - Unless I decide to add a feature to automatically check
+	what is not there...
 
 2. Generate the spect file list.
 	find /full/path/to/your/music/collection -name *.spect > filelist.txt
@@ -61,15 +87,36 @@ Usage:
 
 	**** NOTE ****
 	This consumes some time. It takes about 10 minutes for 8000 spect files.
-	The out file is <Num Mp3> * 193kB ~ 1.5 GB for 8000 tracks.
+	The out file is <Num Mp3> * 1.2MB ~ 9.3 GB for 8300 tracks.
+	The next 19% of the space requirement. This will be deleted after step 5.
 
-4. Generate the hdb file.
+4. Normalize the sdb file.
+	normspectdb /path/to/file/created/in/step/3/out.sdb
+
+	**** NOTE ****
+	This consumes some time. It takes about 40 minutes for 8000 spect files.
+	This step will generate temp files band_0.dat to band_23.dat with a total
+	space of 19% (The last 19%). But unlike the step 3, the temp files 
+	are automatically deleted if the normalization is done successfully.
+
+	This is a _very_ memory hungry process. The more you have, the faster it
+	is. If you have less than NumMp3Files * 1.2MB * 0.75 / 24 of RAM, the
+	process is performed on disk which can be quite slow. 
+
+	The normalization is done in place. That is, it modifies the sdb file
+	in place. Thus if this step fails, based on the step it fails in,
+	the sdb file might be corrupted.
+
+
+5. Generate the hdb file.
 	spect2hist /path/to/file.sdb /path/to/output/file.hdb
 
 	This is quite quick, and the generated .hdb is also quite small. ~100MB for 8000 tracks.
 
 Notes:
-	After step 4, you can delete the sdb file. 
+	a. After step 4, you can delete the sdb file.
+	b. This is the only file required for spectradio to work. 
+	
 
 Updating collection:
 --------------------
@@ -78,7 +125,8 @@ In case you add more tracks to your collection,
 
 Repeat all the above steps. 
 Step 1 wont take as long, as it generates the spect files only for the newly added files.
-So updating collection should get over within 10-20 minutes.
+So updating collection should get over within 10-20 minutes depending on how many more files
+you add. This is the same case if you go the automated approach with genhistdb.pl.
 
 Freeing up space:
 -----------------
@@ -99,12 +147,26 @@ the same time.
 4. This will take some time to load the db. 
 5. From here on, you can select a song you want to listen to, then spectradio
    will pick songs similar to that on. (Like pandora, with your own collection).
-
+   You can also search for a specific string in title, aritst or album.
 
 ===============================================================================
-			Known Issues or Annoyances 
+				Caveats
 ===============================================================================
-spectradio does not show file paths in case tags are not set on the file.
+1. The paths of mp3 files are stored as absolute paths in the .hdb file.
+2. The hdb file contains binary floating point data.
+
+Points 1 and 2 combined, implies that
+a. You cannot rename/move your music directory. Everything will fail afterwhich.
+b. The hdb files is not portable from one machine to another. 
+
+You can probably move your MP3 collection and hdb file to
+another machine only if:
+a. They are of the same architecture (32bit to 32bit, or 64 bit to 64bit).
+b. The Music directory is placed in exactly the same absolute path.
+
+It is also recommended that you do not move the binaries around. Some binaries,
+are compiled with specific information about the machine like RAM size, and
+num cpus. This is especially true for normspectdb. You gotta compile from source.
 
 ===============================================================================
 			Credit where credit is due
@@ -114,10 +176,10 @@ spectrogen == moodbar
 ---------------------
 spectrogen is a line by line copy of moodbar 0.1.2. In fact the *.spect files
 are just glorified .mood files. So, mood files are 1000 elements in length,
-and has information of 3 bands (Used for R, G & B colors). Spect is 8192 in
-length, and has 24 bands (Essentially the maximum). 
+and has information of 3 bands (Used for R, G & B colors). Spect files have
+a length varying on the song length and has 24 bands (Essentially the maximum).
 
-A simple diff of moodbar source with spectrogen, will provide you will a lot
+A simple diff of moodbar source with spectrogen, will provide you with a lot
 of lines changed, but if you observe closely, I had to rename a few things
 so that the filters do not interfere with moodbar (If it also exists).
 
@@ -125,7 +187,7 @@ spectradio == Qt Music player example + My crap
 -----------------------------------------------
 
 http://doc.qt.nokia.com/4.7/phonon-qmusicplayer.html
-You will notice that not a pixel has changed from that! :-)
+You will notice that a few things changed from that.
 
 I have added to that in the most hackiest way possible (Since my native
 language is not C++, it is C and I have absolutely no experience writing
