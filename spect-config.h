@@ -21,25 +21,36 @@
 
 #define NBANDS 24
 
+/* Assumption: normspectdb is performed which normalizes all spect
+ * files to the range [0,1]. */
 #define SPECT_MIN_VAL (0.0)
 #define SPECT_MAX_VAL (1.0)
 #define SPECT_HIST_LEN      64
-
-#define CEPS_MIN_VAL 0
-#define CEPS_MAX_VAL 0.5
-#define CEPS_HIST_LEN 64
 
 #define FNAME_LEN 256
 #define TITLE_LEN  64
 #define ARTIST_LEN 64
 #define ALBUM_LEN  64
 
-#define PERIOD_LEN 30
-
+#if 0
+#define BPM_MIN (0)
+#define BPM_MAX (43 * 30)
+#else
 #define BPM_MIN 30
 #define BPM_MAX 330
+#endif
 #define BPM_LEN (BPM_MAX - BPM_MIN)
 
+/* If PROF is defined, you can use the following to print out the time taken for each block:
+ * example:
+ * BEGIN(fft_band);
+ * ... Do fft of a band ...
+ * END(fft_band);
+ * This would print out
+ * BEGIN   : fft_band
+ * END(100): fft_band
+ * 
+ * where 100 is the total number of micro-seconds the block too */
 #ifdef PROF
 #include <sys/time.h>
 
@@ -75,7 +86,7 @@ do {								\
 	for(____i = ____perc; ____i < 50; ____i++) {		\
 		printf("-");					\
 	}							\
-	printf("] %.2f%% Done",perc);				\
+	printf("] %.2f%% Done",(float)perc * 1.0);		\
 	if(____perc == 50) {					\
 		printf("\n");					\
 	} else {						\
