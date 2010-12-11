@@ -1,31 +1,21 @@
-CFLAGS=  -O3 -g -Wall -mssse3 -mfpmath=sse
-LIBS = -lm -lpthread -lgcc_s -lfftw3f
-
-TAGLIB_CFLAGS = `taglib-config --cflags`
-TAGLIB_LIB = `taglib-config --libs`_c
-
-FFTW_LIB = -lfftw3f
-
-CFLAGS += $(TAGLIB_CFLAGS)
 
 MEMORY_KB := `cat /proc/meminfo | grep "MemTotal:" | perl -e '$$x = <stdin>; if($$x =~ /(\d+)/){$$x=$$1;} print "$$x";'`
-CFLAGS += -DMEMORY_SIZE=$(MEMORY_KB)
 
+TAGLIB_CFLAGS = `taglib-config --cflags`
+FFTW_LIB = -lfftw3f
+TAGLIB_LIB = `taglib-config --libs`_c
 
-SPECT_OBJS = spect.o file_vecio.o
+CFLAGS=  -O3 -g -Wall -mssse3 -mfpmath=sse -I../lib $(TAGLIB_CFLAGS) -DMEMORY_SIZE=$(MEMORY_KB)
+LIBS= -lm -lgcc_s $(TAGLIB_LIB) $(FFTW_LIB) -L../lib -lspect
+
 SPECT2CSV_OBJS = spect2csv.o
-HIST_OBJS = hist.o
 SPECT2HIST_OBJS = spect2hist.o
 GENSPECTDB_OBJS = genspectdb.o
 HIST2PGM_OBJS = hist2pgm.o
-HIST_DIST_OBJS = hist_dist.o
 GETSIMILAR_OBJS = getsimilar.o
-SPECT2BSPECT_OBJS = spect2bspect.o
-BSPECT_OBJS = bspect.o
 BPM_OBJS = bpm.o
 PLOTBPM_OBJS = plotbpm.o
 PLOTHIST_OBJS = plothist.o
-SPECT_BOUNDS_OBJS = spect_bounds.o
 NORM_SPECT_OBJS = norm_spect.o
 
 SPECT2CSV_EXE = spect2csv
@@ -42,40 +32,37 @@ INSTALL_DIR = /usr/local/bin
 
 all: spect2csv genspectdb spect2hist hist2pgm getsimilar plotbpm plothist normspectdb
 
-test: $(TEST_OBJS)
-	$(CC) -o $(TEST_EXE) $(LIBS) $(TEST_OBJS)
+spect2csv: $(SPECT2CSV_OBJS)
+	$(CC)  -o $(SPECT2CSV_EXE) $(LIBS) $(SPECT2CSV_OBJS)
 
-spect2csv: $(SPECT_OBJS) $(SPECT2CSV_OBJS)
-	$(CC)  -o $(SPECT2CSV_EXE)  $(LIBS) $(SPECT_OBJS) $(SPECT2CSV_OBJS)
+genspectdb: $(GENSPECTDB_OBJS)
+	$(CC)  -o $(GENSPECTDB_EXE)  $(LIBS) $(GENSPECTDB_OBJS)
 
-genspectdb: $(SPECT_OBJS) $(GENSPECTDB_OBJS)
-	$(CC)  -o $(GENSPECTDB_EXE)  $(LIBS) $(SPECT_OBJS) $(GENSPECTDB_OBJS)
+normspectdb: $(NORM_SPECT_OBJS)
+	$(CC)  -o $(NORM_SPECT_EXE)  $(LIBS) $(NORM_SPECT_OBJS)
 
-normspectdb: $(SPECT_OBJS) $(SPECT_BOUNDS_OBJS) $(NORM_SPECT_OBJS)
-	$(CC)  -o $(NORM_SPECT_EXE)  $(LIBS) $(SPECT_OBJS) $(SPECT_BOUNDS_OBJS) $(NORM_SPECT_OBJS)
+spect2hist: $(SPECT2HIST_OBJS)
+	$(CC)  -o $(SPECT2HIST_EXE)  $(LIBS) $(SPECT2HIST_OBJS)
 
-spect2hist: $(SPECT_OBJS) $(HIST_OBJS) $(SPECT2HIST_OBJS) $(BPM_OBJS)
-	$(CC)  -o $(SPECT2HIST_EXE)  $(LIBS) $(TAGLIB_LIB) $(SPECT_OBJS) $(HIST_OBJS) $(SPECT2HIST_OBJS) $(BPM_OBJS)
+hist2pgm: $(HIST2PGM_OBJS)
+	$(CC)  -o $(HIST2PGM_EXE)  $(LIBS) $(HIST2PGM_OBJS)
 
-hist2pgm: $(SPECT_OBJS) $(HIST_OBJS) $(HIST2PGM_OBJS) $(BPM_OBJS)
-	$(CC)  -o $(HIST2PGM_EXE)  $(LIBS) $(TAGLIB_LIB) $(SPECT_OBJS) $(HIST_OBJS) $(HIST2PGM_OBJS) $(BPM_OBJS)
+getsimilar: $(GETSIMILAR_OBJS)
+	$(CC)  -o $(GETSIMILAR_EXE)  $(LIBS) $(GETSIMILAR_OBJS)
 
-getsimilar: $(SPECT_OBJS) $(HIST_OBJS) $(HIST_DIST_OBJS) $(GETSIMILAR_OBJS) $(BPM_OBJS)
-	$(CC)  -o $(GETSIMILAR_EXE)  $(LIBS) $(TAGLIB_LIB) $(SPECT_OBJS) $(HIST_OBJS) $(HIST_DIST_OBJS) $(GETSIMILAR_OBJS) $(BPM_OBJS)
+plotbpm: $(BPM_OBJS) $(PLOTBPM_OBJS)
+	$(CC) -o $(PLOTBPM_EXE) $(LIBS) $(PLOTBPM_OBJS) $(BPM_OBJS)
 
-plotbpm: $(SPECT_OBJS) $(BPM_OBJS) $(PLOTBPM_OBJS)
-	$(CC) -o $(PLOTBPM_EXE) $(LIBS) $(TAGLIB_LIB) $(FFTW_LIB) $(SPECT_OBJS) $(PLOTBPM_OBJS) $(BPM_OBJS)
-
-plothist: $(SPECT_OBJS) $(HIST_OBJS) $(PLOTHIST_OBJS) $(BPM_OBJS)
-	$(CC) -o $(PLOTHIST_EXE) $(LIBS) $(TAGLIB_LIB) $(SPECT_OBJS) $(HIST_OBJS) $(PLOTHIST_OBJS) $(BPM_OBJS)
+plothist: $(PLOTHIST_OBJS)
+	$(CC) -o $(PLOTHIST_EXE) $(LIBS) $(PLOTHIST_OBJS)
 
 
 clean:
 	rm -f $(SPECT2CSV_EXE) $(GENSPECTDB_EXE) $(SPECT2HIST_EXE) $(HIST2PGM_EXE)
 	rm -f $(GETSIMILAR_EXE) $(PLOTBPM_EXE) $(PLOTHIST_EXE) $(NORM_SPECT_EXE)
-	rm -f $(SPECT2CSV_OBJS) $(SPECT_OBJS) $(GENSPECTDB_OBJS) $(SPECT2HIST_OBJS) $(BPM_OBJS)
-	rm -f $(HIST_OBJS) $(HIST2PGM_OBJS) $(HIST_DIST_OBJS) $(GETSIMILAR_OBJS) $(PLOTBPM_OBJS)
-	rm -f $(PLOTHIST_OBJS) $(SPECT_BOUNDS_OBJS) $(NORM_SPECT_OBJS)
+	rm -f $(SPECT2CSV_OBJS) $(GENSPECTDB_OBJS) $(SPECT2HIST_OBJS) $(BPM_OBJS)
+	rm -f $(HIST2PGM_OBJS) $(GETSIMILAR_OBJS) $(PLOTBPM_OBJS)
+	rm -f $(PLOTHIST_OBJS) $(NORM_SPECT_OBJS)
 
 install:
 	cp --target-directory $(INSTALL_DIR) $(SPECT2CSV_EXE) $(GENSPECTDB_EXE) $(SPECT2HIST_EXE) $(HIST2PGM_EXE) $(GETSIMILAR_EXE) $(NORM_SPECT_EXE)
