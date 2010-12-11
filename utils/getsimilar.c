@@ -23,6 +23,27 @@
 #define NMAX_DEFAULT 10
 #define INIT_DIST DBL_MAX
 
+float get_mean(float *vec, unsigned int len)
+{
+	int i;
+	float mean = 0;
+	for(i = 0; i < len; i++) {
+		float x = (float)i / (float)(len - 1);
+		mean += x * vec[i];
+	}
+	return mean;
+}
+#define SQR(val) ((val) * (val))
+float get_sd(float *vec, float mean, unsigned int len)
+{
+	int i;
+	float sd = 0;
+	for(i = 0; i < len; i++) {
+		float x = (float)i / (float)(len - 1);
+		sd += SQR(x - mean) * vec[i];
+	}
+	return sqrt(sd);
+}
 
 int main(int argc, char *argv[])
 {
@@ -55,6 +76,12 @@ int main(int argc, char *argv[])
 	if(ref_ind == -1) {
 		spect_error("Cound not find %s in db",argv[2]);
 		exit(-1);
+	}
+
+	for(i = 0; i < NBANDS; i++) {
+		float mean = get_mean(hist_list[ref_ind].spect_hist[i], SPECT_HIST_LEN);
+		float sd = get_sd(hist_list[ref_ind].spect_hist[i], mean, SPECT_HIST_LEN);
+		printf("%d\t%.4f\t%.4f\n", i, mean, sd);
 	}
 
 	if(get_most_similar(hist_list, len, ref_ind, maxes_len, &similar)) {

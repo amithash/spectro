@@ -21,10 +21,13 @@
 
 #include "spect.h"
 
-int spect2bpm(double bpm[BPM_LEN], spect_t *spect);
-int _spect2bpm(double bpm[NBANDS][BPM_LEN], spect_t *spect);
-void plot_bpm(double bpm[BPM_LEN]);
-void _plot_bpm(double bpm[NBANDS][BPM_LEN]);
-void smooth_bpm(double bpm[BPM_LEN]);
+#define WINDOW_LEN 3
+int spect2bpm(float bpm[BPM_LEN], spect_t *spect);
+int _spect2bpm(float bpm[NBANDS][BPM_LEN], spect_t *spect);
+void plot_bpm(float bpm[BPM_LEN]);
+void _plot_bpm(float bpm[NBANDS][BPM_LEN]);
+void smooth_vec(float *vec, unsigned int len, unsigned int window);
+
+#define smooth_bpm(bpm) smooth_vec(bpm, BPM_LEN, WINDOW_LEN)
 
 #endif

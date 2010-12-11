@@ -23,8 +23,8 @@ int main(int argc, char *argv[])
 	spect_t spect;
 	int rc;
 	int i;
-	double bpm[BPM_LEN];
-	double _bpm[NBANDS][BPM_LEN];
+	float bpm[BPM_LEN];
+	float _bpm[NBANDS][BPM_LEN];
 	if(argc <= 1) {
 		spect_error("USAGE: %s <spect file>", argv[0]);
 		exit(-1);

@@ -22,7 +22,7 @@
 #include <time.h>
 #include <float.h>
 
-#define FREQ2BPM(f,len,sr) ((unsigned int)(60 * (((float)sr) * ((float)f / len))))
+#define FREQ2BPM(f,len,sr) ((unsigned int)(30 * (((float)sr) * ((float)f / (float)(len - 1)))))
 
 #define PREC 0.000001
 #define FLOAT_EQUAL(val1, val2) (((val1) < ((val2) + PREC)) && ((val1 > ((val2) - PREC))))
@@ -31,9 +31,30 @@
 #define BPM 0
 #define PROB 1
 
+void smooth_vec(float *vec, unsigned int len, unsigned int window)
+{
+	int i,j;
+	for(i = 0; i < len - window; i++) {
+		float val = 0;
+		for(j = i; j < i + window; j++) {
+			val += vec[j];
+		}
+		vec[i] = val / (float)window;
+	}
+	for(i = len - window; i < len; i++) {
+		float count = 0, val = 0;
+		for(j = i; j < len; j++) {
+			val += vec[j];
+			count = count + 1;
+		}
+		vec[i] = count > 0 ? val / count : vec[i];
+	}
+}
+
+
 int find_peaks(float peaks[MAX_PEAKS][2], float *bpm, int len)
 {
-  int i;
+  int i,j;
   float *tmp_peaks;
   float sum = 0;
   unsigned int cur_peak = 0;
@@ -54,6 +75,7 @@ int find_peaks(float peaks[MAX_PEAKS][2], float *bpm, int len)
   for(i = 0; i < len; i++) {
     bpm[i] = bpm[i] * tmp_peaks[i];
   }
+  free(tmp_peaks);
   for(i = 0; i < len; i++) {
     sum += bpm[i];
   }
@@ -68,13 +90,26 @@ int find_peaks(float peaks[MAX_PEAKS][2], float *bpm, int len)
 
   for(i = 0; i < len; i++) {
     if(bpm[i] > 0) {
-      peaks[cur_peak][BPM] = i;
+      peaks[cur_peak][BPM] = i + BPM_MIN;
       peaks[cur_peak][PROB] = bpm[i];
       cur_peak++;
       if(cur_peak >= MAX_PEAKS)
         break;
     }
   }
+  for(i = 0; i < MAX_PEAKS; i++) {
+  	for(j = 0; j < MAX_PEAKS; j++) {
+		if(peaks[i][1] > peaks[j][1]) {
+			float tmp_bpm = peaks[i][0];
+			float tmp_pro = peaks[i][1];
+			peaks[i][0] = peaks[j][0];
+			peaks[i][1] = peaks[j][1];
+			peaks[j][0] = tmp_bpm;
+			peaks[j][1] = tmp_pro;
+		}
+	}
+  }
+
   return 0;
 }
 
@@ -193,7 +228,6 @@ int spect_fft(int *_out_len, float ***_out, spect_t *spect)
 	int        out_len;
 	unsigned int start, end;
 	unsigned int real_len;
-
 	bounds(&start, &end, spect);
 
 	real_len = end - start;
@@ -215,8 +249,9 @@ int spect_fft(int *_out_len, float ***_out, spect_t *spect)
 					(fftwf_complex *) fftw_out, 
 					FFTW_ESTIMATE);
 	for(i = 0; i < NBANDS; i++) {
+		smooth_vec(&spect->spect[i][start], real_len, 2);
 		for(j = start; j < end; j++) {
-			fftw_in[j - start] = spect->spect[i][j] * 1000;
+			fftw_in[j - start] = spect->spect[i][j];
 		}
 
 		fftwf_execute(fftw_plan);
@@ -224,7 +259,7 @@ int spect_fft(int *_out_len, float ***_out, spect_t *spect)
 		for(j = 0; j < 2*out_len; j+=2) {
 			float re = fftw_out[j];
 			float im = fftw_out[j+1];
-			float abs = sqrt((re*re) + (im *im)) / (float)real_len;
+			float abs = sqrt((re*re) + (im *im)) / sqrt((float)real_len);
 			out[i][j/2] = abs;
 		}
 	}
@@ -249,11 +284,16 @@ unsigned int get_sampling_rate(spect_t *spect)
 {
 	TagLib_File *tf;
 	unsigned int seconds;
+	float rate;
 
 	tf = taglib_file_new(spect->fname);
 	seconds = taglib_audioproperties_length(taglib_file_audioproperties(tf));
 	taglib_file_free(tf);
-	return (unsigned int)((((float)spect->len) / ((float)seconds)) + 0.5);
+	if(seconds == 0) {
+		return 43;
+	}
+	rate =  (((float)spect->len) / ((float)seconds)) + 0.5;
+	return (unsigned int)rate;
 }
 
 int _spect2bpm(float bpm[NBANDS][BPM_LEN], spect_t *spect)
@@ -279,8 +319,8 @@ int _spect2bpm(float bpm[NBANDS][BPM_LEN], spect_t *spect)
 		float min = FLT_MAX;
 		float total = 0;
 		for(i = 1; i < out_len; i++) {
-			unsigned int b = FREQ2BPM(i, spect->len, sampling_rate);
-			if(b >= BPM_LEN)
+			unsigned int b = FREQ2BPM(i, out_len, sampling_rate);
+			if(b >= BPM_LEN + BPM_MIN)
 			      continue;
 			if(b < BPM_MIN)
 			      continue;
@@ -312,11 +352,15 @@ spect_fft_failed:
 	return rc;
 }
 
-
+#define ABS(val) ((val) > 0 ? (val) : -1.0 * (val))
+#define START_BAND 8
+#define END_BAND   19
 int spect2bpm(float bpm[BPM_LEN], spect_t *spect)
 {
 	float _bpm[NBANDS][BPM_LEN];
+	float mean = 0;
 	int rc;
+	float total = 0;
 	int i,j;
 	rc = _spect2bpm(_bpm, spect);
 	if(rc != 0) {
@@ -325,7 +369,8 @@ int spect2bpm(float bpm[BPM_LEN], spect_t *spect)
 	for(i = 0; i < BPM_LEN; i++) {
 		bpm[i] = 0;
 	}
-	for(i = 0; i < NBANDS; i++) {
+
+	for(i = START_BAND; i < END_BAND; i++) {
 		for(j = 0; j < BPM_LEN; j++) {
 			bpm[j] += _bpm[i][j];
 		}
@@ -333,69 +378,25 @@ int spect2bpm(float bpm[BPM_LEN], spect_t *spect)
 	return 0;
 }
 
-#define WINDOW_LEN 3
 
-void smooth_bpm(float bpm[BPM_LEN])
-{
-	int i,j;
-	for(i = 0; i < BPM_LEN - WINDOW_LEN; i++) {
-		float val = 0;
-		for(j = i; j < i + WINDOW_LEN; j++) {
-			val += bpm[j];
-		}
-		bpm[i] = val / WINDOW_LEN;
-	}
-	for(i = BPM_LEN - WINDOW_LEN; i < BPM_LEN; i++) {
-		float count = 0, val = 0;
-		for(j = i; j < BPM_LEN; j++) {
-			val += bpm[j];
-			count = count + 1;
-		}
-		bpm[i] = count > 0 ? val / count : bpm[i];
-	}
-}
 
 void plot_bpm(float bpm[BPM_LEN])
 {
 	FILE *f;
-	int i;
+	int i,j;
 	float mean = 0;
+	float peaks[MAX_PEAKS][2];
 	f = fopen("__out.txt", "w");
 	if(!f) {
 		spect_error("FOPEN failed!");
 		return;
 	}
-	bpm[BPM_LEN-1] = 0;
-	/* High pass filter */
-	hp_filter(bpm, BPM_LEN, 0.99);
-	/* Full wave rectifier */
-	for(i = 0; i < BPM_LEN; i++) {
-		bpm[i] = bpm[i] > 0 ? bpm[i] : -1 * bpm[i];
-	}
-
-	for(i = 0; i < BPM_LEN; i++) {
-		mean += bpm[i];
-	}
-	mean /= (float)BPM_LEN;
-	for(i = 0; i < BPM_LEN; i++) {
-		bpm[i] = bpm[i] - mean;
-		bpm[i] = bpm[i] > 0 ? bpm[i] : 0;
-	}
-	mean = 0;
-	for(i = 0; i < BPM_LEN; i++) {
-		mean += bpm[i];
-	}
-	mean /= (float)BPM_LEN;
-	for(i = 0; i < BPM_LEN; i++) {
-		bpm[i] = bpm[i] - mean;
-		bpm[i] = bpm[i] > 0 ? bpm[i] : 0;
-	}
-
 	for(i = 0; i < BPM_LEN; i++) {
 		int b = i + BPM_MIN;
 		fprintf(f, "%d %f\n", b,  bpm[i]);
 	}
 	fclose(f);
+	
 	f = fopen("__out.gp", "w");
 	fprintf(f, "plot '__out.txt' using 1:2 with lines\npause -1\n");
 	fclose(f);
@@ -403,7 +404,6 @@ void plot_bpm(float bpm[BPM_LEN])
 	system("gnuplot __out.gp");
 	system("rm -f __out.gp __out.txt");
 }
-
 void _plot_bpm(float bpm[NBANDS][BPM_LEN])
 {
 	FILE *f;
@@ -414,7 +414,7 @@ void _plot_bpm(float bpm[NBANDS][BPM_LEN])
 		return;
 	}
 
-	for(i = 0; i < BPM_LEN; i++) {
+	for(i = 1; i < BPM_LEN; i++) {
 		int b = i + BPM_MIN;
 		fprintf(f, "%d", b);
 		for(j = 0; j < NBANDS; j++) {
