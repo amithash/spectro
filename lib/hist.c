@@ -17,7 +17,6 @@
 *******************************************************************************/
 
 #include "hist.h"
-#include "bpm.h"
 #include <pthread.h>
 
 #define NDEBUG
