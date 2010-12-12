@@ -47,28 +47,92 @@ const float mask[NBANDS] = {
 };
 
 #define ABS(val) ((val) > 0 ? (val) : (-1 * (val)))
+#define SQR(val) ((val) * (val))
 
-/* Return the expected difference in loudness between
- * the two bands */
-float loudness_diff(float *a, float *b, unsigned int len)
+//#define KL_DIVERGANCE
+//#define JEFFREYS_DIVERGANCE
+//#define JENSONS_DIVERGANCE
+//#define EXPECTED_VALUE_DIFFERENCE
+//#define EXPECTED_DIFFERENCE
+//#define K_DIVERGANCE
+//#define HELLINGER_DIVERGANCE
+//#define EUCLIDIAN_DISTANCE
+//#define MAX_DISTANCE
+
+
+static float distance(float *a, float *b, unsigned int len)
 {
 	int i;
-	float diff = 0;
-	for(i = 0; i < len; i++) {
-		float loud = (float)i / (float)(len - 1);
-		diff += (a[i] - b[i]) * loud;
-	}
-	return diff;
-}
-
-static float sy_kl_distance(float *a, float *b, unsigned int len)
-{
 	float dist = 0;
-	int i;
+#if defined(JEFFREYS_DIVERGANCE)
 	float log_2 = log(2);
 	for(i = 0; i < len; i++) {
 		dist += (a[i] - b[i]) * log(a[i] / b[i]) / log_2;
 	}
+#elif defined(JENSONS_DIVERGANCE)
+	float bits_a, bits_b, bits_avg;
+	for(i = 0; i < len; i++) {
+		bits_a = a[i] * log(a[i]);
+		bits_b = b[i] * log(b[i]);
+		bits_avg = ((a[i] + b[i]) / 2) * log((a[i] + b[i]) / 2);
+		dist += ((bits_a + bits_b) / 2) - bits_avg;
+	}
+	return dist;
+#elif defined(KL_DIVERGANCE)
+	float log_2 = log(2);
+	for(i = 0; i < len; i++) {
+		dist += a[i] * log(a[i] / b[i]) / log_2;
+	}
+#elif defined(EXPECTED_DIFFERENCE)
+	for(i = 0; i < len; i++) {
+		float x = (float)i / (float)(len - 1);
+		dist += x * ABS(a[i] - b[i]);
+	}
+#elif defined(EXPECTED_VALUE_DIFFERENCE)
+	float exp_a, exp_b;
+	for(i = 0; i < len; i++) {
+		float x = (float)i / (float)(len - 1);
+		exp_a += x * a[i];
+		exp_b += x * b[i];
+	}
+	dist = ABS(exp_a - exp_b);
+#elif defined(K_DIVERGANCE)
+	for(i = 0; i < len; i++) {
+		dist += a[i] * log(2 * a[i] / (a[i] + b[i]));
+	}
+#elif defined(HELLINGER_DIVERGANCE)
+	for(i = 0; i < len; i++) {
+		dist += sqrt(a[i] * b[i]);
+	}
+	dist = sqrt(1 - dist);
+#elif defined(EUCLIDIAN_DISTANCE)
+	for(i = 0; i < len; i++) {
+		dist += SQR(a[i] - b[i]);
+	}
+	dist = sqrt(dist);
+#elif defined(MAX_DISTANCE)
+	float diff;
+	for(i = 0; i < len; i++) {
+		diff = ABS(a[i] - b[i]);
+		if(diff > dist)
+		      dist = diff;
+	}
+#elif defined(MAX_DISTANCE)
+	float diff;
+	float max = 0, min = FLT_MAX, avg = 0;
+	for(i = 0; i < len; i++) {
+		diff = ABS(a[i] - b[i]);
+		if(diff > max)
+		      max = diff;
+		if(diff < min)
+		      min = diff;
+		avg += diff;
+	}
+	avg /= (float)len;
+	dist = avg > 0 ? (max - min) /avg  : FLT_MAX;
+#else
+#error "Need at least one"
+#endif
 	return dist;
 }
 
@@ -76,50 +140,51 @@ float hist_distance(hist_t *hist1, hist_t *hist2)
 {
 	int col;
 	float dist = 0;
-	float loudness = 0;
 
 	for(col = 0; col < NBANDS; col++) {
-		float loud;
-		dist += sy_kl_distance(hist1->spect_hist[col],
+		dist += distance(hist1->spect_hist[col],
 				            hist2->spect_hist[col],
 				            SPECT_HIST_LEN);
-		loud = loudness_diff(hist1->spect_hist[col], 
-					  hist2->spect_hist[col],
-					  SPECT_HIST_LEN) * mask[col];
-		loudness += loud * loud;
 	}
-	return  loudness;
+	return  dist;
 }
 
 int get_most_similar(hist_t *list, unsigned int len, int this_i, int n, similar_t **_out)
 {
 	similar_t *out = NULL;
-	int i,j;
+	int i,j,k;
+	float *dlist;
 	*_out = NULL;
 	if((out = calloc(n, sizeof(similar_t))) == NULL) {
 		return -1;
 	}
+	if((dlist = (float *)calloc(len, sizeof(float))) == NULL)  {
+		free(out);
+		return -1;
+	}
+	for(i = 0; i < len; i ++) {
+		dlist[i] = hist_distance(&list[this_i], &list[i]);
+	}
+
 	for(i = 0; i < n; i++) {
 		out[i].ind = -1;
 		out[i].dist = FLT_MAX;
 	}
-
-	for(i = 0; i < len; i++) {
-		if(i == this_i)
-		      continue;
-		if(
-			strcmp(list[i].artist, list[this_i].artist) == 0 &&
-			strcmp(list[i].title, list[this_i].title) == 0)
-		      continue;
-		float idist = hist_distance(&list[this_i], &list[i]);
-		for(j = 0; j < n; j++) {
-			if(idist < out[j].dist) {
-				out[j].dist = idist;
-				out[j].ind  = i;
-				break;
+	for(k = 0; k < n; k++) {
+		for(i = 0; i < len; i++) {
+			if(i == this_i)
+				continue;
+			float idist = dlist[i];
+			for(j = 0; j < n; j++) {
+				if(idist <= out[j].dist) {
+					out[j].dist = idist;
+					out[j].ind  = i;
+					break;
+				}
 			}
 		}
 	}
+	free(dlist);
 
 	*_out = out;
 	return 0;
