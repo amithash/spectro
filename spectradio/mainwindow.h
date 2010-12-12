@@ -50,6 +50,7 @@
 #include <phonon/backendcapabilities.h>
 #include <QList>
 #include <QLineEdit>
+#include <QDialogButtonBox>
 
 class QAction;
 class QTableWidget;
@@ -69,6 +70,7 @@ class MainWindow : public QMainWindow
 
 	private slots:
 		void loadDB();
+		void settings();
 		void searchDB();
 		void about();
 		void stateChanged(Phonon::State newState, Phonon::State oldState);
@@ -77,6 +79,7 @@ class MainWindow : public QMainWindow
 		void aboutToFinish();
 		void tableClicked(int row, int column);
 		void searchTableClicked(int row, int column);
+		void acceptSettings(QAbstractButton * button);
 
 	private:
 		void setupActions();
@@ -85,6 +88,7 @@ class MainWindow : public QMainWindow
 		void addEntry(QTableWidget *table, QString title, QString artist, QString album);
 		void clearSearchWindow();
 		void setTitle(int ind);
+		void closeSettings();
 
 		Phonon::SeekSlider *seekSlider;
 		Phonon::MediaObject *mediaObject;
@@ -100,6 +104,7 @@ class MainWindow : public QMainWindow
 		QAction *nextAction;
 		QAction *previousAction;
 		QAction *loadDBAction;
+		QAction *settingsAction;
 		QAction *exitAction;
 		QAction *aboutAction;
 		QAction *aboutQtAction;
@@ -109,6 +114,7 @@ class MainWindow : public QMainWindow
 		QTableWidget *searchTable;
 		QLineEdit *searchBox;
 		QStatusBar *statusBar;
+		QDialogButtonBox *dialogBox;
 };
 
 #endif

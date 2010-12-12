@@ -24,9 +24,91 @@
 #include <float.h>
 #include <sys/stat.h>
 
+#define KL_DIVERGANCE "Kullback-Liebler Divergance (Default)"
+#define JEFFREYS_DIVERGANCE "Jeffreys divergance (Symmetric KL Divergance)"
+#define JENSON_DIVERGANCE "Jenson Divergance (Information radius)"
+#define EUCLIDEAN_DISTANCE "Euclidean distance"
+#define HELLINGER_DISTANCE "Hellinger distance"
+
+#define SQR(val) ((val) * (val))
+
+static float kl_distance(float *a, float *b, unsigned int len)
+{
+	float dist = 0;
+	float log_2 = log(2);
+	unsigned int i;
+	if(a == NULL || b == NULL) {
+		return 0;
+	}
+	for(i = 0; i < len; i++) {
+		dist += (a[i]) * log(a[i] / b[i]) / log_2;
+	}
+	return dist;
+}
+static float jeffery_distance(float *a, float *b, unsigned int len)
+{
+	float dist = 0;
+	float log_2 = log(2);
+	unsigned int i;
+	if(a == NULL || b == NULL) {
+		return 0;
+	}
+	for(i = 0; i < len; i++) {
+		dist += (a[i] - b[i]) * log(a[i] / b[i]) / log_2;
+	}
+	return dist;
+}
+static float euclidean_distance(float *a, float *b, unsigned int len)
+{
+	float dist = 0;
+	unsigned int i;
+	if(a == NULL || b == NULL) {
+		return 0;
+	}
+	for(i = 0; i < len; i++) {
+		dist += SQR(a[i] - b[i]);
+	}
+	return sqrt(dist);
+}
+
+static float jensen_distance(float *a, float *b, unsigned int len)
+{
+	float dist = 0;
+	unsigned int i;
+	if(a == NULL || b == NULL) {
+		return 0;
+	}
+	for(i = 0; i < len; i++) {
+
+		dist +=(((a[i] * log(a[i])) + (b[i] * log(b[i]))) / 2) - 
+		    (((a[i] + b[i]) / 2) * log((a[i]+b[i]) / 2));
+	}
+	return dist;
+}
+static float hellinger_distance(float *a, float *b, unsigned int len)
+{
+	float dist = 0;
+	unsigned int i;
+	if(a == NULL || b == NULL) {
+		return 0;
+	}
+	for(i = 0; i < len; i++) {
+		dist += sqrt(a[i] * b[i]);
+	}
+	return sqrt(1 - dist);
+}
+
 HistDB::HistDB(void)
 {
 	valid = 0;
+	supportedDistances.append(KL_DIVERGANCE);
+	supportedDistances.append(JEFFREYS_DIVERGANCE);
+	supportedDistances.append(JENSON_DIVERGANCE);
+	supportedDistances.append(HELLINGER_DISTANCE);
+	supportedDistances.append(EUCLIDEAN_DISTANCE);
+
+	pdf_distance = kl_distance;
+	curDistance = KL_DIVERGANCE;
 }
 
 bool HistDB::is_valid()
@@ -110,6 +192,7 @@ err:
 
 HistDB::HistDB(const char *dbname)
 {
+	HistDB();
 	LoadDB(dbname);
 }
 
@@ -125,29 +208,21 @@ unsigned int HistDB::length()
 	return list.size();
 }
 
-float HistDB::skldistance(float *a, float *b, unsigned int len)
-{
-	float dist = 0;
-	float log_2 = log(2);
-	unsigned int i;
-	if(a == NULL || b == NULL) {
-		return 0;
-	}
-	for(i = 0; i < len; i++) {
-		dist += (a[i] - b[i]) * log(a[i] / b[i]) / log_2;
-	}
-	return dist;
-}
-
 float HistDB::distance(unsigned int e1, unsigned int e2)
 {
 	int col;
 	float dist = 0;
+
 	if(e1 >= list.size() || e1 >= list.size())
 	      return 0;
 
+	if(!pdf_distance) {
+		std::cerr << "Warning pdf distance function was not set. setting it to \"KL DIVERGANCE\"" << std::endl;
+		pdf_distance = kl_distance;
+	}
+
 	for(col = 0; col < NBANDS; col++) {
-		dist += skldistance(list[e1].spect_hist[col],
+		dist += pdf_distance(list[e1].spect_hist[col],
 				      list[e2].spect_hist[col],
 				      SPECT_HIST_LEN);
 	}
@@ -233,4 +308,29 @@ int HistDB::get_next(int ind)
 		std::cout << "Min distance of " << dist << "is too large, Expect deveation" << std::endl;
 	}
 	return (int)ret;
+}
+
+QList<QString> HistDB::getSupportedDistanceFunctions()
+{
+	return supportedDistances;
+}
+
+void HistDB::setDistanceFunction(QString s_func)
+{
+	if(s_func.compare(KL_DIVERGANCE) == 0) {
+		pdf_distance = kl_distance;
+	} else if(s_func.compare(JEFFREYS_DIVERGANCE) == 0) {
+		pdf_distance = jeffery_distance;
+	} else if(s_func.compare(JENSON_DIVERGANCE) == 0) {
+		pdf_distance = jensen_distance;
+	} else if(s_func.compare(EUCLIDEAN_DISTANCE) == 0) {
+		pdf_distance = euclidean_distance;
+	} else if(s_func.compare(HELLINGER_DISTANCE) == 0) {
+		pdf_distance = hellinger_distance;
+	} else {
+		std::cout << "Invalid distance provided. Ignoring.." << std::endl;
+		return;
+	}
+	std::cout << "Switching from " << curDistance.toAscii().data() << " to " << s_func.toAscii().data() << std::endl;
+	curDistance = s_func;
 }

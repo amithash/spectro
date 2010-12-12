@@ -123,6 +123,23 @@ void MainWindow::searchDB()
 	searchTable->show();
 }
 
+void MainWindow::acceptSettings(QAbstractButton * button)
+{
+	if(button->text().compare("Cancel") != 0) {
+		htdb.setDistanceFunction(button->text());
+	}
+	closeSettings();
+}
+void MainWindow::closeSettings()
+{
+	dialogBox->hide();
+}
+
+
+void MainWindow::settings()
+{
+	dialogBox->show();
+}
 
 void MainWindow::loadDB()
 {
@@ -311,6 +328,9 @@ void MainWindow::setupActions()
 	loadDBAction = new QAction(tr("Load &DB"), this);
 	loadDBAction->setShortcut(tr("Ctrl+F"));
 
+	settingsAction = new QAction(tr("Choose Distance Function"), this);
+	settingsAction->setShortcut(tr("Ctrl+D"));
+
 	exitAction = new QAction(tr("E&xit"), this);
 	exitAction->setShortcuts(QKeySequence::Quit);
 
@@ -323,6 +343,7 @@ void MainWindow::setupActions()
 	connect(pauseAction, SIGNAL(triggered()), mediaObject, SLOT(pause()) );
 	connect(stopAction, SIGNAL(triggered()), mediaObject, SLOT(stop()));
 	connect(loadDBAction, SIGNAL(triggered()), this, SLOT(loadDB()));
+	connect(settingsAction, SIGNAL(triggered()), this, SLOT(settings()));
 	connect(exitAction, SIGNAL(triggered()), this, SLOT(close()));
 	connect(aboutAction, SIGNAL(triggered()), this, SLOT(about()));
 	connect(aboutQtAction, SIGNAL(triggered()), qApp, SLOT(aboutQt()));
@@ -332,6 +353,8 @@ void MainWindow::setupMenus()
 {
 	QMenu *fileMenu = menuBar()->addMenu(tr("&File"));
 	fileMenu->addAction(loadDBAction);
+	fileMenu->addSeparator();
+	fileMenu->addAction(settingsAction);
 	fileMenu->addSeparator();
 	fileMenu->addAction(exitAction);
 
@@ -391,6 +414,17 @@ void MainWindow::setupUi()
 	playbackLayout->addStretch();
 	playbackLayout->addWidget(volumeLabel);
 	playbackLayout->addWidget(volumeSlider);
+
+	dialogBox = new QDialogButtonBox();
+	QList<QString> distFuncs = htdb.getSupportedDistanceFunctions();
+	for(int i = 0; i < distFuncs.length(); i++) {
+		dialogBox->addButton(distFuncs[i], QDialogButtonBox::ActionRole);
+	}
+	dialogBox->addButton("Cancel", QDialogButtonBox::ActionRole);
+	dialogBox->setOrientation(Qt::Vertical);
+	dialogBox->setCenterButtons(true);
+	connect(dialogBox, SIGNAL(clicked(QAbstractButton *)), this, SLOT(acceptSettings(QAbstractButton *)));
+	dialogBox->hide();
 
 	searchBox = new QLineEdit;
 	searchBox->setText("");
