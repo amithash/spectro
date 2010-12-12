@@ -31,6 +31,8 @@ int main(int argc, char *argv[]) {
 	char buf[100];
 	int i,j;
 	unsigned int len;
+	float max = 0;
+	float min = 2;
 
 	if(argc < 3) {
 		printf("USAGE: %s <spectdb> FILE.spect4 (Optional output ppm file default: tmp.ppm)\n", argv[0]);
@@ -56,6 +58,18 @@ int main(int argc, char *argv[]) {
 	if(argc == 4) {
 		strcpy(outf_name, argv[3]);
 	}
+
+	for(i = 0; i < NBANDS; i++) {
+		for(j = 0; j < SPECT_HIST_LEN; j++) {
+			if(hist->spect_hist[i][j] > max)
+			      max = hist->spect_hist[i][j];
+			if(hist->spect_hist[i][j] < min)
+			      min = hist->spect_hist[i][j];
+		}
+	}
+
+
+
 	pgf = fopen(outf_name, "w");
 	if(pgf == NULL) {
 		printf("Creating %s failed!\n", outf_name);
@@ -65,12 +79,13 @@ int main(int argc, char *argv[]) {
 	write(fileno(pgf), buf, strlen(buf) * sizeof(char));
 	for(i = 0; i < NBANDS; i++) {
 		for(j = 0; j < SPECT_HIST_LEN; j++) {
-			unsigned int ui_val = (unsigned int)(hist->spect_hist[i][j] * 0x1000000);
+			float i_val = (hist->spect_hist[i][j] - min) / (max - min);
+			unsigned int ui_val = (unsigned int)(i_val * 255);
 			unsigned char val[3];
 
-			val[0] = (unsigned char)((ui_val >> 0) & 0xff);
-			val[1] = (unsigned char)((ui_val >> 8) & 0xff);
-			val[2] = (unsigned char)((ui_val >> 16) & 0xff);
+			val[0] = (unsigned char)((ui_val) & 0xff);
+			val[1] = (unsigned char)((ui_val) & 0xff);
+			val[2] = (unsigned char)((ui_val) & 0xff);
 
 			if(write(fileno(pgf), &val, 3 * sizeof(unsigned char)) != 3 * sizeof(unsigned char)) {
 				printf("Write error!\n");
