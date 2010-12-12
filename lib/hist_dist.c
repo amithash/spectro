@@ -49,7 +49,7 @@ const float mask[NBANDS] = {
 #define ABS(val) ((val) > 0 ? (val) : (-1 * (val)))
 #define SQR(val) ((val) * (val))
 
-//#define KL_DIVERGANCE
+#define KL_DIVERGANCE
 //#define JEFFREYS_DIVERGANCE
 //#define JENSONS_DIVERGANCE
 //#define EXPECTED_VALUE_DIFFERENCE
