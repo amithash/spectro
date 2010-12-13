@@ -159,6 +159,12 @@ void MainWindow::loadDB()
 		return;
 	}
 
+	loadDB(dbfile.toAscii().data());
+}
+
+void MainWindow::loadDB(char *s_dbfile)
+{
+	QString dbfile(s_dbfile);
 	int at = htdb.length();
 
 	statusBar->showMessage("Loading DB");
@@ -351,12 +357,6 @@ void MainWindow::setupActions()
 
 void MainWindow::setupUi()
 {
-	QToolBar *bar = new QToolBar;
-
-	bar->addAction(playAction);
-	bar->addAction(pauseAction);
-	bar->addAction(stopAction);
-
 	seekSlider = new Phonon::SeekSlider(this);
 	seekSlider->setMediaObject(mediaObject);
 
@@ -393,24 +393,20 @@ void MainWindow::setupUi()
 	connect(searchTable, SIGNAL(cellPressed(int, int)), 
 		this, SLOT(searchTableClicked(int, int)));
 
-	// Toolbar
+
 	QToolBar *tbar = new QToolBar;
-	QToolBar *tbarClose = new QToolBar;
 	tbar->addAction(loadDBAction);
 	tbar->addAction(settingsAction);
 	tbar->addAction(aboutAction);
-	tbarClose->addAction(exitAction);
+	tbar->addAction(playAction);
+	tbar->addAction(pauseAction);
+	tbar->addAction(stopAction);
 	QHBoxLayout *toolBar = new QHBoxLayout;
 	toolBar->addWidget(tbar);
 	toolBar->addWidget(seekSlider);
 	toolBar->addWidget(timeLcd);
-	toolBar->addWidget(tbarClose);
-
-	QHBoxLayout *playbackLayout = new QHBoxLayout;
-	playbackLayout->addWidget(bar);
-	playbackLayout->addStretch();
-	playbackLayout->addWidget(volumeLabel);
-	playbackLayout->addWidget(volumeSlider);
+	toolBar->addWidget(volumeLabel);
+	toolBar->addWidget(volumeSlider);
 
 	// Settings dialog box
 	dialogBox = new QDialogButtonBox();
@@ -436,7 +432,6 @@ void MainWindow::setupUi()
 	// Main layout
 	QVBoxLayout *mainLayout = new QVBoxLayout;
 	mainLayout->addLayout(toolBar);
-	mainLayout->addLayout(playbackLayout);
 	mainLayout->addWidget(searchBox);
 	mainLayout->addWidget(searchTable);
 	mainLayout->addWidget(musicTable);

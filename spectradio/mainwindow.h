@@ -67,6 +67,7 @@ class MainWindow : public QMainWindow
 	QSize sizeHint() const {
          	return QSize(500, 300);
      	}
+	void loadDB(char *dbfile);
 
 	private slots:
 		void loadDB();
