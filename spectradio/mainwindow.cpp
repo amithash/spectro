@@ -308,6 +308,7 @@ void MainWindow::setTitle(int index)
 		      " by " + musicTable->item(index,1)->text();
 
 	setWindowTitle(windowTitle);
+	statusBar->showMessage(windowTitle);
 }
 
 void MainWindow::setupActions()
@@ -394,19 +395,19 @@ void MainWindow::setupUi()
 		this, SLOT(searchTableClicked(int, int)));
 
 
-	QToolBar *tbar = new QToolBar;
-	tbar->addAction(loadDBAction);
-	tbar->addAction(settingsAction);
-	tbar->addAction(aboutAction);
-	tbar->addAction(playAction);
-	tbar->addAction(pauseAction);
-	tbar->addAction(stopAction);
-	QHBoxLayout *toolBar = new QHBoxLayout;
-	toolBar->addWidget(tbar);
-	toolBar->addWidget(seekSlider);
-	toolBar->addWidget(timeLcd);
-	toolBar->addWidget(volumeLabel);
-	toolBar->addWidget(volumeSlider);
+	QToolBar *tbar = new QToolBar;		// toolbar 
+	tbar->addAction(loadDBAction);		// load db
+	tbar->addAction(settingsAction);	// settings
+	tbar->addAction(aboutAction);		// about
+	tbar->addAction(playAction);		// play
+	tbar->addAction(pauseAction);		// pause
+	tbar->addAction(stopAction);		// stop
+	QHBoxLayout *toolBar = new QHBoxLayout;	// the toolbar layout
+	toolBar->addWidget(tbar);		// toolbar (above)
+	toolBar->addWidget(seekSlider);		// slider
+	toolBar->addWidget(timeLcd);		// time LCD
+	toolBar->addWidget(volumeLabel);	// volume label
+	toolBar->addWidget(volumeSlider);	// volume slider
 
 	// Settings dialog box
 	dialogBox = new QDialogButtonBox();
