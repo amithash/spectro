@@ -83,7 +83,6 @@ class MainWindow : public QMainWindow
 
 	private:
 		void setupActions();
-		void setupMenus();
 		void setupUi();
 		void addEntry(QTableWidget *table, QString title, QString artist, QString album);
 		void clearSearchWindow();
@@ -107,7 +106,6 @@ class MainWindow : public QMainWindow
 		QAction *settingsAction;
 		QAction *exitAction;
 		QAction *aboutAction;
-		QAction *aboutQtAction;
 
 		QLCDNumber *timeLcd;
 		QTableWidget *musicTable;

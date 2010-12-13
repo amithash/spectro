@@ -62,7 +62,6 @@ MainWindow::MainWindow()
 	Phonon::createPath(mediaObject, audioOutput);
 
 	setupActions();
-	setupMenus();
 	setupUi();
 	timeLcd->display("00:00");
 }
@@ -325,19 +324,21 @@ void MainWindow::setupActions()
 	previousAction = new QAction(style()->standardIcon(QStyle::SP_MediaSkipBackward), tr("Previous"), this);
 	previousAction->setShortcut(tr("Ctrl+R"));
 
-	loadDBAction = new QAction(tr("Load &DB"), this);
+	loadDBAction = new QAction(style()->standardIcon(QStyle::SP_DirOpenIcon), tr("Load DB (Ctrl+F)"), this);
 	loadDBAction->setShortcut(tr("Ctrl+F"));
+	loadDBAction->setDisabled(false);
 
-	settingsAction = new QAction(tr("Choose Distance Function"), this);
+	settingsAction = new QAction(style()->standardIcon(QStyle::SP_FileDialogDetailedView), tr("Choose Distance Function (Ctrl+D)"), this);
 	settingsAction->setShortcut(tr("Ctrl+D"));
+	settingsAction->setDisabled(false);
 
-	exitAction = new QAction(tr("E&xit"), this);
+	exitAction = new QAction(style()->standardIcon(QStyle::SP_TitleBarCloseButton), tr("Exit"), this);
 	exitAction->setShortcuts(QKeySequence::Quit);
+	exitAction->setDisabled(false);
 
-	aboutAction = new QAction(tr("A&bout"), this);
+	aboutAction = new QAction(style()->standardIcon(QStyle::SP_DialogHelpButton), tr("About (Ctrl+B)"), this);
 	aboutAction->setShortcut(tr("Ctrl+B"));
-	aboutQtAction = new QAction(tr("About &Qt"), this);
-	aboutQtAction->setShortcut(tr("Ctrl+Q"));
+	aboutAction->setDisabled(false);
 
 	connect(playAction, SIGNAL(triggered()), mediaObject, SLOT(play()));
 	connect(pauseAction, SIGNAL(triggered()), mediaObject, SLOT(pause()) );
@@ -346,21 +347,6 @@ void MainWindow::setupActions()
 	connect(settingsAction, SIGNAL(triggered()), this, SLOT(settings()));
 	connect(exitAction, SIGNAL(triggered()), this, SLOT(close()));
 	connect(aboutAction, SIGNAL(triggered()), this, SLOT(about()));
-	connect(aboutQtAction, SIGNAL(triggered()), qApp, SLOT(aboutQt()));
-}
-
-void MainWindow::setupMenus()
-{
-	QMenu *fileMenu = menuBar()->addMenu(tr("&File"));
-	fileMenu->addAction(loadDBAction);
-	fileMenu->addSeparator();
-	fileMenu->addAction(settingsAction);
-	fileMenu->addSeparator();
-	fileMenu->addAction(exitAction);
-
-	QMenu *aboutMenu = menuBar()->addMenu(tr("&Help"));
-	aboutMenu->addAction(aboutAction);
-	aboutMenu->addAction(aboutQtAction);
 }
 
 void MainWindow::setupUi()
@@ -387,6 +373,7 @@ void MainWindow::setupUi()
 	timeLcd = new QLCDNumber;
 	timeLcd->setPalette(palette);
 
+	// Music table
 	QStringList headers;
 	headers << tr("Title") << tr("Artist") << tr("Album");
 
@@ -397,6 +384,7 @@ void MainWindow::setupUi()
 	connect(musicTable, SIGNAL(cellPressed(int,int)),
 		this, SLOT(tableClicked(int,int)));
 
+	// Search Table
 	searchTable = new QTableWidget(0, 3);
 	searchTable->setHorizontalHeaderLabels(headers);
 	searchTable->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -405,9 +393,18 @@ void MainWindow::setupUi()
 	connect(searchTable, SIGNAL(cellPressed(int, int)), 
 		this, SLOT(searchTableClicked(int, int)));
 
-	QHBoxLayout *seekerLayout = new QHBoxLayout;
-	seekerLayout->addWidget(seekSlider);
-	seekerLayout->addWidget(timeLcd);
+	// Toolbar
+	QToolBar *tbar = new QToolBar;
+	QToolBar *tbarClose = new QToolBar;
+	tbar->addAction(loadDBAction);
+	tbar->addAction(settingsAction);
+	tbar->addAction(aboutAction);
+	tbarClose->addAction(exitAction);
+	QHBoxLayout *toolBar = new QHBoxLayout;
+	toolBar->addWidget(tbar);
+	toolBar->addWidget(seekSlider);
+	toolBar->addWidget(timeLcd);
+	toolBar->addWidget(tbarClose);
 
 	QHBoxLayout *playbackLayout = new QHBoxLayout;
 	playbackLayout->addWidget(bar);
@@ -415,6 +412,7 @@ void MainWindow::setupUi()
 	playbackLayout->addWidget(volumeLabel);
 	playbackLayout->addWidget(volumeSlider);
 
+	// Settings dialog box
 	dialogBox = new QDialogButtonBox();
 	QList<QString> distFuncs = htdb.getSupportedDistanceFunctions();
 	for(int i = 0; i < distFuncs.length(); i++) {
@@ -426,19 +424,22 @@ void MainWindow::setupUi()
 	connect(dialogBox, SIGNAL(clicked(QAbstractButton *)), this, SLOT(acceptSettings(QAbstractButton *)));
 	dialogBox->hide();
 
+	// search bar
 	searchBox = new QLineEdit;
 	searchBox->setText("");
 	connect(searchBox, SIGNAL(editingFinished()), this, SLOT(searchDB()));
 
+	// status bar
 	statusBar = new QStatusBar;
 	statusBar->clearMessage();
 
+	// Main layout
 	QVBoxLayout *mainLayout = new QVBoxLayout;
+	mainLayout->addLayout(toolBar);
+	mainLayout->addLayout(playbackLayout);
 	mainLayout->addWidget(searchBox);
 	mainLayout->addWidget(searchTable);
 	mainLayout->addWidget(musicTable);
-	mainLayout->addLayout(seekerLayout);
-	mainLayout->addLayout(playbackLayout);
 	mainLayout->addWidget(statusBar);
 
 	QWidget *widget = new QWidget;

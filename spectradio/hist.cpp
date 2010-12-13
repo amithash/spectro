@@ -276,7 +276,6 @@ int HistDB::get_next(int ind)
 
 	float dist = DBL_MAX;
 	int ret = ind + 1 >= (int)list.size() ? 0 : ind + 1;
-	int found = 0;
 
 	QString ind_title(list[ind].title);
 	QString ind_artist(list[ind].artist);
@@ -287,25 +286,19 @@ int HistDB::get_next(int ind)
 		QString i_artist(list[i].artist);
 
 		if(list[i].played == 1 || i == (unsigned int)ind) {
-			std::cout << "Skipping already played: " << i_title.toAscii().data() << std::endl;
 			continue;
 		}
 
 		if(ind_title.toLower().compare(i_title.toLower()) == 0 && ind_artist.toLower().compare(i_artist.toLower()) == 0) {
+			std::cout << "Skipping the same song in another album" << std::endl;
 			continue;
 		}
 
 		float t_dist = distance(ind, i);
 		if(t_dist < dist) {
-			found = 1;
 			ret = i;
 			dist = t_dist;
 		}
-	}
-	if(!found)
-		std::cout << "Did not find anything.... probable bug...." << std::endl;
-	if(dist > 8) {
-		std::cout << "Min distance of " << dist << "is too large, Expect deveation" << std::endl;
 	}
 	return (int)ret;
 }
