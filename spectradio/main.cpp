@@ -52,8 +52,9 @@ int main(int argv, char **args)
 
 	MainWindow window;
 	window.show();
-	if(argv >= 2)
-	      window.loadDB(args[1]);
+	for(int i = 1; i < argv; i++) {
+		window.loadDB(args[i]);
+	}
 
 	return app.exec();
 }
