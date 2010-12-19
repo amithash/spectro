@@ -291,6 +291,7 @@ int HistDB::get_next(int ind)
 
 		if(ind_title.toLower().compare(i_title.toLower()) == 0 && ind_artist.toLower().compare(i_artist.toLower()) == 0) {
 			std::cout << "Skipping the same song in another album" << std::endl;
+			list[i].played = 1;
 			continue;
 		}
 
