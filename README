@@ -142,12 +142,21 @@ the same time.
 ===============================================================================
 
 1. Start up spectradio,
-2. File->Load DB
+2. Load DB (the Open icon)
 3. Browse and select your .hdb file.
 4. This will take some time to load the db. 
 5. From here on, you can select a song you want to listen to, then spectradio
    will pick songs similar to that on. (Like pandora, with your own collection).
    You can also search for a specific string in title, aritst or album.
+
+You can also start spectradio from the command line with the path of the hist
+db file:
+> spectradio ~/Music.hdb ~/experimental.hdb # You get the drift
+
+Pressing the more options button, you can select the distance function.
+(This is mostly for the people who want to check out if it performs
+ better with other distance functions)
+
 
 ===============================================================================
 				Caveats
@@ -187,7 +196,7 @@ spectradio == Qt Music player example + My crap
 -----------------------------------------------
 
 http://doc.qt.nokia.com/4.7/phonon-qmusicplayer.html
-You will notice that a few things changed from that.
+You will notice that my player is based on that code.
 
 I have added to that in the most hackiest way possible (Since my native
 language is not C++, it is C and I have absolutely no experience writing
