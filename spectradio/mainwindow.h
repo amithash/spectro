@@ -74,18 +74,22 @@ class MainWindow : public QMainWindow
 		void settings();
 		void searchDB();
 		void about();
+		void retry();
+		void next();
 		void stateChanged(Phonon::State newState, Phonon::State oldState);
 		void tick(qint64 time);
 		void sourceChanged(const Phonon::MediaSource &source);
 		void aboutToFinish();
 		void tableClicked(int row, int column);
 		void searchTableClicked(int row, int column);
+		void playlistTableClicked(int row, int column);
 		void acceptSettings(QAbstractButton * button);
 
 	private:
 		void setupActions();
 		void setupUi();
 		void addEntry(QTableWidget *table, QString title, QString artist, QString album);
+		void appendPlaylist(QString title, QString artist, QString album, int num);
 		void clearSearchWindow();
 		void setTitle(int ind);
 		void closeSettings();
@@ -102,15 +106,15 @@ class MainWindow : public QMainWindow
 		QAction *pauseAction;
 		QAction *stopAction;
 		QAction *nextAction;
-		QAction *previousAction;
 		QAction *loadDBAction;
 		QAction *settingsAction;
-		QAction *exitAction;
 		QAction *aboutAction;
+		QAction *retryAction;
 
 		QLCDNumber *timeLcd;
 		QTableWidget *musicTable;
 		QTableWidget *searchTable;
+		QTableWidget *playlistTable;
 		QLineEdit *searchBox;
 		QStatusBar *statusBar;
 		QDialogButtonBox *dialogBox;

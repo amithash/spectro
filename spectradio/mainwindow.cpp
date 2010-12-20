@@ -47,6 +47,17 @@
 
 HistDB htdb;
 
+const QString AboutMessage =
+"\
+Author: Amithash Prasad <amithash@gmail.com>	\n\
+						\n\
+spectradio is a personal auto-playlist which 	\n\
+automatically plays songs similar to each other.\n\
+Please refer to the README file which comes	\n\
+with the source for more information on creating\n\
+the hist DB file.				\n\
+";
+			
 MainWindow::MainWindow()
 {
 	audioOutput = new Phonon::AudioOutput(Phonon::MusicCategory, this);
@@ -82,6 +93,80 @@ void MainWindow::addEntry(QTableWidget *table, QString title, QString artist, QS
 	table->setItem(currentRow, 1, artistItem);
 	table->setItem(currentRow, 2, albumItem);
 }
+
+void MainWindow::playlistTableClicked(int row, int /* column */)
+{
+	QString s_realRow = playlistTable->item(row, 3)->text();
+	int realRow = s_realRow.toInt();
+	tableClicked(realRow, 0);
+}
+
+void MainWindow::retry(void)
+{
+	int last = playlistTable->rowCount() - 2;
+	if(last < 0)
+	      return;
+	int playRow = playlistTable->item(last, 3)->text().toInt();
+	if(playRow >= sources.size()) {
+		std::cerr << "playRow invalid: " << playRow << std::endl; 
+		return;
+	}
+	mediaObject->stop();
+	mediaObject->clearQueue();
+	int index = htdb.get_next(playRow);
+	if(index >= sources.size()) {
+		std::cerr << "Bad index: " << index << std::endl;
+		return;
+	}
+	mediaObject->setCurrentSource(sources[index]);
+	mediaObject->play();
+}
+
+void MainWindow::next(void)
+{
+	int thisInd = playlistTable->rowCount() - 1;
+	if(thisInd < 0)
+	      return;
+	int playingRow = playlistTable->item(thisInd, 3)->text().toInt();
+	if(playingRow >= sources.size()) {
+		std::cerr << "playRow invalid: " << playingRow << std::endl;
+		return;
+	}
+	mediaObject->stop();
+	int index = htdb.get_next(playingRow);
+	if(index >= sources.size()) {
+		std::cerr << "Bad index: " << index << std::endl;
+		mediaObject->play();
+		return;
+	}
+	mediaObject->clearQueue();
+	mediaObject->setCurrentSource(sources[index]);
+	mediaObject->play();
+}
+
+void MainWindow::appendPlaylist(QString title, QString artist, QString album, int num)
+{
+	int currentRow = playlistTable->rowCount();
+	playlistTable->insertRow(currentRow);
+	QString s_num;
+	s_num.setNum(num);
+	QTableWidgetItem *titleItem = new QTableWidgetItem(title);
+	QTableWidgetItem *artistItem = new QTableWidgetItem(artist);
+	QTableWidgetItem *albumItem = new QTableWidgetItem(album);
+	QTableWidgetItem *rowItem = new QTableWidgetItem(s_num);
+
+        titleItem->setFlags(titleItem->flags() ^ Qt::ItemIsEditable);
+        artistItem->setFlags(artistItem->flags() ^ Qt::ItemIsEditable);
+        albumItem->setFlags(albumItem->flags() ^ Qt::ItemIsEditable);
+        rowItem->setFlags(rowItem->flags() ^ Qt::ItemIsEditable);
+
+	playlistTable->setItem(currentRow, 0, titleItem);
+	playlistTable->setItem(currentRow, 1, artistItem);
+	playlistTable->setItem(currentRow, 2, albumItem);
+	playlistTable->setItem(currentRow, 3, rowItem);
+	playlistTable->setColumnHidden(3, true);
+}
+
 
 void MainWindow::clearSearchWindow()
 {
@@ -193,8 +278,7 @@ void MainWindow::loadDB(char *s_dbfile)
 
 void MainWindow::about()
 {
-	QMessageBox::information(this, tr("Specradio"),
-		tr("Play a song and the player will pick the next one for you... kinda like pandora, but with your own music"));
+	QMessageBox::information(this, tr("Spectradio"), AboutMessage);
 }
 
 void MainWindow::stateChanged(Phonon::State newState, Phonon::State /* oldState */)
@@ -214,12 +298,16 @@ void MainWindow::stateChanged(Phonon::State newState, Phonon::State /* oldState 
 			playAction->setEnabled(false);
 			pauseAction->setEnabled(true);
 			stopAction->setEnabled(true);
+			retryAction->setEnabled(true);
+			nextAction->setEnabled(true);
 			break;
 
 		case Phonon::StoppedState:
 			stopAction->setEnabled(false);
 			playAction->setEnabled(true);
 			pauseAction->setEnabled(false);
+			retryAction->setEnabled(false);
+			nextAction->setEnabled(false);
 			timeLcd->display("00:00");
 			break;
 
@@ -227,6 +315,8 @@ void MainWindow::stateChanged(Phonon::State newState, Phonon::State /* oldState 
 			pauseAction->setEnabled(false);
 			stopAction->setEnabled(true);
 			playAction->setEnabled(true);
+			retryAction->setEnabled(true);
+			nextAction->setEnabled(true);
 			break;
 
 		case Phonon::BufferingState:
@@ -270,6 +360,10 @@ void MainWindow::sourceChanged(const Phonon::MediaSource &source)
 	int row = sources.indexOf(source);
 	musicTable->selectRow(row);
 	setTitle(row);
+	appendPlaylist(musicTable->item(row, 0)->text(),
+			musicTable->item(row, 1)->text(),
+			musicTable->item(row, 2)->text(),
+			row);
 
 	timeLcd->display("00:00");
 }
@@ -298,36 +392,40 @@ void MainWindow::setupActions()
 {
 	playAction = new QAction(style()->standardIcon(QStyle::SP_MediaPlay), tr("Play"), this);
 	playAction->setShortcut(tr("Ctrl+P"));
+	playAction->setToolTip("Play (Ctrl+P)");
 	playAction->setDisabled(true);
 
 	pauseAction = new QAction(style()->standardIcon(QStyle::SP_MediaPause), tr("Pause"), this);
 	pauseAction->setShortcut(tr("Ctrl+A"));
+	pauseAction->setToolTip("Pause (Ctrl+A)");
 	pauseAction->setDisabled(true);
 
 	stopAction = new QAction(style()->standardIcon(QStyle::SP_MediaStop), tr("Stop"), this);
 	stopAction->setShortcut(tr("Ctrl+S"));
+	stopAction->setToolTip("Stop (Ctrl+S)");
 	stopAction->setDisabled(true);
 
 	nextAction = new QAction(style()->standardIcon(QStyle::SP_MediaSkipForward), tr("Next"), this);
 	nextAction->setShortcut(tr("Ctrl+N"));
+	nextAction->setToolTip("Skip the current playing track and play the next predicted (Ctrl+N)");
+	nextAction->setDisabled(true);
 
-	previousAction = new QAction(style()->standardIcon(QStyle::SP_MediaSkipBackward), tr("Previous"), this);
-	previousAction->setShortcut(tr("Ctrl+R"));
+	retryAction = new QAction(style()->standardIcon(QStyle::SP_BrowserReload), tr("Retry"), this);
+	retryAction->setShortcut(tr("Ctrl+R"));
+	retryAction->setToolTip("Skip the current playing and rerun the prediction from the last played track (Ctrl+R)");
+	retryAction->setDisabled(true);
 
-	loadDBAction = new QAction(style()->standardIcon(QStyle::SP_DirOpenIcon), tr("Load DB (Ctrl+F)"), this);
-	loadDBAction->setShortcut(tr("Ctrl+F"));
+	loadDBAction = new QAction(style()->standardIcon(QStyle::SP_DirOpenIcon), tr("Load DB"), this);
+	loadDBAction->setShortcut(tr("Ctrl+L"));
+	loadDBAction->setToolTip("Load the hist DB (Ctrl+L)");
 	loadDBAction->setDisabled(false);
 
-	settingsAction = new QAction(style()->standardIcon(QStyle::SP_FileDialogDetailedView), tr("Choose Distance Function (Ctrl+D)"), this);
+	settingsAction = new QAction(style()->standardIcon(QStyle::SP_FileDialogDetailedView), tr("Distance Function"), this);
 	settingsAction->setShortcut(tr("Ctrl+D"));
+	settingsAction->setToolTip("Choose the distance function for track prediction (Ctrl+D)");
 	settingsAction->setDisabled(false);
 
-	exitAction = new QAction(style()->standardIcon(QStyle::SP_TitleBarCloseButton), tr("Exit"), this);
-	exitAction->setShortcuts(QKeySequence::Quit);
-	exitAction->setDisabled(false);
-
-	aboutAction = new QAction(style()->standardIcon(QStyle::SP_DialogHelpButton), tr("About (Ctrl+B)"), this);
-	aboutAction->setShortcut(tr("Ctrl+B"));
+	aboutAction = new QAction(style()->standardIcon(QStyle::SP_DialogHelpButton), tr("About"), this);
 	aboutAction->setDisabled(false);
 
 	connect(playAction, SIGNAL(triggered()), mediaObject, SLOT(play()));
@@ -335,8 +433,9 @@ void MainWindow::setupActions()
 	connect(stopAction, SIGNAL(triggered()), mediaObject, SLOT(stop()));
 	connect(loadDBAction, SIGNAL(triggered()), this, SLOT(loadDB()));
 	connect(settingsAction, SIGNAL(triggered()), this, SLOT(settings()));
-	connect(exitAction, SIGNAL(triggered()), this, SLOT(close()));
 	connect(aboutAction, SIGNAL(triggered()), this, SLOT(about()));
+	connect(retryAction, SIGNAL(triggered()), this, SLOT(retry()));
+	connect(nextAction, SIGNAL(triggered()), this, SLOT(next()));
 }
 
 void MainWindow::setupUi()
@@ -377,14 +476,25 @@ void MainWindow::setupUi()
 	connect(searchTable, SIGNAL(cellPressed(int, int)), 
 		this, SLOT(searchTableClicked(int, int)));
 
+	playlistTable = new QTableWidget(0,4);
+	playlistTable->setHorizontalHeaderLabels(headers << "");
+	playlistTable->setSelectionMode(QAbstractItemView::SingleSelection);
+	playlistTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+	playlistTable->setColumnHidden(3, true);
+	connect(playlistTable, SIGNAL(cellPressed(int, int)), 
+		this, SLOT(playlistTableClicked(int, int)));
+
 
 	QToolBar *tbar = new QToolBar;		// toolbar 
 	tbar->addAction(loadDBAction);		// load db
-	tbar->addAction(settingsAction);	// settings
-	tbar->addAction(aboutAction);		// about
 	tbar->addAction(playAction);		// play
 	tbar->addAction(pauseAction);		// pause
 	tbar->addAction(stopAction);		// stop
+	tbar->addAction(retryAction);		// Retry
+	tbar->addAction(nextAction);		// Next
+	tbar->addAction(settingsAction);	// settings
+	tbar->addAction(aboutAction);		// about
+
 	QHBoxLayout *toolBar = new QHBoxLayout;	// the toolbar layout
 	toolBar->addWidget(tbar);		// toolbar (above)
 	toolBar->addWidget(seekSlider);		// slider
@@ -413,12 +523,22 @@ void MainWindow::setupUi()
 	statusBar = new QStatusBar;
 	statusBar->clearMessage();
 
+	QVBoxLayout *DBLayout = new QVBoxLayout;
+	DBLayout->addWidget(searchBox);
+	DBLayout->addWidget(searchTable);
+	DBLayout->addWidget(musicTable);
+
+	QVBoxLayout *PlaylistLayout = new QVBoxLayout;
+	PlaylistLayout->addWidget(playlistTable);
+
+	QHBoxLayout *SubMainLayout = new QHBoxLayout;
+	SubMainLayout->addLayout(DBLayout);
+	SubMainLayout->addLayout(PlaylistLayout);
+
 	// Main layout
 	QVBoxLayout *mainLayout = new QVBoxLayout;
 	mainLayout->addLayout(toolBar);
-	mainLayout->addWidget(searchBox);
-	mainLayout->addWidget(searchTable);
-	mainLayout->addWidget(musicTable);
+	mainLayout->addLayout(SubMainLayout);
 	mainLayout->addWidget(statusBar);
 
 	QWidget *widget = new QWidget;

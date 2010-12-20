@@ -301,6 +301,7 @@ int HistDB::get_next(int ind)
 			dist = t_dist;
 		}
 	}
+	list[ret].played = 1;
 	return (int)ret;
 }
 
