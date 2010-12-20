@@ -144,6 +144,17 @@ void MainWindow::next(void)
 	mediaObject->play();
 }
 
+void MainWindow::togglePlaylist()
+{
+	if(playlistVisible) {
+		playlistVisible = false;
+		playlistTable->hide();
+	} else {
+		playlistVisible = true;
+		playlistTable->show();
+	}
+}
+
 void MainWindow::appendPlaylist(QString title, QString artist, QString album, int num)
 {
 	int currentRow = playlistTable->rowCount();
@@ -425,6 +436,11 @@ void MainWindow::setupActions()
 	settingsAction->setToolTip("Choose the distance function for track prediction (Ctrl+D)");
 	settingsAction->setDisabled(false);
 
+	togglePlaylistAction = new QAction(style()->standardIcon(QStyle::SP_FileDialogDetailedView), tr("Distance Function"), this);
+	togglePlaylistAction->setShortcut(tr("Alt+P"));
+	togglePlaylistAction->setToolTip("Toggle playlist (Alt+P)");
+	settingsAction->setDisabled(false);
+
 	aboutAction = new QAction(style()->standardIcon(QStyle::SP_DialogHelpButton), tr("About"), this);
 	aboutAction->setDisabled(false);
 
@@ -436,6 +452,7 @@ void MainWindow::setupActions()
 	connect(aboutAction, SIGNAL(triggered()), this, SLOT(about()));
 	connect(retryAction, SIGNAL(triggered()), this, SLOT(retry()));
 	connect(nextAction, SIGNAL(triggered()), this, SLOT(next()));
+	connect(togglePlaylistAction, SIGNAL(triggered()), this, SLOT(togglePlaylist()));
 }
 
 void MainWindow::setupUi()
@@ -483,6 +500,8 @@ void MainWindow::setupUi()
 	playlistTable->setColumnHidden(3, true);
 	connect(playlistTable, SIGNAL(cellPressed(int, int)), 
 		this, SLOT(playlistTableClicked(int, int)));
+	playlistTable->hide();
+	playlistVisible = false;
 
 
 	QToolBar *tbar = new QToolBar;		// toolbar 
@@ -495,12 +514,16 @@ void MainWindow::setupUi()
 	tbar->addAction(settingsAction);	// settings
 	tbar->addAction(aboutAction);		// about
 
+	QToolBar *tpl_toolbar = new QToolBar;
+	tbar->addAction(togglePlaylistAction);
+
 	QHBoxLayout *toolBar = new QHBoxLayout;	// the toolbar layout
 	toolBar->addWidget(tbar);		// toolbar (above)
 	toolBar->addWidget(seekSlider);		// slider
 	toolBar->addWidget(timeLcd);		// time LCD
 	toolBar->addWidget(volumeLabel);	// volume label
 	toolBar->addWidget(volumeSlider);	// volume slider
+	toolBar->addWidget(tpl_toolbar);	// toggle Playlist
 
 	// Settings dialog box
 	dialogBox = new QDialogButtonBox();

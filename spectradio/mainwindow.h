@@ -76,6 +76,7 @@ class MainWindow : public QMainWindow
 		void about();
 		void retry();
 		void next();
+		void togglePlaylist();
 		void stateChanged(Phonon::State newState, Phonon::State oldState);
 		void tick(qint64 time);
 		void sourceChanged(const Phonon::MediaSource &source);
@@ -101,6 +102,7 @@ class MainWindow : public QMainWindow
 		QList<Phonon::MediaSource> sources;
 		QList<int> searchMap;
 		int stop;
+		bool playlistVisible;
 
 		QAction *playAction;
 		QAction *pauseAction;
@@ -110,6 +112,7 @@ class MainWindow : public QMainWindow
 		QAction *settingsAction;
 		QAction *aboutAction;
 		QAction *retryAction;
+		QAction *togglePlaylistAction;
 
 		QLCDNumber *timeLcd;
 		QTableWidget *musicTable;
