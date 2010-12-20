@@ -12,6 +12,7 @@ typedef void * dwt_plan_t;
 void dwt_destroy_plan(dwt_plan_t plan);
 
 
+int dwt_plan_size(dwt_plan_t _plan);
 /* Note:
  * if in_vec == out_vec, then an in-place transform is performed. During the transform's
  * execution, the contents of in_vec is undefined.

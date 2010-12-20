@@ -29,6 +29,25 @@ typedef struct
 	kernel_t	kernel;
 } dwt_plan_s_t;
 
+int get_pow2_len(int len)
+{
+	int i;
+	if(IS_POW_2(len)) {
+		return len;
+	}
+	for(i = 1; i < len; i <<= 1);
+	i >>= 1;
+	return i;
+}
+
+int dwt_plan_size(dwt_plan_t _plan)
+{
+	dwt_plan_s_t *plan = (dwt_plan_s_t *)_plan;
+	if(!_plan)
+	      return 0;
+	return plan->size;
+}
+
 static void transform( dwt_plan_t _plan, const int n)
 {
 	int i, j;
@@ -108,8 +127,8 @@ dwt_plan_t dwt_create_plan(int size, float *in_vec, float *out_vec, dwt_dir_t di
 
 	if(!in_vec || !out_vec)
 	      return NULL;
-	if(!IS_POW_2(size))
-	      return NULL;
+
+	size = get_pow2_len(size);
 
 	switch(dir) {
 		case DWT_FORWARD:

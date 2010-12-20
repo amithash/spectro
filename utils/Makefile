@@ -17,6 +17,7 @@ BPM_OBJS = bpm.o
 PLOTBPM_OBJS = plotbpm.o
 PLOTHIST_OBJS = plothist.o
 NORM_SPECT_OBJS = norm_spect.o
+DWT_OBJS = dwt.o
 
 SPECT2CSV_EXE = spect2csv
 GENSPECTDB_EXE = genspectdb
@@ -50,8 +51,8 @@ hist2pgm: $(HIST2PGM_OBJS)
 getsimilar: $(GETSIMILAR_OBJS)
 	$(CC)  -o $(GETSIMILAR_EXE)  $(LIBS) $(GETSIMILAR_OBJS)
 
-plotbpm: $(BPM_OBJS) $(PLOTBPM_OBJS)
-	$(CC) -o $(PLOTBPM_EXE) $(LIBS) $(PLOTBPM_OBJS) $(BPM_OBJS)
+plotbpm: $(BPM_OBJS) $(PLOTBPM_OBJS) $(DWT_OBJS)
+	$(CC) -o $(PLOTBPM_EXE) $(LIBS) $(PLOTBPM_OBJS) $(BPM_OBJS) $(DWT_OBJS)
 
 plothist: $(PLOTHIST_OBJS)
 	$(CC) -o $(PLOTHIST_EXE) $(LIBS) $(PLOTHIST_OBJS)

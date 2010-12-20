@@ -17,14 +17,18 @@
 *******************************************************************************/
 
 #include "bpm.h"
+#include "dwt.h"
 
 int main(int argc, char *argv[])
 {
 	spect_t spect;
 	int rc;
-	int i;
+	int i,j;
 	float bpm[BPM_LEN];
 	float _bpm[NBANDS][BPM_LEN];
+	dwt_plan_t plan;
+	float *work;
+	int real_len;
 	if(argc <= 1) {
 		spect_error("USAGE: %s <spect file>", argv[0]);
 		exit(-1);
@@ -34,6 +38,7 @@ int main(int argc, char *argv[])
 		spect_error("Reading %s returned in error=%s",argv[1],RM_RC_STR(rc));
 		exit(-1);
 	}
+#if 0
 	if(argc >= 3) {
 		if(_spect2bpm(_bpm, &spect)) {
 			spect_error("Conversion failed!");
@@ -50,7 +55,25 @@ int main(int argc, char *argv[])
 		}
 		plot_bpm(bpm);	
 	}
+#else
+	for(i = 0; i < NBANDS; i++) {
+		plan = dwt_create_plan(spect.len, spect.spect[i], spect.spect[i], DWT_FORWARD);
+		if(!plan) {
+			spect_error("Waaaaaaaaaaa");
+			exit(-1);
+		}
+		if(i == 0)
+		      real_len = dwt_plan_size(plan);
+		dwt_execute(plan);
+		dwt_destroy_plan(plan);
+	}
+	for(i = 1; i < NBANDS; i++) {
+		for(j = 0; j < real_len; j++) {
+			spect.spect[0][j] += spect.spect[i][j];
+		}
+	}
 
+#endif
 
 cleanup_spect:
 	free_spect(&spect);
