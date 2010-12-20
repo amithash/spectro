@@ -16,10 +16,13 @@ install:
 	+make -C lib install
 	+make -C utils install
 	+make -C spectrogen install
+	cp genhistdb.pl /usr/local/bin/genhistdb
+	chmod +x /usr/local/bin/genhistdb
 
 uninstall:
 	+make -C spectradio uninstall
 	+make -C lib uninstall
 	+make -C utils uninstall
 	+make -C spectrogen uninstall
+	rm -f /usr/local/bin/genhistdb
 
