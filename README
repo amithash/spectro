@@ -1,5 +1,8 @@
 ===============================================================================
 				SPECTRO
+
+			Author: Amithash Prasad
+			Email: amithash@gmail.com
 ===============================================================================
 
 Description:
@@ -25,12 +28,13 @@ Requirements
 ------------
 
 I cannot right now, describe what all are required. I can state the basic minimum
-required to compile the package:
+(probably incomplete) required to compile and use the package:
+
 0. Compilers - gcc, g++, make
 1. gstreamer and its development libs.
 2. mp3 support in gstreamer (This is usually in the bad and ugly libs) = If you want mp3s
 3. fftw, taglib libs.
-4. Qt 4.7 development libs. (Including qmake)
+4. Qt 4.7 development libs. (Including qmake, phonon libs and its backend)
 5. Anything else configure complains about :-)
 
 ===============================================================================
@@ -208,8 +212,8 @@ spectradio == Qt Music player example + My crap
 -----------------------------------------------
 
 http://doc.qt.nokia.com/4.7/phonon-qmusicplayer.html
-You will notice that my player is based on that code.
+You will notice that my player is based on that code. Even though it started
+from the example code, it is currently totally modified. But, hey, I could
+never have this without the example code!
 
-I have added to that in the most hackiest way possible (Since my native
-language is not C++, it is C and I have absolutely no experience writing
-GUI programs).
+
