@@ -157,6 +157,18 @@ Pressing the more options button, you can select the distance function.
 (This is mostly for the people who want to check out if it performs
  better with other distance functions)
 
+Some features which might need more explanation:
+1. The "next" icon skips the current song, and re-predicts the next
+   one based on the current song.
+2. The "refresh/retry" icon skips the current playing song, and 
+   re-predicts the next one based on the previous played song.
+
+Thus the next/retry functions should be understood in the context of
+"this is a radio" and not as a music player which would have a static
+playlist.
+
+The "Distance choice" lets you choose which distance function is used.
+Obviously, this is mostly there to try out different algorithms.
 
 ===============================================================================
 				Caveats
