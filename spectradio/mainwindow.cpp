@@ -47,6 +47,7 @@
 
 HistDB htdb;
 
+
 const QString AboutMessage =
 "\
 Author: Amithash Prasad <amithash@gmail.com>	\n\
@@ -178,6 +179,18 @@ void MainWindow::appendPlaylist(QString title, QString artist, QString album, in
 	playlistTable->setColumnHidden(3, true);
 }
 
+void MainWindow::togglePlay()
+{
+  switch(mediaObject->state())
+  {
+    case Phonon::MediaObject::PlayingState:
+      mediaObject->pause();
+      break;
+    case Phonon::MediaObject::PausedState:
+      mediaObject->play();
+      break;
+  }
+}
 
 void MainWindow::clearSearchWindow()
 {
@@ -307,7 +320,7 @@ void MainWindow::stateChanged(Phonon::State newState, Phonon::State /* oldState 
 		
 		case Phonon::PlayingState:
 			playAction->setEnabled(false);
-			pauseAction->setEnabled(true);
+      playAction->setIcon(style()->standardIcon(QStyle::SP_MediaPause));
 			stopAction->setEnabled(true);
 			retryAction->setEnabled(true);
 			nextAction->setEnabled(true);
@@ -316,14 +329,15 @@ void MainWindow::stateChanged(Phonon::State newState, Phonon::State /* oldState 
 		case Phonon::StoppedState:
 			stopAction->setEnabled(false);
 			playAction->setEnabled(true);
-			pauseAction->setEnabled(false);
+      playAction->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
 			retryAction->setEnabled(false);
 			nextAction->setEnabled(false);
 			timeLcd->display("00:00");
 			break;
 
 		case Phonon::PausedState:
-			pauseAction->setEnabled(false);
+			playAction->setEnabled(true);
+      playAction->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
 			stopAction->setEnabled(true);
 			playAction->setEnabled(true);
 			retryAction->setEnabled(true);
@@ -444,8 +458,7 @@ void MainWindow::setupActions()
 	aboutAction = new QAction(style()->standardIcon(QStyle::SP_DialogHelpButton), tr("About"), this);
 	aboutAction->setDisabled(false);
 
-	connect(playAction, SIGNAL(triggered()), mediaObject, SLOT(play()));
-	connect(pauseAction, SIGNAL(triggered()), mediaObject, SLOT(pause()) );
+	connect(playAction, SIGNAL(triggered()), this, SLOT(togglePlay()));
 	connect(stopAction, SIGNAL(triggered()), mediaObject, SLOT(stop()));
 	connect(loadDBAction, SIGNAL(triggered()), this, SLOT(loadDB()));
 	connect(settingsAction, SIGNAL(triggered()), this, SLOT(settings()));
@@ -507,7 +520,6 @@ void MainWindow::setupUi()
 	QToolBar *tbar = new QToolBar;		// toolbar 
 	tbar->addAction(loadDBAction);		// load db
 	tbar->addAction(playAction);		// play
-	tbar->addAction(pauseAction);		// pause
 	tbar->addAction(stopAction);		// stop
 	tbar->addAction(retryAction);		// Retry
 	tbar->addAction(nextAction);		// Next

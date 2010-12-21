@@ -76,6 +76,7 @@ class MainWindow : public QMainWindow
 		void about();
 		void retry();
 		void next();
+    void togglePlay();
 		void togglePlaylist();
 		void stateChanged(Phonon::State newState, Phonon::State oldState);
 		void tick(qint64 time);
@@ -105,7 +106,6 @@ class MainWindow : public QMainWindow
 		bool playlistVisible;
 
 		QAction *playAction;
-		QAction *pauseAction;
 		QAction *stopAction;
 		QAction *nextAction;
 		QAction *loadDBAction;
