@@ -183,11 +183,16 @@ void MainWindow::togglePlay()
 {
   switch(mediaObject->state())
   {
-    case Phonon::MediaObject::PlayingState:
+	case Phonon::PlayingState:
       mediaObject->pause();
       break;
-    case Phonon::MediaObject::PausedState:
+	case Phonon::StoppedState:
+	case Phonon::PausedState:
       mediaObject->play();
+      break;
+	case Phonon::ErrorState:
+	case Phonon::BufferingState:
+	default:
       break;
   }
 }
@@ -319,7 +324,7 @@ void MainWindow::stateChanged(Phonon::State newState, Phonon::State /* oldState 
 			break;
 		
 		case Phonon::PlayingState:
-			playAction->setEnabled(false);
+			playAction->setEnabled(true);
       playAction->setIcon(style()->standardIcon(QStyle::SP_MediaPause));
 			stopAction->setEnabled(true);
 			retryAction->setEnabled(true);
