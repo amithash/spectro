@@ -421,8 +421,8 @@ void MainWindow::setTitle(int index)
 void MainWindow::setupActions()
 {
 	playAction = new QAction(style()->standardIcon(QStyle::SP_MediaPlay), tr("Play/Pause"), this);
-	playAction->setShortcut(tr("Ctrl+P"));
-	playAction->setToolTip("Play (Ctrl+P)");
+	playAction->setShortcut(tr("space"));
+	playAction->setToolTip("Play (space)");
 	playAction->setDisabled(true);
 
 	stopAction = new QAction(style()->standardIcon(QStyle::SP_MediaStop), tr("Stop"), this);
