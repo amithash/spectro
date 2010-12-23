@@ -9,7 +9,7 @@ CFLAGS=  -O3 -g -Wall -mssse3 -mfpmath=sse -DMEMORY_SIZE=$(MEMORY_KB) $(TAGLIB_C
 CFLAGS += -fPIC -g
 LIBS = -lm -lpthread -lgcc_s -lfftw3f $(TAGLIB_LIB)
 
-OBJS = file_vecio.o hist.o hist_dist.o spect_bounds.o spect.o
+OBJS = file_vecio.o hist.o hist_dist.o spect_bounds.o spect.o plot.o
 
 VERSION_MAJOR=0
 VERSION_MINOR=0.1

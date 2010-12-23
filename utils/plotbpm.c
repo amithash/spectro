@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
 		spect_error("Reading %s returned in error=%s",argv[1],RM_RC_STR(rc));
 		exit(-1);
 	}
-#if 0
+#if 1
 	if(argc >= 3) {
 		if(_spect2bpm(_bpm, &spect)) {
 			spect_error("Conversion failed!");

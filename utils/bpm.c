@@ -21,6 +21,7 @@
 #include <tag_c.h>
 #include <time.h>
 #include <float.h>
+#include "plot.h"
 
 #define FREQ2BPM(f,len,sr) ((unsigned int)(30 * (((float)sr) * ((float)f / (float)(len - 1)))))
 
@@ -384,59 +385,19 @@ void plot_bpm(float bpm[BPM_LEN])
 {
 	FILE *f;
 	int i,j;
-	float mean = 0;
-	float peaks[MAX_PEAKS][2];
-	f = fopen("__out.txt", "w");
-	if(!f) {
-		spect_error("FOPEN failed!");
-		return;
-	}
-	for(i = 0; i < BPM_LEN; i++) {
-		int b = i + BPM_MIN;
-		fprintf(f, "%d %f\n", b,  bpm[i]);
-	}
-	fclose(f);
-	
-	f = fopen("__out.gp", "w");
-	fprintf(f, "plot '__out.txt' using 1:2 with lines\npause -1\n");
-	fclose(f);
-
-	system("gnuplot __out.gp");
-	system("rm -f __out.gp __out.txt");
+	float x[BPM_LEN];
+	for(i = 0; i < BPM_LEN; i++)
+	      x[i] = i + BPM_MIN;
+	plot(x, bpm, 1, BPM_LEN, PLOT_LINES);
 }
+
 void _plot_bpm(float bpm[NBANDS][BPM_LEN])
 {
-	FILE *f;
-	int i, j;
-	f = fopen("__out.txt", "w");
-	if(!f) {
-		spect_error("FOPEN failed!");
-		return;
-	}
-
-	for(i = 1; i < BPM_LEN; i++) {
-		int b = i + BPM_MIN;
-		fprintf(f, "%d", b);
-		for(j = 0; j < NBANDS; j++) {
-			fprintf(f, " %f", bpm[j][i]);
-		}
-		fprintf(f, "\n");
-	}
-	fclose(f);
-	f = fopen("__out.gp", "w");
-	fprintf(f, "plot \\\n");
-	for(i = 0; i < NBANDS; i++) {
-		fprintf(f, "\"__out.txt\" using 1:%d with lines", i + 2);
-		if(i < (NBANDS - 1)) {
-		      fprintf(f, ", \\");
-		}
-		fprintf(f, "\n");
-	}
-	fprintf(f," pause -1\n");
-	fclose(f);
-
-	system("gnuplot __out.gp");
-	system("rm -f __out.gp __out.txt");
+	int i;
+	float x[BPM_LEN];
+	for(i = 0; i < BPM_LEN; i++)
+	      x[i] = i + BPM_MIN;
+	plot(x, bpm, NBANDS, BPM_LEN, PLOT_LINES);
 }
 
 

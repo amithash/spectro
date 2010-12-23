@@ -24,6 +24,7 @@
 #include <tag_c.h>
 #include <stdint.h>
 #include "file_vecio.h"
+#include "plot.h"
 
 #define BIN_WIDTH     ((SPECT_MAX_VAL - SPECT_MIN_VAL) / SPECT_HIST_LEN)
 
@@ -294,30 +295,6 @@ err:
 
 void plot_hist(hist_t *hist)
 {
-	int i,j;
-	FILE *f;
-	f = fopen("__out.txt", "w");
-	for(i = 0; i < SPECT_HIST_LEN; i++) {
-		for(j = 0; j < NBANDS; j++) {
-			fprintf(f,"%f ",hist->spect_hist[j][i]);
-		}
-		fprintf(f,"\n");
-	}
-	fclose(f);
-	f = fopen("__out.gp", "w");
-	fprintf(f, "plot \\\n");
-	for(i = 0; i < NBANDS; i++) {
-		fprintf(f, "\"__out.txt\" using %d with lines title 'Band %d'", i + 1, i);
-		if(i < (NBANDS - 1)) {
-		      fprintf(f, ", \\");
-		}
-		fprintf(f, "\n");
-	}
-	fprintf(f,"pause -1\n");
-	fclose(f);
-	
-	system("gnuplot __out.gp");
-
-	system("rm -f __out.gp __out.txt");
+	plot(NULL, (float *)hist->spect_hist, NBANDS, SPECT_HIST_LEN, PLOT_LINES);
 }
 
