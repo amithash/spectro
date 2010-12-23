@@ -435,7 +435,7 @@ void MainWindow::setupActions()
 	nextAction->setToolTip("Skip the current playing track and play the next predicted (Ctrl+N)");
 	nextAction->setDisabled(true);
 
-	retryAction = new QAction(style()->standardIcon(QStyle::SP_BrowserReload), tr("Retry"), this);
+	retryAction = new QAction(style()->standardIcon(QStyle::SP_DialogResetButton), tr("Retry"), this);
 	retryAction->setShortcut(tr("Ctrl+R"));
 	retryAction->setToolTip("Skip the current playing and rerun the prediction from the last played track (Ctrl+R)");
 	retryAction->setDisabled(true);
@@ -445,7 +445,7 @@ void MainWindow::setupActions()
 	loadDBAction->setToolTip("Load the hist DB (Ctrl+L)");
 	loadDBAction->setDisabled(false);
 
-	settingsAction = new QAction(style()->standardIcon(QStyle::SP_FileDialogDetailedView), tr("Distance Function"), this);
+	settingsAction = new QAction(style()->standardIcon(QStyle::SP_FileDialogInfoView), tr("Distance Function"), this);
 	settingsAction->setShortcut(tr("Ctrl+D"));
 	settingsAction->setToolTip("Choose the distance function for track prediction (Ctrl+D)");
 	settingsAction->setDisabled(false);
@@ -455,7 +455,7 @@ void MainWindow::setupActions()
 	togglePlaylistAction->setToolTip("Toggle playlist (Alt+P)");
 	settingsAction->setDisabled(false);
 
-	aboutAction = new QAction(style()->standardIcon(QStyle::SP_DialogHelpButton), tr("About"), this);
+	aboutAction = new QAction(style()->standardIcon(QStyle::SP_MessageBoxQuestion), tr("About"), this);
 	aboutAction->setDisabled(false);
 
 	connect(playAction, SIGNAL(triggered()), this, SLOT(togglePlay()));
@@ -527,7 +527,7 @@ void MainWindow::setupUi()
 	tbar->addAction(aboutAction);		// about
 
 	QToolBar *tpl_toolbar = new QToolBar;
-	tbar->addAction(togglePlaylistAction);
+	tpl_toolbar->addAction(togglePlaylistAction);
 
 	QHBoxLayout *toolBar = new QHBoxLayout;	// the toolbar layout
 	toolBar->addWidget(tbar);		// toolbar (above)
