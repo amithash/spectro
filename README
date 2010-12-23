@@ -24,18 +24,52 @@ Uninstall
 sudo make uninstall
 # or make uninstall # as root
 
-Requirements
-------------
-
+===============================================================================
+			Requirements
+===============================================================================
 I cannot right now, describe what all are required. I can state the basic minimum
 (probably incomplete) required to compile and use the package:
 
 0. Compilers - gcc, g++, make
-1. gstreamer and its development libs.
-2. mp3 support in gstreamer (This is usually in the bad and ugly libs) = If you want mp3s
-3. fftw, taglib libs.
-4. Qt 4.7 development libs. (Including qmake, phonon libs and its backend)
-5. Anything else configure complains about :-)
+
+spectrogen:
+-----------
+pkg-config
+libfftw3-3
+libfftw3-dev
+libgstreamer0.10-0
+libgstreamer0.10-dev
+libgstreamer-plugins-base0.10-dev
+
+#If you have mp3s or ther non-free music formats, you would need these too:
+gstreamer0.10-plugins-bad
+gstreamer0.10-plugins-base
+gstreamer0.10-plugins-good
+gstreamer0.10-plugins-ugly  
+
+
+spectradio
+----------
+libqt4
+libqt4-dev
+libphonon-dev 
+libphonon4
+
+# To playback, you will also need one of the following
+phonon-backend-gstreamer 
+phonon-backend-xine
+phonon-backend-vlc
+#(Kubuntu is usually packaged with the xine backend)
+
+utils:
+------
+libfftw3-3
+libfftw3-dev
+libtag1-dev
+libtag1c2a 
+libtagc0
+libtagc0-dev
+
 
 ===============================================================================
 			Automated DB Generation
