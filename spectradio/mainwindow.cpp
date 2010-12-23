@@ -47,6 +47,10 @@
 
 HistDB htdb;
 
+#define TITLE_COLOR QRgb(qRgb(0x00, 0x00, 0xFF))
+#define ARTIST_COLOR QRgb(qRgb(0x00, 0x00, 0xA0))
+#define ALBUM_COLOR QRgb(qRgb(0x00, 0x00, 0x70))
+
 
 const QString AboutMessage =
 "\
@@ -85,6 +89,10 @@ void MainWindow::addEntry(QTableWidget *table, QString title, QString artist, QS
 	QTableWidgetItem *titleItem = new QTableWidgetItem(title);
 	QTableWidgetItem *artistItem = new QTableWidgetItem(artist);
 	QTableWidgetItem *albumItem = new QTableWidgetItem(album);
+
+	titleItem->setBackground(QBrush(QColor(TITLE_COLOR)));
+	artistItem->setBackground(QBrush(QColor(ARTIST_COLOR)));
+	albumItem->setBackground(QBrush(QColor(ALBUM_COLOR)));
 
         titleItem->setFlags(titleItem->flags() ^ Qt::ItemIsEditable);
         artistItem->setFlags(artistItem->flags() ^ Qt::ItemIsEditable);
@@ -166,6 +174,10 @@ void MainWindow::appendPlaylist(QString title, QString artist, QString album, in
 	QTableWidgetItem *artistItem = new QTableWidgetItem(artist);
 	QTableWidgetItem *albumItem = new QTableWidgetItem(album);
 	QTableWidgetItem *rowItem = new QTableWidgetItem(s_num);
+
+	titleItem->setBackground(QBrush(QColor(TITLE_COLOR)));
+	artistItem->setBackground(QBrush(QColor(ARTIST_COLOR)));
+	albumItem->setBackground(QBrush(QColor(ALBUM_COLOR)));
 
         titleItem->setFlags(titleItem->flags() ^ Qt::ItemIsEditable);
         artistItem->setFlags(artistItem->flags() ^ Qt::ItemIsEditable);
@@ -411,7 +423,7 @@ void MainWindow::setTitle(int index)
 {
 	QString windowTitle;
 	windowTitle = musicTable->item(index, 0)->text() +
-		      "\tby\t" + musicTable->item(index,1)->text();
+		      " by " + musicTable->item(index,1)->text();
 
 	setWindowTitle(windowTitle);
 	statusBar->clearMessage();
@@ -494,6 +506,7 @@ void MainWindow::setupUi()
 	musicTable->setHorizontalHeaderLabels(headers);
 	musicTable->setSelectionMode(QAbstractItemView::SingleSelection);
 	musicTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+	musicTable->verticalHeader()->hide();
 	connect(musicTable, SIGNAL(cellPressed(int,int)),
 		this, SLOT(tableClicked(int,int)));
 
@@ -503,6 +516,7 @@ void MainWindow::setupUi()
 	searchTable->setSelectionMode(QAbstractItemView::SingleSelection);
 	searchTable->setSelectionBehavior(QAbstractItemView::SelectRows);
 	searchTable->hide();
+	searchTable->verticalHeader()->hide();
 	connect(searchTable, SIGNAL(cellPressed(int, int)), 
 		this, SLOT(searchTableClicked(int, int)));
 
@@ -511,6 +525,7 @@ void MainWindow::setupUi()
 	playlistTable->setSelectionMode(QAbstractItemView::SingleSelection);
 	playlistTable->setSelectionBehavior(QAbstractItemView::SelectRows);
 	playlistTable->setColumnHidden(3, true);
+	playlistTable->verticalHeader()->hide();
 	connect(playlistTable, SIGNAL(cellPressed(int, int)), 
 		this, SLOT(playlistTableClicked(int, int)));
 	playlistTable->hide();
