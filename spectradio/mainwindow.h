@@ -90,8 +90,8 @@ class MainWindow : public QMainWindow
 	private:
 		void setupActions();
 		void setupUi();
-		void addEntry(QTableWidget *table, QString title, QString artist, QString album);
-		void appendPlaylist(QString title, QString artist, QString album, int num);
+		void addEntry(QTableWidget *table, QString title, QString artist, QString album, int ind);
+		void repopulateReverseIndex();
 		void clearSearchWindow();
 		void setTitle(int ind);
 		void closeSettings();
@@ -101,7 +101,6 @@ class MainWindow : public QMainWindow
 		Phonon::AudioOutput *audioOutput;
 		Phonon::VolumeSlider *volumeSlider;
 		QList<Phonon::MediaSource> sources;
-		QList<int> searchMap;
 		int stop;
 		bool playlistVisible;
 
@@ -114,10 +113,11 @@ class MainWindow : public QMainWindow
 		QAction *retryAction;
 		QAction *togglePlaylistAction;
 
+		QList<int> reverseIndex;	// index in sources (or htdb) to index in musicTable
 		QLCDNumber *timeLcd;
-		QTableWidget *musicTable;
-		QTableWidget *searchTable;
-		QTableWidget *playlistTable;
+		QTableWidget *musicTable;	// Last column is an index to entry in sources and htdb
+		QTableWidget *searchTable;	// Last column is an index to entry in musicTable
+		QTableWidget *playlistTable;	// Last column is an index to entry in musicTable
 		QLineEdit *searchBox;
 		QStatusBar *statusBar;
 		QDialogButtonBox *dialogBox;

@@ -51,14 +51,19 @@ class HistDB
 	unsigned int valid;
 	QString curDistance;
 	QList<QString> supportedDistances;
+	QList<QString> database;
 
 	float (*pdf_distance)(float *a, float *b, unsigned int len);
 
 	public:
-	bool is_valid();
 	HistDB(void);
 	HistDB(const char *dbname);
 	~HistDB();
+
+	void addToDB(QString name);
+	bool existsInDB(QString name);
+
+	bool is_valid();
 	unsigned int length(void);
 	float distance(unsigned int e1, unsigned int e2);
 	void set_media_source(unsigned int ind, Phonon::MediaSource source);

@@ -48,8 +48,8 @@
 HistDB htdb;
 
 #define TITLE_COLOR QRgb(qRgb(0x00, 0x00, 0xFF))
-#define ARTIST_COLOR QRgb(qRgb(0x00, 0x00, 0xA0))
-#define ALBUM_COLOR QRgb(qRgb(0x00, 0x00, 0x70))
+#define ARTIST_COLOR QRgb(qRgb(0x00, 0xFF, 0x00))
+#define ALBUM_COLOR QRgb(qRgb(0xFF, 0x00, 0x00))
 
 
 const QString AboutMessage =
@@ -82,13 +82,16 @@ MainWindow::MainWindow()
 	timeLcd->display("00:00");
 }
 
-void MainWindow::addEntry(QTableWidget *table, QString title, QString artist, QString album)
+void MainWindow::addEntry(QTableWidget *table, QString title, QString artist, QString album, int ind)
 {
 	int currentRow = table->rowCount();
 	table->insertRow(currentRow);
+	QString s_num;
+	s_num.setNum(ind);
 	QTableWidgetItem *titleItem = new QTableWidgetItem(title);
 	QTableWidgetItem *artistItem = new QTableWidgetItem(artist);
 	QTableWidgetItem *albumItem = new QTableWidgetItem(album);
+	QTableWidgetItem *indexItem = new QTableWidgetItem(s_num);
 
 	titleItem->setBackground(QBrush(QColor(TITLE_COLOR)));
 	artistItem->setBackground(QBrush(QColor(ARTIST_COLOR)));
@@ -97,16 +100,46 @@ void MainWindow::addEntry(QTableWidget *table, QString title, QString artist, QS
         titleItem->setFlags(titleItem->flags() ^ Qt::ItemIsEditable);
         artistItem->setFlags(artistItem->flags() ^ Qt::ItemIsEditable);
         albumItem->setFlags(albumItem->flags() ^ Qt::ItemIsEditable);
+        indexItem->setFlags(albumItem->flags() ^ Qt::ItemIsEditable);
 
 	table->setItem(currentRow, 0, titleItem);
 	table->setItem(currentRow, 1, artistItem);
 	table->setItem(currentRow, 2, albumItem);
+	table->setItem(currentRow, 3, indexItem);
+
+	table->setColumnHidden(3, true);
+}
+
+void MainWindow::repopulateReverseIndex()
+{
+	int tableLen = musicTable->rowCount();
+	int reverseIndexLen = reverseIndex.length();
+
+	if(reverseIndexLen < tableLen) {
+		reverseIndex.reserve(tableLen);
+	} else if(reverseIndexLen > tableLen) {
+		if(sources.length() != tableLen) {
+			std::cerr << "Unrecoverable error. exiting" << std::endl;
+			exit(-1);
+		}
+		reverseIndex.clear();
+		reverseIndex.reserve(tableLen);
+	}
+
+	// Invalidate all elements
+	for(int i = 0; i < reverseIndex.length(); i++) {
+		reverseIndex[i] = -1;
+	}
+
+	for(int i = 0; i < tableLen; i++) {
+		int sourcesInd = musicTable->item(i, 3)->text().toInt();
+		reverseIndex[sourcesInd] = i;
+	}
 }
 
 void MainWindow::playlistTableClicked(int row, int /* column */)
 {
-	QString s_realRow = playlistTable->item(row, 3)->text();
-	int realRow = s_realRow.toInt();
+	int realRow = playlistTable->item(row, 3)->text().toInt();
 	tableClicked(realRow, 0);
 }
 
@@ -137,19 +170,22 @@ void MainWindow::next(void)
 	if(thisInd < 0)
 	      return;
 	int playingRow = playlistTable->item(thisInd, 3)->text().toInt();
-	if(playingRow >= sources.size()) {
+	if(playingRow >= musicTable->rowCount()) {
 		std::cerr << "playRow invalid: " << playingRow << std::endl;
 		return;
 	}
 	mediaObject->stop();
-	int index = htdb.get_next(playingRow);
-	if(index >= sources.size()) {
-		std::cerr << "Bad index: " << index << std::endl;
+
+	int sourcesIndex = musicTable->item(playingRow, 3)->text().toInt();
+	int nextSourcesIndex = htdb.get_next(sourcesIndex);
+	if(nextSourcesIndex >= sources.size()) {
+		std::cerr << "Bad index: " << nextSourcesIndex << std::endl;
 		mediaObject->play();
 		return;
 	}
+
 	mediaObject->clearQueue();
-	mediaObject->setCurrentSource(sources[index]);
+	mediaObject->setCurrentSource(sources[nextSourcesIndex]);
 	mediaObject->play();
 }
 
@@ -162,33 +198,6 @@ void MainWindow::togglePlaylist()
 		playlistVisible = true;
 		playlistTable->show();
 	}
-}
-
-void MainWindow::appendPlaylist(QString title, QString artist, QString album, int num)
-{
-	int currentRow = playlistTable->rowCount();
-	playlistTable->insertRow(currentRow);
-	QString s_num;
-	s_num.setNum(num);
-	QTableWidgetItem *titleItem = new QTableWidgetItem(title);
-	QTableWidgetItem *artistItem = new QTableWidgetItem(artist);
-	QTableWidgetItem *albumItem = new QTableWidgetItem(album);
-	QTableWidgetItem *rowItem = new QTableWidgetItem(s_num);
-
-	titleItem->setBackground(QBrush(QColor(TITLE_COLOR)));
-	artistItem->setBackground(QBrush(QColor(ARTIST_COLOR)));
-	albumItem->setBackground(QBrush(QColor(ALBUM_COLOR)));
-
-        titleItem->setFlags(titleItem->flags() ^ Qt::ItemIsEditable);
-        artistItem->setFlags(artistItem->flags() ^ Qt::ItemIsEditable);
-        albumItem->setFlags(albumItem->flags() ^ Qt::ItemIsEditable);
-        rowItem->setFlags(rowItem->flags() ^ Qt::ItemIsEditable);
-
-	playlistTable->setItem(currentRow, 0, titleItem);
-	playlistTable->setItem(currentRow, 1, artistItem);
-	playlistTable->setItem(currentRow, 2, albumItem);
-	playlistTable->setItem(currentRow, 3, rowItem);
-	playlistTable->setColumnHidden(3, true);
 }
 
 void MainWindow::togglePlay()
@@ -219,14 +228,13 @@ void MainWindow::searchDB()
 {
 	QString search = searchBox->text().toLower();
 	clearSearchWindow();
-	searchMap.clear();
-	if(searchBox->text().isEmpty()) {
+	if(search.isEmpty()) {
 		searchTable->hide();
 		musicTable->show();
 		return;
 	}
 	int tblCount = musicTable->rowCount();
-	int colCount = musicTable->columnCount();
+	int colCount = 3;
 	stop = 0;
 	for(int i = 0; i < tblCount; i++) {
 		int found = 0;
@@ -238,13 +246,16 @@ void MainWindow::searchDB()
 			}
 		}
 		if(found == 1) {
-			addEntry(searchTable, musicTable->item(i, 0)->text(), musicTable->item(i, 1)->text(), musicTable->item(i, 2)->text());
-			searchMap.append(i);
+			addEntry(searchTable, 
+			musicTable->item(i, 0)->text(), 
+			musicTable->item(i, 1)->text(), 
+			musicTable->item(i, 2)->text(), i);
 		}
 		if(stop == 1)
 			break;
 	}
 	musicTable->hide();
+	searchTable->sortItems(1, Qt::AscendingOrder);
 	searchTable->show();
 }
 
@@ -289,6 +300,12 @@ void MainWindow::loadDB(char *s_dbfile)
 	QString dbfile(s_dbfile);
 	int at = htdb.length();
 
+	if(htdb.existsInDB(dbfile)) {
+		std::cerr << s_dbfile << " Already exists, so skipping it" << std::endl;
+		return;
+	}
+	htdb.addToDB(dbfile);
+
 	statusBar->showMessage("Loading DB...", 2000);
 	htdb.LoadDB(dbfile.toAscii().data());
 	statusBar->showMessage("Done loading DB", 2000);
@@ -306,13 +323,15 @@ void MainWindow::loadDB(char *s_dbfile)
 		htdb.set_media_source(i, source);
 		sources.append(source);
 		if(htdb.ind_title(i).isEmpty()) {
-			addEntry(musicTable, htdb.ind_name(i), htdb.ind_artist(i), htdb.ind_album(i));
+			addEntry(musicTable, htdb.ind_name(i), htdb.ind_artist(i), htdb.ind_album(i), i);
 		} else {
-			addEntry(musicTable, htdb.ind_title(i), htdb.ind_artist(i), htdb.ind_album(i));
+			addEntry(musicTable, htdb.ind_title(i), htdb.ind_artist(i), htdb.ind_album(i), i);
 		}
 	}
 	musicTable->show();
 	musicTable->resizeColumnsToContents();
+	musicTable->sortItems(1, Qt::AscendingOrder);
+	repopulateReverseIndex();
 	if (musicTable->columnWidth(0) > 300)
 		musicTable->setColumnWidth(0, 300);
 }
@@ -378,10 +397,11 @@ void MainWindow::searchTableClicked(int row, int /* column */)
 {
 	/* Start playing */
 	stop = 1;
-	int mt_row = searchMap.at(row);
+	QString tableIndex_s = searchTable->item(row, 3)->text();
+	int tableIndex = tableIndex_s.toInt();
 	searchTable->hide();
 	musicTable->show();
-	tableClicked(mt_row, 0);
+	tableClicked(tableIndex, 0);
 }
 
 void MainWindow::tableClicked(int row, int /* column */)
@@ -389,23 +409,29 @@ void MainWindow::tableClicked(int row, int /* column */)
 	mediaObject->stop();
 	mediaObject->clearQueue();
 
-	if (row >= sources.size())
+	if(row >= musicTable->rowCount())
+	      return;
+	int sourcesIndex = musicTable->item(row, 3)->text().toInt();
+
+	if (sourcesIndex >= sources.size())
 		return;
 
-	htdb.set_playing(row);
-	mediaObject->setCurrentSource(sources[row]);
+	htdb.set_playing(sourcesIndex);
+	mediaObject->setCurrentSource(sources[sourcesIndex]);
 	mediaObject->play();
 }
 
 void MainWindow::sourceChanged(const Phonon::MediaSource &source)
 {
-	int row = sources.indexOf(source);
-	musicTable->selectRow(row);
-	setTitle(row);
-	appendPlaylist(musicTable->item(row, 0)->text(),
-			musicTable->item(row, 1)->text(),
-			musicTable->item(row, 2)->text(),
-			row);
+	int sourcesIndex = sources.indexOf(source);
+	int musicTableIndex = reverseIndex[sourcesIndex];
+	musicTable->selectRow(musicTableIndex);
+	setTitle(musicTableIndex);
+	addEntry(playlistTable, 
+			musicTable->item(musicTableIndex, 0)->text(),
+			musicTable->item(musicTableIndex, 1)->text(),
+			musicTable->item(musicTableIndex, 2)->text(),
+			musicTableIndex);
 
 	timeLcd->display("00:00");
 }
@@ -500,28 +526,30 @@ void MainWindow::setupUi()
 
 	// Music table
 	QStringList headers;
-	headers << tr("Title") << tr("Artist") << tr("Album");
+	headers << tr("Title") << tr("Artist") << tr("Album") << tr("Index");
 
-	musicTable = new QTableWidget(0, 3);
+	musicTable = new QTableWidget(0, 4);
 	musicTable->setHorizontalHeaderLabels(headers);
 	musicTable->setSelectionMode(QAbstractItemView::SingleSelection);
 	musicTable->setSelectionBehavior(QAbstractItemView::SelectRows);
 	musicTable->verticalHeader()->hide();
+	musicTable->setColumnHidden(3, true);
 	connect(musicTable, SIGNAL(cellPressed(int,int)),
 		this, SLOT(tableClicked(int,int)));
 
 	// Search Table
-	searchTable = new QTableWidget(0, 3);
+	searchTable = new QTableWidget(0, 4);
 	searchTable->setHorizontalHeaderLabels(headers);
 	searchTable->setSelectionMode(QAbstractItemView::SingleSelection);
 	searchTable->setSelectionBehavior(QAbstractItemView::SelectRows);
 	searchTable->hide();
+	searchTable->setColumnHidden(3, true);
 	searchTable->verticalHeader()->hide();
 	connect(searchTable, SIGNAL(cellPressed(int, int)), 
 		this, SLOT(searchTableClicked(int, int)));
 
 	playlistTable = new QTableWidget(0,4);
-	playlistTable->setHorizontalHeaderLabels(headers << "");
+	playlistTable->setHorizontalHeaderLabels(headers);
 	playlistTable->setSelectionMode(QAbstractItemView::SingleSelection);
 	playlistTable->setSelectionBehavior(QAbstractItemView::SelectRows);
 	playlistTable->setColumnHidden(3, true);

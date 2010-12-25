@@ -329,3 +329,18 @@ void HistDB::setDistanceFunction(QString s_func)
 	std::cout << "Switching from " << curDistance.toAscii().data() << " to " << s_func.toAscii().data() << std::endl;
 	curDistance = s_func;
 }
+
+void HistDB::addToDB(QString name)
+{
+	database.append(name);
+}
+
+bool HistDB::existsInDB(QString qname)
+{
+	for(int i = 0; i < database.length(); i++) {
+		if(database[i].compare(qname) == 0) {
+			return true;
+		}
+	}
+	return false;
+}
