@@ -295,6 +295,6 @@ err:
 
 void plot_hist(hist_t *hist)
 {
-	plot(NULL, (float *)hist->spect_hist, NBANDS, SPECT_HIST_LEN, PLOT_LINES);
+	plot(NULL, (float *)hist->spect_hist, NBANDS, SPECT_HIST_LEN, PLOT_LINES, 0);
 }
 

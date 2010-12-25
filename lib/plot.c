@@ -12,7 +12,7 @@ const char *standard_types[PLOT_MAX] = {
 
 #define IND(arr,i,j,len) arr[(i * len) + j]
 
-int plot(float *x, float *y, unsigned int ncol, unsigned int len, plot_type_t type)
+int plot(float *x, float *y, unsigned int ncol, unsigned int len, plot_type_t type, int debug)
 {
 	FILE *f;
 	int i,j;
@@ -46,7 +46,7 @@ int plot(float *x, float *y, unsigned int ncol, unsigned int len, plot_type_t ty
 		if(x)
 			fprintf(f, "\"__data.txt\" using 1:%d with %s title \"data %d\"", i + 2, standard_types[type], i);
 		else
-			fprintf(f, "\"__data.txt\" using %d with %s title \"data %d\"", i, standard_types[type], i);
+			fprintf(f, "\"__data.txt\" using %d with %s title \"data %d\"", i + 1, standard_types[type], i);
 		if(i < (ncol - 1)) {
 			fprintf(f, ", \\");
 		}
@@ -54,9 +54,10 @@ int plot(float *x, float *y, unsigned int ncol, unsigned int len, plot_type_t ty
 	}
 	fprintf(f, " pause -1\n");
 	fclose(f);
-
 	system("gnuplot __out.gp");
-	system("rm -f __out.gp __data.txt");
+	if(!debug) {
+		system("rm -f __out.gp __data.txt");
+	}
 }
 #ifdef PLOT_TEST
 int main(void)

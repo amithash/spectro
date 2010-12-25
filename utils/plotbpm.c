@@ -16,6 +16,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *******************************************************************************/
 
+#include "plot.h"
 #include "bpm.h"
 #include "dwt.h"
 
@@ -38,7 +39,7 @@ int main(int argc, char *argv[])
 		spect_error("Reading %s returned in error=%s",argv[1],RM_RC_STR(rc));
 		exit(-1);
 	}
-#if 1
+#if 0
 	if(argc >= 3) {
 		if(_spect2bpm(_bpm, &spect)) {
 			spect_error("Conversion failed!");
@@ -72,6 +73,7 @@ int main(int argc, char *argv[])
 			spect.spect[0][j] += spect.spect[i][j];
 		}
 	}
+	plot(NULL, spect.spect[0],1,real_len, PLOT_LINES, 0);
 
 #endif
 

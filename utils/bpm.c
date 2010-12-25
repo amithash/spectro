@@ -388,7 +388,7 @@ void plot_bpm(float bpm[BPM_LEN])
 	float x[BPM_LEN];
 	for(i = 0; i < BPM_LEN; i++)
 	      x[i] = i + BPM_MIN;
-	plot(x, bpm, 1, BPM_LEN, PLOT_LINES);
+	plot(x, bpm, 1, BPM_LEN, PLOT_LINES, 0);
 }
 
 void _plot_bpm(float bpm[NBANDS][BPM_LEN])
@@ -397,7 +397,7 @@ void _plot_bpm(float bpm[NBANDS][BPM_LEN])
 	float x[BPM_LEN];
 	for(i = 0; i < BPM_LEN; i++)
 	      x[i] = i + BPM_MIN;
-	plot(x, bpm, NBANDS, BPM_LEN, PLOT_LINES);
+	plot(x, bpm, NBANDS, BPM_LEN, PLOT_LINES, 0);
 }
 
 
