@@ -499,8 +499,14 @@ void MainWindow::aboutToFinish()
 void MainWindow::setTitle(int index)
 {
 	QString windowTitle;
-	windowTitle = musicTable->item(index, 0)->text() +
-		      " by " + musicTable->item(index,1)->text();
+	QString title  = musicTable->item(index, TITLE_COLUMN)->text();
+	QString artist = musicTable->item(index, ARTIST_COLUMN)->text();
+
+	if(artist.isEmpty()) {
+		windowTitle = title;
+	} else {
+		windowTitle = title + " by " + artist;
+	}
 
 	setWindowTitle(windowTitle);
 	statusBar->clearMessage();
