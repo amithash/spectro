@@ -39,7 +39,6 @@
  ** $QT_END_LICENSE$
  **
  ***************************************************************************/
-#include <QtGui>
 #include <iostream>
 
 #include "mainwindow.h"
@@ -47,9 +46,14 @@
 
 HistDB htdb;
 
-#define TITLE_COLOR QRgb(qRgb(0x00, 0x00, 0xFF))
-#define ARTIST_COLOR QRgb(qRgb(0x00, 0xFF, 0x00))
-#define ALBUM_COLOR QRgb(qRgb(0xFF, 0x00, 0x00))
+#define TITLE_COLOR QRgb(qRgb(0xA0, 0xA0, 0xFF))
+#define ARTIST_COLOR QRgb(qRgb(0xB0, 0xB0, 0xFF))
+#define ALBUM_COLOR QRgb(qRgb(0xC0, 0xC0, 0xFF))
+
+#define TITLE_COLUMN  0
+#define ARTIST_COLUMN 1
+#define ALBUM_COLUMN  2
+#define INDEX_COLUMN  3
 
 
 const QString AboutMessage =
@@ -62,7 +66,7 @@ Please refer to the README file which comes	\n\
 with the source for more information on creating\n\
 the hist DB file.				\n\
 ";
-			
+
 MainWindow::MainWindow()
 {
 	audioOutput = new Phonon::AudioOutput(Phonon::MusicCategory, this);
@@ -102,12 +106,28 @@ void MainWindow::addEntry(QTableWidget *table, QString title, QString artist, QS
         albumItem->setFlags(albumItem->flags() ^ Qt::ItemIsEditable);
         indexItem->setFlags(albumItem->flags() ^ Qt::ItemIsEditable);
 
-	table->setItem(currentRow, 0, titleItem);
-	table->setItem(currentRow, 1, artistItem);
-	table->setItem(currentRow, 2, albumItem);
-	table->setItem(currentRow, 3, indexItem);
+	table->setItem(currentRow, TITLE_COLUMN, titleItem);
+	table->setItem(currentRow, ARTIST_COLUMN, artistItem);
+	table->setItem(currentRow, ALBUM_COLUMN, albumItem);
+	table->setItem(currentRow, INDEX_COLUMN, indexItem);
 
-	table->setColumnHidden(3, true);
+	table->setColumnHidden(INDEX_COLUMN, true);
+}
+
+void MainWindow::sortMusicTable(int col)
+{
+	if(col < 0 || col > 2)
+	      return;
+	musicTable->sortItems(col, Qt::AscendingOrder);
+	repopulateReverseIndex();
+}
+
+void MainWindow::sortSearchTable(int col)
+{
+	if(col < 0 || col > 2)
+	      return;
+
+	searchTable->sortItems(col, Qt::AscendingOrder);
 }
 
 void MainWindow::repopulateReverseIndex()
@@ -139,7 +159,7 @@ void MainWindow::repopulateReverseIndex()
 
 void MainWindow::playlistTableClicked(int row, int /* column */)
 {
-	int realRow = playlistTable->item(row, 3)->text().toInt();
+	int realRow = playlistTable->item(row, INDEX_COLUMN)->text().toInt();
 	tableClicked(realRow, 0);
 }
 
@@ -148,7 +168,7 @@ void MainWindow::retry(void)
 	int last = playlistTable->rowCount() - 2;
 	if(last < 0)
 	      return;
-	int playRow = playlistTable->item(last, 3)->text().toInt();
+	int playRow = playlistTable->item(last, INDEX_COLUMN)->text().toInt();
 	if(playRow >= sources.size()) {
 		std::cerr << "playRow invalid: " << playRow << std::endl; 
 		return;
@@ -169,14 +189,14 @@ void MainWindow::next(void)
 	int thisInd = playlistTable->rowCount() - 1;
 	if(thisInd < 0)
 	      return;
-	int playingRow = playlistTable->item(thisInd, 3)->text().toInt();
+	int playingRow = playlistTable->item(thisInd, INDEX_COLUMN)->text().toInt();
 	if(playingRow >= musicTable->rowCount()) {
 		std::cerr << "playRow invalid: " << playingRow << std::endl;
 		return;
 	}
 	mediaObject->stop();
 
-	int sourcesIndex = musicTable->item(playingRow, 3)->text().toInt();
+	int sourcesIndex = musicTable->item(playingRow, INDEX_COLUMN)->text().toInt();
 	int nextSourcesIndex = htdb.get_next(sourcesIndex);
 	if(nextSourcesIndex >= sources.size()) {
 		std::cerr << "Bad index: " << nextSourcesIndex << std::endl;
@@ -234,29 +254,62 @@ void MainWindow::searchDB()
 		return;
 	}
 	int tblCount = musicTable->rowCount();
-	int colCount = 3;
 	stop = 0;
 	for(int i = 0; i < tblCount; i++) {
-		int found = 0;
-		for(int j = 0; j < colCount; j++) {
-			QString str = musicTable->item(i, j)->text().toLower();
-			if(str.contains(search)) {
-				found = 1;
-				break;
-			}
+		bool found = false;
+		if(currentSearchOption & SEARCH_TITLE) {
+			QString str = musicTable->item(i, TITLE_COLUMN)->text().toLower();
+			if(str.contains(search))
+			      found = true;
 		}
-		if(found == 1) {
+		if(found == false && (currentSearchOption & SEARCH_ARTIST)) {
+			QString str = musicTable->item(i, ARTIST_COLUMN)->text().toLower();
+			if(str.contains(search))
+			      found = true;
+		}
+		if(found == false && (currentSearchOption & SEARCH_ALBUM)) {
+			QString str = musicTable->item(i, ALBUM_COLUMN)->text().toLower();
+			if(str.contains(search))
+			      found = true;
+		}
+		if(found == true) {
 			addEntry(searchTable, 
-			musicTable->item(i, 0)->text(), 
-			musicTable->item(i, 1)->text(), 
-			musicTable->item(i, 2)->text(), i);
+			musicTable->item(i, TITLE_COLUMN)->text(), 
+			musicTable->item(i, ARTIST_COLUMN)->text(), 
+			musicTable->item(i, ALBUM_COLUMN)->text(), 
+			i);
 		}
 		if(stop == 1)
 			break;
 	}
 	musicTable->hide();
-	searchTable->sortItems(1, Qt::AscendingOrder);
+	sortSearchTable(ARTIST_COLUMN);
 	searchTable->show();
+}
+
+void MainWindow::searchOptionAll(void)
+{
+	searchOptionButton->setText("All");
+	currentSearchOption = SEARCH_ALL;
+	searchDB();
+}
+void MainWindow::searchOptionArtist(void)
+{
+	searchOptionButton->setText("Artist");
+	currentSearchOption = SEARCH_ARTIST;
+	searchDB();
+}
+void MainWindow::searchOptionAlbum(void)
+{
+	searchOptionButton->setText("Album");
+	currentSearchOption = SEARCH_ALBUM;
+	searchDB();
+}
+void MainWindow::searchOptionTitle(void)
+{
+	searchOptionButton->setText("Title");
+	currentSearchOption = SEARCH_TITLE;
+	searchDB();
 }
 
 void MainWindow::acceptSettings(QAbstractButton * button)
@@ -301,7 +354,9 @@ void MainWindow::loadDB(char *s_dbfile)
 	int at = htdb.length();
 
 	if(htdb.existsInDB(dbfile)) {
-		std::cerr << s_dbfile << " Already exists, so skipping it" << std::endl;
+		QString str(s_dbfile);
+		str.append(" Already loaded, so skipping it");
+		statusBar->showMessage(str, 2000);
 		return;
 	}
 	htdb.addToDB(dbfile);
@@ -329,11 +384,7 @@ void MainWindow::loadDB(char *s_dbfile)
 		}
 	}
 	musicTable->show();
-	musicTable->resizeColumnsToContents();
-	musicTable->sortItems(1, Qt::AscendingOrder);
-	repopulateReverseIndex();
-	if (musicTable->columnWidth(0) > 300)
-		musicTable->setColumnWidth(0, 300);
+	sortMusicTable(ARTIST_COLUMN);
 }
 
 void MainWindow::about()
@@ -496,6 +547,17 @@ void MainWindow::setupActions()
 	aboutAction = new QAction(style()->standardIcon(QStyle::SP_MessageBoxQuestion), tr("About"), this);
 	aboutAction->setDisabled(false);
 
+	searchAllAction = new QAction(tr("All"), this);
+	searchArtistAction = new QAction(tr("Artist"), this);
+	searchAlbumAction = new QAction(tr("Album"), this);
+	searchTitleAction = new QAction(tr("Title"), this);
+
+	connect(searchAllAction, SIGNAL(triggered()), this, SLOT(searchOptionAll()));
+	connect(searchArtistAction, SIGNAL(triggered()), this, SLOT(searchOptionArtist()));
+	connect(searchAlbumAction, SIGNAL(triggered()), this, SLOT(searchOptionAlbum()));
+	connect(searchTitleAction, SIGNAL(triggered()), this, SLOT(searchOptionTitle()));
+
+
 	connect(playAction, SIGNAL(triggered()), this, SLOT(togglePlay()));
 	connect(stopAction, SIGNAL(triggered()), mediaObject, SLOT(stop()));
 	connect(loadDBAction, SIGNAL(triggered()), this, SLOT(loadDB()));
@@ -534,8 +596,11 @@ void MainWindow::setupUi()
 	musicTable->setSelectionBehavior(QAbstractItemView::SelectRows);
 	musicTable->verticalHeader()->hide();
 	musicTable->setColumnHidden(3, true);
+	musicTable->horizontalHeader()->setResizeMode(QHeaderView::Stretch);
 	connect(musicTable, SIGNAL(cellPressed(int,int)),
 		this, SLOT(tableClicked(int,int)));
+	connect(musicTable->horizontalHeader(), SIGNAL(sectionPressed(int)),
+					this, SLOT(sortMusicTable(int)));
 
 	// Search Table
 	searchTable = new QTableWidget(0, 4);
@@ -545,8 +610,11 @@ void MainWindow::setupUi()
 	searchTable->hide();
 	searchTable->setColumnHidden(3, true);
 	searchTable->verticalHeader()->hide();
+	searchTable->horizontalHeader()->setResizeMode(QHeaderView::Stretch);
 	connect(searchTable, SIGNAL(cellPressed(int, int)), 
 		this, SLOT(searchTableClicked(int, int)));
+	connect(musicTable->horizontalHeader(), SIGNAL(sectionPressed(int)),
+					this, SLOT(sortSearchTable(int)));
 
 	playlistTable = new QTableWidget(0,4);
 	playlistTable->setHorizontalHeaderLabels(headers);
@@ -554,31 +622,32 @@ void MainWindow::setupUi()
 	playlistTable->setSelectionBehavior(QAbstractItemView::SelectRows);
 	playlistTable->setColumnHidden(3, true);
 	playlistTable->verticalHeader()->hide();
+	playlistTable->horizontalHeader()->setResizeMode(QHeaderView::Stretch);
 	connect(playlistTable, SIGNAL(cellPressed(int, int)), 
 		this, SLOT(playlistTableClicked(int, int)));
 	playlistTable->hide();
 	playlistVisible = false;
 
 
-	QToolBar *tbar = new QToolBar;		// toolbar 
-	tbar->addAction(loadDBAction);		// load db
-	tbar->addAction(playAction);		// play
-	tbar->addAction(stopAction);		// stop
-	tbar->addAction(retryAction);		// Retry
-	tbar->addAction(nextAction);		// Next
-	tbar->addAction(settingsAction);	// settings
-	tbar->addAction(aboutAction);		// about
+	QToolBar *tbar1 = new QToolBar;		// toolbar 
+	tbar1->addAction(loadDBAction);		// load db
+	tbar1->addAction(playAction);		// play
+	tbar1->addAction(stopAction);		// stop
+	tbar1->addAction(retryAction);		// Retry
+	tbar1->addAction(nextAction);		// Next
+	tbar1->addAction(togglePlaylistAction); // toggle playlist
 
-	QToolBar *tpl_toolbar = new QToolBar;
-	tpl_toolbar->addAction(togglePlaylistAction);
+	QToolBar *tbar2 = new QToolBar;
+	tbar2->addAction(settingsAction);	// settings
+	tbar2->addAction(aboutAction);		// about
 
 	QHBoxLayout *toolBar = new QHBoxLayout;	// the toolbar layout
-	toolBar->addWidget(tbar);		// toolbar (above)
+	toolBar->addWidget(tbar1);		// toolbar (above)
 	toolBar->addWidget(seekSlider);		// slider
 	toolBar->addWidget(timeLcd);		// time LCD
 	toolBar->addWidget(volumeLabel);	// volume label
 	toolBar->addWidget(volumeSlider);	// volume slider
-	toolBar->addWidget(tpl_toolbar);	// toggle Playlist
+	toolBar->addWidget(tbar2);		// toggle Playlist
 
 	// Settings dialog box
 	dialogBox = new QDialogButtonBox();
@@ -597,12 +666,30 @@ void MainWindow::setupUi()
 	searchBox->setText("");
 	connect(searchBox, SIGNAL(editingFinished()), this, SLOT(searchDB()));
 
+	QToolBar *searchBar = new QToolBar;
+	searchOptionButton = new QToolButton(searchBar);
+	searchOptionButton->setPopupMode( QToolButton::MenuButtonPopup );
+	searchOptionButton->setText("All");
+	searchBar->addWidget(searchOptionButton);
+	searchBar->addWidget(searchBox);
+
+	QMenu *searchMenu = new QMenu(searchBar);
+	searchOptionButton->setMenu(searchMenu);
+	searchMenu->addAction(searchAllAction);
+	searchMenu->addAction(searchArtistAction);
+	searchMenu->addAction(searchAlbumAction);
+	searchMenu->addAction(searchTitleAction);
+	searchMenu->setDefaultAction(searchAllAction);
+	currentSearchOption = SEARCH_ALL;
+	connect(searchOptionButton, SIGNAL(clicked()), searchMenu, SLOT(show()));
+
+
 	// status bar
 	statusBar = new QStatusBar;
 	statusBar->clearMessage();
 
 	QVBoxLayout *DBLayout = new QVBoxLayout;
-	DBLayout->addWidget(searchBox);
+	DBLayout->addWidget(searchBar);
 	DBLayout->addWidget(searchTable);
 	DBLayout->addWidget(musicTable);
 

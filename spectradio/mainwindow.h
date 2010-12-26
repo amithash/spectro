@@ -51,11 +51,19 @@
 #include <QList>
 #include <QLineEdit>
 #include <QDialogButtonBox>
+#include <QtGui>
 
 class QAction;
 class QTableWidget;
 class QLCDNumber;
 
+enum SearchOption
+{
+	SEARCH_ARTIST = 1,
+	SEARCH_ALBUM = 2,
+	SEARCH_TITLE = 4,
+	SEARCH_ALL = 7,
+};
 
 class MainWindow : public QMainWindow
 {
@@ -86,6 +94,12 @@ class MainWindow : public QMainWindow
 		void searchTableClicked(int row, int column);
 		void playlistTableClicked(int row, int column);
 		void acceptSettings(QAbstractButton * button);
+		void sortMusicTable(int col);
+		void sortSearchTable(int col);
+		void searchOptionAll(void);
+		void searchOptionArtist(void);
+		void searchOptionAlbum(void);
+		void searchOptionTitle(void);
 
 	private:
 		void setupActions();
@@ -103,6 +117,7 @@ class MainWindow : public QMainWindow
 		QList<Phonon::MediaSource> sources;
 		int stop;
 		bool playlistVisible;
+		enum SearchOption currentSearchOption;
 
 		QAction *playAction;
 		QAction *stopAction;
@@ -112,6 +127,10 @@ class MainWindow : public QMainWindow
 		QAction *aboutAction;
 		QAction *retryAction;
 		QAction *togglePlaylistAction;
+		QAction *searchAllAction;
+		QAction *searchArtistAction;
+		QAction *searchAlbumAction;
+		QAction *searchTitleAction;
 
 		QList<int> reverseIndex;	// index in sources (or htdb) to index in musicTable
 		QLCDNumber *timeLcd;
@@ -121,6 +140,7 @@ class MainWindow : public QMainWindow
 		QLineEdit *searchBox;
 		QStatusBar *statusBar;
 		QDialogButtonBox *dialogBox;
+		QToolButton *searchOptionButton;
 };
 
 #endif
