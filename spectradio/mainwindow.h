@@ -109,6 +109,7 @@ class MainWindow : public QMainWindow
 		void clearSearchWindow();
 		void setTitle(int ind);
 		void closeSettings();
+		void setupTable(QTableWidget **table);
 
 		Phonon::SeekSlider *seekSlider;
 		Phonon::MediaObject *mediaObject;

@@ -574,6 +574,22 @@ void MainWindow::setupActions()
 	connect(togglePlaylistAction, SIGNAL(triggered()), this, SLOT(togglePlaylist()));
 }
 
+void MainWindow::setupTable(QTableWidget **_table)
+{
+	QTableWidget *table;
+	QStringList headers;
+	headers << tr("Title") << tr("Artist") << tr("Album") << tr("Index");
+
+	table = new QTableWidget(0, 4);
+	table->setHorizontalHeaderLabels(headers);
+	table->setSelectionMode(QAbstractItemView::SingleSelection);
+	table->setSelectionBehavior(QAbstractItemView::SelectRows);
+	table->verticalHeader()->hide();
+	table->setColumnHidden(3, true);
+	table->horizontalHeader()->setResizeMode(QHeaderView::Stretch);
+	*_table = table;
+}
+
 void MainWindow::setupUi()
 {
 	seekSlider = new Phonon::SeekSlider(this);
@@ -592,43 +608,21 @@ void MainWindow::setupUi()
 	timeLcd = new QLCDNumber;
 	timeLcd->setPalette(palette);
 
-	// Music table
-	QStringList headers;
-	headers << tr("Title") << tr("Artist") << tr("Album") << tr("Index");
-
-	musicTable = new QTableWidget(0, 4);
-	musicTable->setHorizontalHeaderLabels(headers);
-	musicTable->setSelectionMode(QAbstractItemView::SingleSelection);
-	musicTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-	musicTable->verticalHeader()->hide();
-	musicTable->setColumnHidden(3, true);
-	musicTable->horizontalHeader()->setResizeMode(QHeaderView::Stretch);
+	setupTable(&musicTable);
 	connect(musicTable, SIGNAL(cellPressed(int,int)),
 		this, SLOT(tableClicked(int,int)));
 	connect(musicTable->horizontalHeader(), SIGNAL(sectionPressed(int)),
 					this, SLOT(sortMusicTable(int)));
 
 	// Search Table
-	searchTable = new QTableWidget(0, 4);
-	searchTable->setHorizontalHeaderLabels(headers);
-	searchTable->setSelectionMode(QAbstractItemView::SingleSelection);
-	searchTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+	setupTable(&searchTable);
 	searchTable->hide();
-	searchTable->setColumnHidden(3, true);
-	searchTable->verticalHeader()->hide();
-	searchTable->horizontalHeader()->setResizeMode(QHeaderView::Stretch);
 	connect(searchTable, SIGNAL(cellPressed(int, int)), 
 		this, SLOT(searchTableClicked(int, int)));
 	connect(musicTable->horizontalHeader(), SIGNAL(sectionPressed(int)),
 					this, SLOT(sortSearchTable(int)));
 
-	playlistTable = new QTableWidget(0,4);
-	playlistTable->setHorizontalHeaderLabels(headers);
-	playlistTable->setSelectionMode(QAbstractItemView::SingleSelection);
-	playlistTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-	playlistTable->setColumnHidden(3, true);
-	playlistTable->verticalHeader()->hide();
-	playlistTable->horizontalHeader()->setResizeMode(QHeaderView::Stretch);
+	setupTable(&playlistTable);
 	connect(playlistTable, SIGNAL(cellPressed(int, int)), 
 		this, SLOT(playlistTableClicked(int, int)));
 	playlistTable->hide();
