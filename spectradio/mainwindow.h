@@ -73,7 +73,7 @@ class MainWindow : public QMainWindow
 	MainWindow();
 
 	QSize sizeHint() const {
-         	return QSize(500, 300);
+         	return QSize(800, 600);
      	}
 	void loadDB(char *dbfile);
 
@@ -84,30 +84,28 @@ class MainWindow : public QMainWindow
 		void about();
 		void retry();
 		void next();
-    void togglePlay();
+		void togglePlay();
 		void togglePlaylist();
 		void stateChanged(Phonon::State newState, Phonon::State oldState);
 		void tick(qint64 time);
 		void sourceChanged(const Phonon::MediaSource &source);
 		void aboutToFinish();
-		void tableClicked(int row, int column);
-		void searchTableClicked(int row, int column);
+		void searchTreeClicked(QTreeWidgetItem *item, int column);
 		void playlistTableClicked(int row, int column);
 		void acceptSettings(QAbstractButton * button);
-		void sortMusicTable(int col);
-		void sortSearchTable(int col);
 		void searchOptionAll(void);
 		void searchOptionArtist(void);
 		void searchOptionAlbum(void);
 		void searchOptionTitle(void);
+		void treeClicked(QTreeWidgetItem *item, int column);
 
 	private:
 		void setupActions();
 		void setupUi();
-		void addEntry(QTableWidget *table, QString title, QString artist, QString album, int ind);
-		void repopulateReverseIndex();
+		void addEntry(QTreeWidget *tree, QString title, QString artist, QString album, int ind);
+		void appendPlaylist(QString title, QString artist, QString album, int ind);
 		void clearSearchWindow();
-		void setTitle(int ind);
+		void setTitle(QString title, QString album, QString artist);
 		void closeSettings();
 		void setupTable(QTableWidget **table);
 
@@ -116,6 +114,7 @@ class MainWindow : public QMainWindow
 		Phonon::AudioOutput *audioOutput;
 		Phonon::VolumeSlider *volumeSlider;
 		QList<Phonon::MediaSource> sources;
+		QList<QTreeWidgetItem *> treeItemList;
 		int stop;
 		bool playlistVisible;
 		enum SearchOption currentSearchOption;
@@ -133,15 +132,15 @@ class MainWindow : public QMainWindow
 		QAction *searchAlbumAction;
 		QAction *searchTitleAction;
 
-		QList<int> reverseIndex;	// index in sources (or htdb) to index in musicTable
 		QLCDNumber *timeLcd;
-		QTableWidget *musicTable;	// Last column is an index to entry in sources and htdb
-		QTableWidget *searchTable;	// Last column is an index to entry in musicTable
-		QTableWidget *playlistTable;	// Last column is an index to entry in musicTable
+		QTreeWidget *searchTree;	// Last column is an index to entry in sources
+		QTableWidget *playlistTable;	// Last column is an index to entry in sources
 		QLineEdit *searchBox;
 		QStatusBar *statusBar;
 		QDialogButtonBox *dialogBox;
 		QToolButton *searchOptionButton;
+		QLabel *songLabel;
+		QTreeWidget *browserTree;
 };
 
 #endif

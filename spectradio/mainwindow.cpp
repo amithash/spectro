@@ -55,6 +55,11 @@ HistDB htdb;
 #define ALBUM_COLUMN  2
 #define INDEX_COLUMN  3
 
+#define STATUS_BAR_COLOR_BLUE QString("<font color='Blue'>")
+#define STATUS_BAR_COLOR_RED QString("<font color='Red'>")
+#define STATUS_BAR_COLOR_BLACK QString("<font color='Black'>")
+#define STATUS_BAR_TEXT_END QString("</font>")
+
 
 const QString AboutMessage =
 "\
@@ -86,8 +91,10 @@ MainWindow::MainWindow()
 	timeLcd->display("00:00");
 }
 
-void MainWindow::addEntry(QTableWidget *table, QString title, QString artist, QString album, int ind)
+
+void MainWindow::appendPlaylist(QString title, QString artist, QString album, int ind)
 {
+	QTableWidget *table = playlistTable;
 	int currentRow = table->rowCount();
 	table->insertRow(currentRow);
 	QString s_num;
@@ -114,53 +121,57 @@ void MainWindow::addEntry(QTableWidget *table, QString title, QString artist, QS
 	table->setColumnHidden(INDEX_COLUMN, true);
 }
 
-void MainWindow::sortMusicTable(int col)
+
+void MainWindow::addEntry(QTreeWidget *tree, QString title, QString artist, QString album, int ind)
 {
-	if(col < 0 || col > 2)
-	      return;
-	musicTable->sortItems(col, Qt::AscendingOrder);
-	repopulateReverseIndex();
-}
-
-void MainWindow::sortSearchTable(int col)
-{
-	if(col < 0 || col > 2)
-	      return;
-
-	searchTable->sortItems(col, Qt::AscendingOrder);
-}
-
-void MainWindow::repopulateReverseIndex()
-{
-	int tableLen = musicTable->rowCount();
-	int reverseIndexLen = reverseIndex.length();
-
-	if(reverseIndexLen < tableLen) {
-		reverseIndex.reserve(tableLen);
-	} else if(reverseIndexLen > tableLen) {
-		if(sources.length() != tableLen) {
-			std::cerr << "Unrecoverable error. exiting" << std::endl;
-			exit(-1);
+	int artistCount = tree->topLevelItemCount();
+	QTreeWidgetItem *artistItem = NULL;
+	for(int i = 0; i < artistCount; i++) {
+		QString i_artist = tree->topLevelItem(i)->text(0);
+		if(i_artist.compare(artist) == 0) {
+			artistItem = tree->topLevelItem(i);
+			break;
 		}
-		reverseIndex.clear();
-		reverseIndex.reserve(tableLen);
+	}
+	if(!artistItem) {
+		artistItem = new QTreeWidgetItem;
+		artistItem->setText(0, artist);
+		tree->addTopLevelItem(artistItem);
 	}
 
-	// Invalidate all elements
-	for(int i = 0; i < reverseIndex.length(); i++) {
-		reverseIndex[i] = -1;
+	QTreeWidgetItem *albumItem = NULL;
+	int albumCount = artistItem->childCount();
+	for(int i = 0; i < albumCount; i++) {
+		QString i_album = artistItem->child(i)->text(0);
+		if(i_album.compare(album) == 0) {
+			albumItem = artistItem->child(i);
+			break;
+		}
 	}
 
-	for(int i = 0; i < tableLen; i++) {
-		int sourcesInd = musicTable->item(i, 3)->text().toInt();
-		reverseIndex[sourcesInd] = i;
+	if(!albumItem) {
+		albumItem = new QTreeWidgetItem;
+		albumItem->setText(0, album);
+		artistItem->addChild(albumItem);
 	}
+
+	QTreeWidgetItem *titleItem = new QTreeWidgetItem;
+	titleItem->setText(0, title);
+	QString s_ind;
+	s_ind.setNum(ind);
+	titleItem->setText(1, s_ind);
+
+	albumItem->addChild(titleItem);
+
+	if(tree != searchTree)
+		treeItemList.append(titleItem);
 }
 
 void MainWindow::playlistTableClicked(int row, int /* column */)
 {
 	int realRow = playlistTable->item(row, INDEX_COLUMN)->text().toInt();
-	tableClicked(realRow, 0);
+	QTreeWidgetItem *item = treeItemList[realRow];
+	treeClicked(item, 0);
 }
 
 void MainWindow::retry(void)
@@ -189,14 +200,13 @@ void MainWindow::next(void)
 	int thisInd = playlistTable->rowCount() - 1;
 	if(thisInd < 0)
 	      return;
-	int playingRow = playlistTable->item(thisInd, INDEX_COLUMN)->text().toInt();
-	if(playingRow >= musicTable->rowCount()) {
-		std::cerr << "playRow invalid: " << playingRow << std::endl;
+	int sourcesIndex = playlistTable->item(thisInd, INDEX_COLUMN)->text().toInt();
+	if(sourcesIndex >= sources.size()) {
+		std::cerr << "sourcesIndex invalid: " << sourcesIndex << std::endl;
 		return;
 	}
 	mediaObject->stop();
 
-	int sourcesIndex = musicTable->item(playingRow, INDEX_COLUMN)->text().toInt();
 	int nextSourcesIndex = htdb.get_next(sourcesIndex);
 	if(nextSourcesIndex >= sources.size()) {
 		std::cerr << "Bad index: " << nextSourcesIndex << std::endl;
@@ -240,8 +250,7 @@ void MainWindow::togglePlay()
 
 void MainWindow::clearSearchWindow()
 {
-	for (int i = searchTable->rowCount() - 1; i >= 0; --i)
-		searchTable->removeRow(i);
+	searchTree->clear();
 }
 
 void MainWindow::searchDB()
@@ -249,42 +258,36 @@ void MainWindow::searchDB()
 	QString search = searchBox->text().toLower();
 	clearSearchWindow();
 	if(search.isEmpty()) {
-		searchTable->hide();
-		musicTable->show();
+		searchTree->hide();
+		browserTree->show();
 		return;
 	}
-	int tblCount = musicTable->rowCount();
-	stop = 0;
-	for(int i = 0; i < tblCount; i++) {
+	for(int i = 0; i < treeItemList.length(); i++) {
 		bool found = false;
-		if(currentSearchOption & SEARCH_TITLE) {
-			QString str = musicTable->item(i, TITLE_COLUMN)->text().toLower();
-			if(str.contains(search))
-			      found = true;
-		}
-		if(found == false && (currentSearchOption & SEARCH_ARTIST)) {
-			QString str = musicTable->item(i, ARTIST_COLUMN)->text().toLower();
-			if(str.contains(search))
-			      found = true;
+		QString title = treeItemList[i]->text(0).toLower();
+		QString album = treeItemList[i]->parent()->text(0).toLower();
+		QString artist = treeItemList[i]->parent()->parent()->text(0).toLower();
+		if(found == false && (currentSearchOption & SEARCH_TITLE)) {
+			if(title.contains(search)) {
+				found = true;
+			}
 		}
 		if(found == false && (currentSearchOption & SEARCH_ALBUM)) {
-			QString str = musicTable->item(i, ALBUM_COLUMN)->text().toLower();
-			if(str.contains(search))
-			      found = true;
+			if(album.contains(search)) {
+				found = true;
+			}
+		}
+		if(found == false && (currentSearchOption & SEARCH_ARTIST)) {
+			if(artist.contains(search)) {
+				found = true;
+			}
 		}
 		if(found == true) {
-			addEntry(searchTable, 
-			musicTable->item(i, TITLE_COLUMN)->text(), 
-			musicTable->item(i, ARTIST_COLUMN)->text(), 
-			musicTable->item(i, ALBUM_COLUMN)->text(), 
-			i);
+			addEntry(searchTree, title, artist, album, i);
 		}
-		if(stop == 1)
-			break;
 	}
-	musicTable->hide();
-	sortSearchTable(ARTIST_COLUMN);
-	searchTable->show();
+	browserTree->hide();
+	searchTree->show();
 }
 
 void MainWindow::searchOptionAll(void)
@@ -371,20 +374,23 @@ void MainWindow::loadDB(char *s_dbfile)
 	}
 
 	sources.reserve(htdb.length());
-	musicTable->hide();
+	treeItemList.reserve(htdb.length());
+	browserTree->hide();
 	for(unsigned int i = at; i < htdb.length(); i++) {
 		QString string(htdb.ind_name(i));
 		Phonon::MediaSource source(string);
 		htdb.set_media_source(i, source);
 		sources.append(source);
-		if(htdb.ind_title(i).isEmpty()) {
-			addEntry(musicTable, htdb.ind_name(i), htdb.ind_artist(i), htdb.ind_album(i), i);
-		} else {
-			addEntry(musicTable, htdb.ind_title(i), htdb.ind_artist(i), htdb.ind_album(i), i);
+		QString title(htdb.ind_title(i));
+		if(title.isEmpty()) {
+			title = QString(htdb.ind_name(i));
 		}
+		QString artist(htdb.ind_artist(i));
+		QString album(htdb.ind_album(i));
+
+		addEntry(browserTree, title, artist, album, i);
 	}
-	musicTable->show();
-	sortMusicTable(ARTIST_COLUMN);
+	browserTree->show();
 }
 
 void MainWindow::about()
@@ -444,29 +450,31 @@ void MainWindow::tick(qint64 time)
 	timeLcd->display(displayTime.toString("mm:ss"));
 }
 
-void MainWindow::searchTableClicked(int row, int /* column */)
+void MainWindow::searchTreeClicked(QTreeWidgetItem *item, int /* column */)
 {
 	/* Start playing */
+	if(item->childCount() > 0) {
+		return;
+	}
 	stop = 1;
-	QString tableIndex_s = searchTable->item(row, 3)->text();
-	int tableIndex = tableIndex_s.toInt();
-	searchTable->hide();
-	musicTable->show();
-	tableClicked(tableIndex, 0);
+	int sourcesIndex = item->text(1).toInt();
+	QTreeWidgetItem *browserItem = treeItemList[sourcesIndex];
+	searchTree->hide();
+	browserTree->show();
+	treeClicked(browserItem, 0);
 }
 
-void MainWindow::tableClicked(int row, int /* column */)
+void MainWindow::treeClicked(QTreeWidgetItem *item, int /* column */)
 {
+	if(item->childCount() > 0) {
+		return;
+	}
+	int sourcesIndex = item->text(1).toInt();
 	mediaObject->stop();
 	mediaObject->clearQueue();
-
-	if(row >= musicTable->rowCount())
-	      return;
-	int sourcesIndex = musicTable->item(row, 3)->text().toInt();
-
-	if (sourcesIndex >= sources.size())
+	if(sourcesIndex >= sources.size()) {
 		return;
-
+	}
 	htdb.set_playing(sourcesIndex);
 	mediaObject->setCurrentSource(sources[sourcesIndex]);
 	mediaObject->play();
@@ -475,14 +483,16 @@ void MainWindow::tableClicked(int row, int /* column */)
 void MainWindow::sourceChanged(const Phonon::MediaSource &source)
 {
 	int sourcesIndex = sources.indexOf(source);
-	int musicTableIndex = reverseIndex[sourcesIndex];
-	musicTable->selectRow(musicTableIndex);
-	setTitle(musicTableIndex);
-	addEntry(playlistTable, 
-			musicTable->item(musicTableIndex, 0)->text(),
-			musicTable->item(musicTableIndex, 1)->text(),
-			musicTable->item(musicTableIndex, 2)->text(),
-			musicTableIndex);
+	QTreeWidgetItem *titleItem = treeItemList[sourcesIndex];
+	QTreeWidgetItem *albumItem = titleItem->parent();
+	QTreeWidgetItem *artistItem = albumItem->parent();
+	browserTree->setCurrentItem(titleItem);
+	titleItem->setSelected(true);
+	setTitle(titleItem->text(0), artistItem->text(0), albumItem->text(0));
+	appendPlaylist( titleItem->text(0),
+			artistItem->text(0),
+			albumItem->text(0),
+			sourcesIndex);
 
 	timeLcd->display("00:00");
 }
@@ -496,21 +506,27 @@ void MainWindow::aboutToFinish()
 	}
 }
 
-void MainWindow::setTitle(int index)
+void MainWindow::setTitle(QString title, QString album, QString artist)
 {
 	QString windowTitle;
-	QString title  = musicTable->item(index, TITLE_COLUMN)->text();
-	QString artist = musicTable->item(index, ARTIST_COLUMN)->text();
+	QString message;
 
-	if(artist.isEmpty()) {
-		windowTitle = title;
-	} else {
-		windowTitle = title + " by " + artist;
+	message = STATUS_BAR_COLOR_BLUE + title + STATUS_BAR_TEXT_END;
+	windowTitle = title;
+
+	if(!artist.isEmpty()) {
+		windowTitle += " by " + artist;
+		message += STATUS_BAR_COLOR_BLACK + " by " + STATUS_BAR_TEXT_END +
+			  STATUS_BAR_COLOR_RED + artist + STATUS_BAR_TEXT_END;
+	}
+
+	if(!album.isEmpty()) {
+		message = message + 
+		    STATUS_BAR_COLOR_BLUE + " (" + album + ")" + STATUS_BAR_TEXT_END;
 	}
 
 	setWindowTitle(windowTitle);
-	statusBar->clearMessage();
-	statusBar->showMessage(windowTitle);
+	songLabel->setText(message);
 }
 
 void MainWindow::setupActions()
@@ -608,20 +624,6 @@ void MainWindow::setupUi()
 	timeLcd = new QLCDNumber;
 	timeLcd->setPalette(palette);
 
-	setupTable(&musicTable);
-	connect(musicTable, SIGNAL(cellPressed(int,int)),
-		this, SLOT(tableClicked(int,int)));
-	connect(musicTable->horizontalHeader(), SIGNAL(sectionPressed(int)),
-					this, SLOT(sortMusicTable(int)));
-
-	// Search Table
-	setupTable(&searchTable);
-	searchTable->hide();
-	connect(searchTable, SIGNAL(cellPressed(int, int)), 
-		this, SLOT(searchTableClicked(int, int)));
-	connect(musicTable->horizontalHeader(), SIGNAL(sectionPressed(int)),
-					this, SLOT(sortSearchTable(int)));
-
 	setupTable(&playlistTable);
 	connect(playlistTable, SIGNAL(cellPressed(int, int)), 
 		this, SLOT(playlistTableClicked(int, int)));
@@ -644,7 +646,6 @@ void MainWindow::setupUi()
 	QHBoxLayout *toolBar = new QHBoxLayout;	// the toolbar layout
 	toolBar->addWidget(tbar1);		// toolbar (above)
 	toolBar->addWidget(seekSlider);		// slider
-	toolBar->addWidget(timeLcd);		// time LCD
 	toolBar->addWidget(volumeLabel);	// volume label
 	toolBar->addWidget(volumeSlider);	// volume slider
 	toolBar->addWidget(tbar2);		// toggle Playlist
@@ -683,15 +684,29 @@ void MainWindow::setupUi()
 	currentSearchOption = SEARCH_ALL;
 	connect(searchOptionButton, SIGNAL(clicked()), searchMenu, SLOT(show()));
 
+	songLabel = new QLabel;
+	songLabel->setTextFormat(Qt::RichText);
+	songLabel->setAlignment(Qt::AlignRight | Qt::AlignBottom);
 
 	// status bar
 	statusBar = new QStatusBar;
 	statusBar->clearMessage();
+	statusBar->addPermanentWidget(songLabel);
+	statusBar->addPermanentWidget(timeLcd);		// time LCD
+
+	// Search Table
+	searchTree = new QTreeWidget;
+	searchTree->hide();
+	connect(searchTree, SIGNAL(itemActivated(QTreeWidgetItem *, int)), 
+		this, SLOT(searchTreeClicked(QTreeWidgetItem *, int)));
+
+	browserTree = new QTreeWidget;
+	connect(browserTree, SIGNAL(itemActivated(QTreeWidgetItem *, int)), this, SLOT(treeClicked(QTreeWidgetItem *, int)));
 
 	QVBoxLayout *DBLayout = new QVBoxLayout;
 	DBLayout->addWidget(searchBar);
-	DBLayout->addWidget(searchTable);
-	DBLayout->addWidget(musicTable);
+	DBLayout->addWidget(searchTree);
+	DBLayout->addWidget(browserTree);
 
 	QVBoxLayout *PlaylistLayout = new QVBoxLayout;
 	PlaylistLayout->addWidget(playlistTable);
