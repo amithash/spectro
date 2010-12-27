@@ -46,9 +46,9 @@
 
 HistDB htdb;
 
-#define TITLE_COLOR QRgb(qRgb(0xA0, 0xA0, 0xFF))
-#define ARTIST_COLOR QRgb(qRgb(0xB0, 0xB0, 0xFF))
-#define ALBUM_COLOR QRgb(qRgb(0xC0, 0xC0, 0xFF))
+#define TITLE_COLOR QRgb(qRgb(0xb2, 0xdb, 0xf7))
+#define ARTIST_COLOR QRgb(qRgb(0xb2, 0xdb, 0xe7))
+#define ALBUM_COLOR QRgb(qRgb(0xb2, 0xdb, 0xd7))
 
 #define TITLE_COLUMN  0
 #define ARTIST_COLUMN 1
@@ -506,7 +506,7 @@ void MainWindow::aboutToFinish()
 	}
 }
 
-void MainWindow::setTitle(QString title, QString album, QString artist)
+void MainWindow::setTitle(QString title, QString artist, QString album)
 {
 	QString windowTitle;
 	QString message;
@@ -590,24 +590,29 @@ void MainWindow::setupActions()
 	connect(togglePlaylistAction, SIGNAL(triggered()), this, SLOT(togglePlaylist()));
 }
 
-void MainWindow::setupTable(QTableWidget **_table)
-{
-	QTableWidget *table;
-	QStringList headers;
-	headers << tr("Title") << tr("Artist") << tr("Album") << tr("Index");
-
-	table = new QTableWidget(0, 4);
-	table->setHorizontalHeaderLabels(headers);
-	table->setSelectionMode(QAbstractItemView::SingleSelection);
-	table->setSelectionBehavior(QAbstractItemView::SelectRows);
-	table->verticalHeader()->hide();
-	table->setColumnHidden(3, true);
-	table->horizontalHeader()->setResizeMode(QHeaderView::Stretch);
-	*_table = table;
-}
-
 void MainWindow::setupUi()
 {
+	// ----------- Hidden artifacts ---------------
+	dialogBox = new QDialogButtonBox();
+	QList<QString> distFuncs = htdb.getSupportedDistanceFunctions();
+	for(int i = 0; i < distFuncs.length(); i++) {
+		dialogBox->addButton(distFuncs[i], QDialogButtonBox::ActionRole);
+	}
+	dialogBox->addButton("Cancel", QDialogButtonBox::ActionRole);
+	dialogBox->setOrientation(Qt::Vertical);
+	dialogBox->setCenterButtons(true);
+	connect(dialogBox, SIGNAL(clicked(QAbstractButton *)), 
+				this, SLOT(acceptSettings(QAbstractButton *)));
+	dialogBox->hide();
+
+	// --------------- Top Tool bar ----------------
+	QToolBar *tbar1 = new QToolBar;		// toolbar 
+	tbar1->addAction(loadDBAction);		// load db
+	tbar1->addAction(playAction);		// play
+	tbar1->addAction(stopAction);		// stop
+	tbar1->addAction(retryAction);		// Retry
+	tbar1->addAction(nextAction);		// Next
+
 	seekSlider = new Phonon::SeekSlider(this);
 	seekSlider->setMediaObject(mediaObject);
 
@@ -617,27 +622,6 @@ void MainWindow::setupUi()
 
 	QLabel *volumeLabel = new QLabel;
 	volumeLabel->setPixmap(QPixmap("images/volume.png"));
-
-	QPalette palette;
-	palette.setBrush(QPalette::Light, Qt::darkGray);
-
-	timeLcd = new QLCDNumber;
-	timeLcd->setPalette(palette);
-
-	setupTable(&playlistTable);
-	connect(playlistTable, SIGNAL(cellPressed(int, int)), 
-		this, SLOT(playlistTableClicked(int, int)));
-	playlistTable->hide();
-	playlistVisible = false;
-
-
-	QToolBar *tbar1 = new QToolBar;		// toolbar 
-	tbar1->addAction(loadDBAction);		// load db
-	tbar1->addAction(playAction);		// play
-	tbar1->addAction(stopAction);		// stop
-	tbar1->addAction(retryAction);		// Retry
-	tbar1->addAction(nextAction);		// Next
-	tbar1->addAction(togglePlaylistAction); // toggle playlist
 
 	QToolBar *tbar2 = new QToolBar;
 	tbar2->addAction(settingsAction);	// settings
@@ -650,19 +634,9 @@ void MainWindow::setupUi()
 	toolBar->addWidget(volumeSlider);	// volume slider
 	toolBar->addWidget(tbar2);		// toggle Playlist
 
-	// Settings dialog box
-	dialogBox = new QDialogButtonBox();
-	QList<QString> distFuncs = htdb.getSupportedDistanceFunctions();
-	for(int i = 0; i < distFuncs.length(); i++) {
-		dialogBox->addButton(distFuncs[i], QDialogButtonBox::ActionRole);
-	}
-	dialogBox->addButton("Cancel", QDialogButtonBox::ActionRole);
-	dialogBox->setOrientation(Qt::Vertical);
-	dialogBox->setCenterButtons(true);
-	connect(dialogBox, SIGNAL(clicked(QAbstractButton *)), this, SLOT(acceptSettings(QAbstractButton *)));
-	dialogBox->hide();
-
-	// search bar
+	// ------------- Browser Layout ------------------------
+	//
+	// +++++++++++++ Search Bar ++++++++++++++++++++++
 	searchBox = new QLineEdit;
 	searchBox->setText("");
 	connect(searchBox, SIGNAL(editingFinished()), this, SLOT(searchDB()));
@@ -673,6 +647,7 @@ void MainWindow::setupUi()
 	searchOptionButton->setText("All");
 	searchBar->addWidget(searchOptionButton);
 	searchBar->addWidget(searchBox);
+	searchBar->addAction(togglePlaylistAction); // toggle playlist
 
 	QMenu *searchMenu = new QMenu(searchBar);
 	searchOptionButton->setMenu(searchMenu);
@@ -684,25 +659,35 @@ void MainWindow::setupUi()
 	currentSearchOption = SEARCH_ALL;
 	connect(searchOptionButton, SIGNAL(clicked()), searchMenu, SLOT(show()));
 
-	songLabel = new QLabel;
-	songLabel->setTextFormat(Qt::RichText);
-	songLabel->setAlignment(Qt::AlignRight | Qt::AlignBottom);
-
-	// status bar
-	statusBar = new QStatusBar;
-	statusBar->clearMessage();
-	statusBar->addPermanentWidget(songLabel);
-	statusBar->addPermanentWidget(timeLcd);		// time LCD
-
-	// Search Table
+	// ++++++++++++++ Search Tree ++++++++++++++++++++
 	searchTree = new QTreeWidget;
 	searchTree->hide();
+	searchTree->header()->hide();
 	connect(searchTree, SIGNAL(itemActivated(QTreeWidgetItem *, int)), 
 		this, SLOT(searchTreeClicked(QTreeWidgetItem *, int)));
 
+	// +++++++++++++ Browser Tree ++++++++++++++++++++
 	browserTree = new QTreeWidget;
+	browserTree->header()->hide();
 	connect(browserTree, SIGNAL(itemActivated(QTreeWidgetItem *, int)), this, SLOT(treeClicked(QTreeWidgetItem *, int)));
 
+
+	// +++++++++++++ Playlist Table +++++++++++++++++++
+	QStringList headers;
+	headers << tr("Title") << tr("Artist") << tr("Album") << tr("Index");
+
+	playlistTable = new QTableWidget(0, 4);
+	playlistTable->setHorizontalHeaderLabels(headers);
+	playlistTable->setSelectionMode(QAbstractItemView::SingleSelection);
+	playlistTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+	playlistTable->verticalHeader()->hide();
+	playlistTable->setColumnHidden(3, true);
+	playlistTable->horizontalHeader()->setResizeMode(QHeaderView::Stretch);
+	playlistVisible = true;
+	connect(playlistTable, SIGNAL(cellPressed(int, int)), 
+		this, SLOT(playlistTableClicked(int, int)));
+
+	// +++++++++++ layout ++++++++++++++++++++++++++
 	QVBoxLayout *DBLayout = new QVBoxLayout;
 	DBLayout->addWidget(searchBar);
 	DBLayout->addWidget(searchTree);
@@ -715,7 +700,23 @@ void MainWindow::setupUi()
 	SubMainLayout->addLayout(DBLayout);
 	SubMainLayout->addLayout(PlaylistLayout);
 
-	// Main layout
+	// ------------ STATUS BAR ---------------
+	songLabel = new QLabel;
+	songLabel->setTextFormat(Qt::RichText);
+	songLabel->setAlignment(Qt::AlignRight | Qt::AlignBottom);
+
+	QPalette palette;
+	palette.setBrush(QPalette::Light, Qt::darkGray);
+	timeLcd = new QLCDNumber;
+	timeLcd->setPalette(palette);
+
+	// status bar
+	statusBar = new QStatusBar;
+	statusBar->clearMessage();
+	statusBar->addPermanentWidget(songLabel);	// Song label
+	statusBar->addPermanentWidget(timeLcd);		// time LCD
+
+	// ------------- Main layout ------------a
 	QVBoxLayout *mainLayout = new QVBoxLayout;
 	mainLayout->addLayout(toolBar);
 	mainLayout->addLayout(SubMainLayout);

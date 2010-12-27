@@ -105,9 +105,8 @@ class MainWindow : public QMainWindow
 		void addEntry(QTreeWidget *tree, QString title, QString artist, QString album, int ind);
 		void appendPlaylist(QString title, QString artist, QString album, int ind);
 		void clearSearchWindow();
-		void setTitle(QString title, QString album, QString artist);
+		void setTitle(QString title, QString artist, QString album);
 		void closeSettings();
-		void setupTable(QTableWidget **table);
 
 		Phonon::SeekSlider *seekSlider;
 		Phonon::MediaObject *mediaObject;
