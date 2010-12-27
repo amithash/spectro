@@ -46,9 +46,9 @@
 
 HistDB htdb;
 
-#define TITLE_COLOR QRgb(qRgb(0xb2, 0xdb, 0xf7))
-#define ARTIST_COLOR QRgb(qRgb(0xb2, 0xdb, 0xe7))
-#define ALBUM_COLOR QRgb(qRgb(0xb2, 0xdb, 0xd7))
+#define TITLE_COLOR QBrush(QColor(QRgb(qRgb(0xb2, 0xdb, 0xf7))))
+#define ARTIST_COLOR QBrush(QColor(QRgb(qRgb(0xb2, 0xdb, 0xf7))))
+#define ALBUM_COLOR QBrush(QColor(QRgb(qRgb(0xb2, 0xdb, 0xf7))))
 
 #define TITLE_COLUMN  0
 #define ARTIST_COLUMN 1
@@ -104,9 +104,9 @@ void MainWindow::appendPlaylist(QString title, QString artist, QString album, in
 	QTableWidgetItem *albumItem = new QTableWidgetItem(album);
 	QTableWidgetItem *indexItem = new QTableWidgetItem(s_num);
 
-	titleItem->setBackground(QBrush(QColor(TITLE_COLOR)));
-	artistItem->setBackground(QBrush(QColor(ARTIST_COLOR)));
-	albumItem->setBackground(QBrush(QColor(ALBUM_COLOR)));
+	titleItem->setBackground(TITLE_COLOR);
+	artistItem->setBackground(ARTIST_COLOR);
+	albumItem->setBackground(ALBUM_COLOR);
 
         titleItem->setFlags(titleItem->flags() ^ Qt::ItemIsEditable);
         artistItem->setFlags(artistItem->flags() ^ Qt::ItemIsEditable);
@@ -160,6 +160,7 @@ void MainWindow::addEntry(QTreeWidget *tree, QString title, QString artist, QStr
 	QString s_ind;
 	s_ind.setNum(ind);
 	titleItem->setText(1, s_ind);
+	titleItem->setIcon(0, style()->standardIcon(QStyle::SP_MediaPlay));
 
 	albumItem->addChild(titleItem);
 
@@ -286,6 +287,7 @@ void MainWindow::searchDB()
 			addEntry(searchTree, title, artist, album, i);
 		}
 	}
+	searchTree->sortItems(0, Qt::AscendingOrder);
 	browserTree->hide();
 	searchTree->show();
 }
@@ -390,6 +392,7 @@ void MainWindow::loadDB(char *s_dbfile)
 
 		addEntry(browserTree, title, artist, album, i);
 	}
+	browserTree->sortItems(0, Qt::AscendingOrder);
 	browserTree->show();
 }
 
@@ -454,6 +457,7 @@ void MainWindow::searchTreeClicked(QTreeWidgetItem *item, int /* column */)
 {
 	/* Start playing */
 	if(item->childCount() > 0) {
+		item->setExpanded(!item->isExpanded());
 		return;
 	}
 	stop = 1;
