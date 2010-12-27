@@ -74,6 +74,7 @@ class HistDB
 	QString ind_title(unsigned int ind);
 	QString ind_artist(unsigned int ind);
 	QString ind_album(unsigned int ind);
+	QString ind_track(unsigned int ind);
 
 	QList<QString> getSupportedDistanceFunctions();
 	void setDistanceFunction(QString dist);

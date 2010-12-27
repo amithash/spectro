@@ -249,6 +249,18 @@ QString HistDB::ind_artist(unsigned int ind)
 	return list[ind].artist;
 }
 
+QString HistDB::ind_track(unsigned int ind)
+{
+	if(ind >= list.size())
+	      return NULL;
+	unsigned int track = list[ind].track;
+	QString ret;
+	if(track < 10)
+	      ret = "0";
+	ret += QString(track);
+	return ret;
+}
+
 QString HistDB::ind_album(unsigned int ind)
 {
 	if(ind >= list.size())
