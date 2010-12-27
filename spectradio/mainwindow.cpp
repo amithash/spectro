@@ -60,7 +60,6 @@ HistDB htdb;
 #define STATUS_BAR_COLOR_BLACK QString("<font color='Black'>")
 #define STATUS_BAR_TEXT_END QString("</font>")
 
-
 const QString AboutMessage =
 "\
 Author: Amithash Prasad <amithash@gmail.com>	\n\
@@ -345,23 +344,35 @@ void MainWindow::loadDB()
 		QDesktopServices::storageLocation(QDesktopServices::HomeLocation));
 
 	foreach (QString string, files) {
-		if(string.endsWith(".hdb")) {
-			loadDB(string.toAscii().data());
-		} else {
-			std::cout << "Ignoring " << string.toAscii().data() << std::endl;
-		}
+		loadDB(string.toAscii().data());
 	}
 }
 
 void MainWindow::loadDB(char *s_dbfile)
 {
 	QString dbfile(s_dbfile);
+	QString message;
+
+	if(!dbfile.endsWith(".hdb")) {
+		message =  "Ignoring " + dbfile + ": Not a hdb file";
+		statusBar->showMessage(message,4000);
+		std::cerr << message.toAscii().data() << std::endl;
+		return;
+	}
+	if(!QFile::exists(dbfile)) {
+		message = "File " + dbfile + ": does not exist";
+		statusBar->showMessage(message, 4000);
+		std::cerr << message.toAscii().data() << std::endl;
+		return;
+	}
+
 	int at = htdb.length();
 
 	if(htdb.existsInDB(dbfile)) {
 		QString str(s_dbfile);
 		str.append(" Already loaded, so skipping it");
 		statusBar->showMessage(str, 2000);
+		std::cerr << str.toAscii().data() << std::endl;
 		return;
 	}
 	htdb.addToDB(dbfile);
