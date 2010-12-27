@@ -257,7 +257,9 @@ QString HistDB::ind_track(unsigned int ind)
 	QString ret;
 	if(track < 10)
 	      ret = "0";
-	ret += QString(track);
+	QString num;
+	num.setNum(track);
+	ret += num;
 	return ret;
 }
 
