@@ -396,11 +396,15 @@ void MainWindow::loadDB(char *s_dbfile)
 		htdb.set_media_source(i, source);
 		sources.append(source);
 		QString title(htdb.ind_title(i));
-		if(title.isEmpty()) {
-			title = QString(htdb.ind_name(i));
-		}
+		QString track(htdb.ind_track(i));
 		QString artist(htdb.ind_artist(i));
 		QString album(htdb.ind_album(i));
+
+		if(title.isEmpty()) {
+			title = QString(htdb.ind_name(i));
+		} else if(!artist.isEmpty() && !album.isEmpty()) {
+			title = track + " - " + title;
+		}
 
 		addEntry(browserTree, title, artist, album, i);
 	}
