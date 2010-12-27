@@ -102,7 +102,7 @@ class MainWindow : public QMainWindow
 	private:
 		void setupActions();
 		void setupUi();
-		void addEntry(QTreeWidget *tree, QString title, QString artist, QString album, int ind);
+		QTreeWidgetItem *addEntry(QTreeWidget *tree, QString title, QString artist, QString album, int ind);
 		void appendPlaylist(QString title, QString artist, QString album, int ind);
 		void clearSearchWindow();
 		void setTitle(QString title, QString artist, QString album);

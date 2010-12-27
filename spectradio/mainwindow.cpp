@@ -122,7 +122,7 @@ void MainWindow::appendPlaylist(QString title, QString artist, QString album, in
 }
 
 
-void MainWindow::addEntry(QTreeWidget *tree, QString title, QString artist, QString album, int ind)
+QTreeWidgetItem *MainWindow::addEntry(QTreeWidget *tree, QString title, QString artist, QString album, int ind)
 {
 	int artistCount = tree->topLevelItemCount();
 	QTreeWidgetItem *artistItem = NULL;
@@ -164,8 +164,8 @@ void MainWindow::addEntry(QTreeWidget *tree, QString title, QString artist, QStr
 
 	albumItem->addChild(titleItem);
 
-	if(tree != searchTree)
-		treeItemList.append(titleItem);
+	return titleItem;
+
 }
 
 void MainWindow::playlistTableClicked(int row, int /* column */)
@@ -284,7 +284,7 @@ void MainWindow::searchDB()
 			}
 		}
 		if(found == true) {
-			addEntry(searchTree, title, artist, album, i);
+			(void)addEntry(searchTree, title, artist, album, i);
 		}
 	}
 	searchTree->sortItems(0, Qt::AscendingOrder);
@@ -393,7 +393,6 @@ void MainWindow::loadDB(char *s_dbfile)
 	for(unsigned int i = at; i < htdb.length(); i++) {
 		QString string(htdb.ind_name(i));
 		Phonon::MediaSource source(string);
-		htdb.set_media_source(i, source);
 		sources.append(source);
 		QString title(htdb.ind_title(i));
 		QString track(htdb.ind_track(i));
@@ -406,7 +405,8 @@ void MainWindow::loadDB(char *s_dbfile)
 			title = track + " - " + title;
 		}
 
-		addEntry(browserTree, title, artist, album, i);
+		QTreeWidgetItem *item = addEntry(browserTree, title, artist, album, i);
+		treeItemList.append(item);
 	}
 	browserTree->sortItems(0, Qt::AscendingOrder);
 	browserTree->show();
