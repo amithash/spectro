@@ -140,6 +140,9 @@ class MainWindow : public QMainWindow
 		QToolButton *searchOptionButton;
 		QLabel *songLabel;
 		QTreeWidget *browserTree;
+	protected:
+		void dropEvent(QDropEvent *event);
+		void dragEnterEvent(QDragEnterEvent *event);
 };
 
 #endif

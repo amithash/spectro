@@ -88,6 +88,7 @@ MainWindow::MainWindow()
 	setupActions();
 	setupUi();
 	timeLcd->display("00:00");
+	setAcceptDrops(true);
 }
 
 
@@ -410,6 +411,18 @@ void MainWindow::loadDB(char *s_dbfile)
 void MainWindow::about()
 {
 	QMessageBox::information(this, tr("Spectradio"), AboutMessage);
+}
+
+void MainWindow::dropEvent(QDropEvent *event)
+{
+	event->acceptProposedAction();
+	QString file = event->mimeData()->text();
+	file.replace("file://","");
+	loadDB(file.toAscii().data());
+}
+void MainWindow::dragEnterEvent(QDragEnterEvent *event)
+{
+	event->acceptProposedAction();
 }
 
 void MainWindow::stateChanged(Phonon::State newState, Phonon::State /* oldState */)
