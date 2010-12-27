@@ -270,12 +270,6 @@ QString HistDB::ind_album(unsigned int ind)
 	return list[ind].album;
 }
 
-void HistDB::set_media_source(unsigned int ind, Phonon::MediaSource source)
-{
-	if(ind >= list.size())
-	      return;
-	list[ind].media_source = source;
-}
 void HistDB::set_playing(unsigned int current)
 {
 	if(current >= list.size())

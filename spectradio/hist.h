@@ -37,7 +37,6 @@ class Hist
 	unsigned int track;
 	float spect_hist[NBANDS][SPECT_HIST_LEN];
 	int played;
-	Phonon::MediaSource media_source;
 
 	Hist(void)
 	{
@@ -66,7 +65,6 @@ class HistDB
 	bool is_valid();
 	unsigned int length(void);
 	float distance(unsigned int e1, unsigned int e2);
-	void set_media_source(unsigned int ind, Phonon::MediaSource source);
 	void set_playing(unsigned int ind);
 	int get_next(int current);
 	void LoadDB(const char *dbname);
