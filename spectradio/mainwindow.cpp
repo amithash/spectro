@@ -467,6 +467,7 @@ void MainWindow::searchTreeClicked(QTreeWidgetItem *item, int /* column */)
 void MainWindow::treeClicked(QTreeWidgetItem *item, int /* column */)
 {
 	if(item->childCount() > 0) {
+		item->setExpanded(!item->isExpanded());
 		return;
 	}
 	int sourcesIndex = item->text(1).toInt();
