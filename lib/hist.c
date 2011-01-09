@@ -148,6 +148,9 @@ static int write_hist(int fd, hist_t *hist)
 	if(write_uint(fd, hist->track)) {
 		return -1;
 	}
+	if(write_uint(fd, hist->length)) {
+		return -1;
+	}
 	for(i = 0; i < NBANDS; i++) {
 		if(write_float_vec(fd, hist->spect_hist[i], SPECT_HIST_LEN)) {
 			return -1;
@@ -175,6 +178,9 @@ static int read_hist(int fd, hist_t *hist)
 		return -1;
 	}
 	if(read_uint(fd, &hist->track)) {
+		return -1;
+	}
+	if(read_uint(fd, &hist->length)) {
 		return -1;
 	}
 	for(i = 0; i < NBANDS; i++) {

@@ -35,6 +35,7 @@ class Hist
 	QString artist;
 	QString album;
 	unsigned int track;
+	unsigned int length;
 	float spect_hist[NBANDS][SPECT_HIST_LEN];
 	int played;
 

@@ -177,6 +177,10 @@ void HistDB::LoadDB(const char *dbname)
 			std::cerr << "Error reading element number " << i << std::endl;
 			goto err;
 		}
+		if(!ifs.read((char *)&list[i].length, sizeof(unsigned int))) {
+			std::cerr << "Error reading element number " << i << std::endl;
+			goto err;
+		}
 		for(int j = 0; j < NBANDS; j++) {
 			if(!ifs.read((char *)list[i].spect_hist[j], (sizeof(float) * SPECT_HIST_LEN) / sizeof(char))) {
 				std::cerr << "Error reading sh element number " << i << "Band: " << j << std::endl;
@@ -287,11 +291,15 @@ int HistDB::get_next(int ind)
 
 	QString ind_title(list[ind].title);
 	QString ind_artist(list[ind].artist);
+	unsigned int ind_length = list[ind].length;
 
 	list[ind].played = 1;
 	for(unsigned int i = 0; i < list.size(); i++) {
 		QString i_title(list[i].title);
 		QString i_artist(list[i].artist);
+		unsigned int i_length = list[i].length;
+
+		// Find out what you can do with ind_length and i_length.
 
 		if(list[i].played == 1 || i == (unsigned int)ind) {
 			continue;
