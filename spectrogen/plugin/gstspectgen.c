@@ -32,7 +32,7 @@
  */
 
 /* This plugin takes a frequency-domain stream, does some simple 
- * analysis, and returns a string of (unsigned char) rgb triples
+ * analysis, and returns a string of (float) 24 bands
  * that represent the magnitude of various sections of the stream.
  * Since we have to perform some normalization, we queue up all
  * of our analysis until we get an EOS event, at which point we 
@@ -43,10 +43,8 @@
 /* More precisely, the analysis performed is as follows:
  *  (1) the spectrum is broken into 24 parts, called "bark bands"
  *      (Gav's terminology), as given in bark_bands below
- *  (2) we compute the size of the first 8 bark bands and store
- *      that as the "red" component; similarly for blue and green
  *  (3) after receiving an EOS, we normalize all of the analysis
- *      done in (1) and (2) and return a stream of rgb triples
+ *      done in (1) and (2) and return a stream of 24 band vectors
  *      (application/x-raw-rgb)
  */
 
@@ -133,23 +131,18 @@ static void gst_spectgen_finish (GstSpectgen *spect);
 /* Default max-width of the output image, or 0 for no rescaling */
 #define MAX_WIDTH_DEFAULT 0
 
-#define USE_BARK_BANDS
-
-#if defined(USE_BARK_BANDS)
 /* We use this table to break up the incoming spectrum into segments */
 static const guint bark_bands[24] 
   = { 100,  200,  300,  400,  510,  630,  770,   920, 
       1080, 1270, 1480, 1720, 2000, 2320, 2700,  3150, 
       3700, 4400, 5300, 6400, 7700, 9500, 12000, 15500 };
-#elif defined(USE_MEL_BANDS)
-static const guint bark_bands[24] 
-  = { 65,   174,  298,  440,  603,   788,   1000,  1242, 
-      1519, 1834, 2195, 2607, 3078,  3616,  4230,  4932,
-      5734, 6650, 7696, 8892, 10257, 11817, 13599, 15635
-  };
-#else
-#error "You need either USE_BARK_BANDS or USE_MEL_BANDS defined"
-#endif
+
+const float inv_eq_loudness_coeff[NBANDS]
+= { 0.823529, 0.897436, 0.921053, 0.921053, 0.921053, 0.917464, 0.900932, 0.879403,
+    0.876772, 0.880981, 0.885633, 0.896203, 0.909091, 0.932678, 0.959176, 0.983516,
+    1.000000, 0.974123, 0.927985, 0.864979, 0.819767, 0.818741, 0.736842, 0.628727 };
+
+
 
 /***************************************************************/
 /* GObject boilerplate stuff                                   */
@@ -161,7 +154,7 @@ static void gst_spectgen_base_init (gpointer gclass)
 	static GstElementDetails element_details = {
 			"Spectgen analyzer",
 			"Filter/Converter/Spectgen",
-			"Convert a spectrum into a stream of (uchar) rgb triples representing its \"spect\"",
+			"Convert a spectrum into a stream of (float) 24 bands representing its \"spect\"",
 			"Joe Rabinoff <bobqwatson@yahoo.com>"
 		};
 	GstElementClass *element_class = GST_ELEMENT_CLASS (gclass);
@@ -450,12 +443,9 @@ static GstFlowReturn gst_spectgen_chain (GstPad *pad, GstBuffer *buf)
 {
 	GstSpectgen *spect = GST_SPECTGEN (gst_pad_get_parent (pad));
 	guint i;
-	gfloat amplitudes[24], rgb[NBANDS];
+	gfloat amplitudes[NBANDS] = {0};
 	gfloat *out, real, imag;
 	guint numfreqs = NUMFREQS (spect);
-	for(i = 0; i < NBANDS; i++) {
-  		rgb[i] = 0.f;
-	}
 
 	if (GST_BUFFER_SIZE (buf) != numfreqs * sizeof (gfloat) * 2) {
 		gst_object_unref (spect);
@@ -468,25 +458,15 @@ static GstFlowReturn gst_spectgen_chain (GstPad *pad, GstBuffer *buf)
 		return GST_FLOW_ERROR;
 
 	/* Calculate total amplitudes for the different bark bands */
-  
-	for (i = 0; i < 24; ++i)
-		amplitudes[i] = 0.f;
-
 	for (i = 0; i < numfreqs; ++i) {
 		real = out[2*i];
 		imag = out[2*i + 1];
-		amplitudes[spect->barkband_table[i]] += sqrtf (real*real + imag*imag);
+		amplitudes[spect->barkband_table[i]] += real*real + imag*imag;
 	}
 
-	/* Now divide the bark bands into thirds and compute their total 
-	 * amplitudes */
-
-	for (i = 0; i < 24; ++i) {
-		rgb[i/(24 / NBANDS)] += amplitudes[i] * amplitudes[i];
-	}
 	for(i = 0; i < NBANDS; i++) {
-		rgb[i] = sqrtf(rgb[i]);
-		spect->bands[i][spect->numframes] = rgb[i];
+		spect->bands[i][spect->numframes] = 
+		    sqrt(amplitudes[i]) * inv_eq_loudness_coeff[i];
 	}
 	gst_buffer_unref (buf);
 	gst_object_unref (spect);
@@ -498,12 +478,10 @@ static GstFlowReturn gst_spectgen_chain (GstPad *pad, GstBuffer *buf)
 /* This function normalizes all of the cached r,g,b data and 
  * finally pushes a monster buffer with all of our output.
  */
-typedef float spect_e_type;
-#define MUL_BY 1.0
 static void gst_spectgen_finish (GstSpectgen *spect)
 {
 	GstBuffer *buf;
-	spect_e_type *data;
+	float *data;
 	guint output_width;
 	guint i, j;
 	GstCaps *caps = gst_caps_copy (gst_pad_get_caps (spect->srcpad));
@@ -512,17 +490,17 @@ static void gst_spectgen_finish (GstSpectgen *spect)
 	output_width = spect->numframes;
 
 	buf = gst_buffer_new_and_alloc 
-		(output_width * NBANDS * sizeof (spect_e_type));
+		(output_width * NBANDS * sizeof (float));
 	if (!buf)
 		return;
 
 	/* Don't set the timestamp, duration, etc. since it's irrelevant */
 	GST_BUFFER_OFFSET (buf) = 0;
-	data = (spect_e_type *) GST_BUFFER_DATA (buf);
+	data = (float *) GST_BUFFER_DATA (buf);
 
 	for (i = 0; i < output_width; ++i) {
 		for(j = 0; j < NBANDS; j++) {
-			*(data++) = (spect_e_type)(spect->bands[j][i] * MUL_BY);
+			*(data++) = (float)(spect->bands[j][i]);
 		}
 	}
 
