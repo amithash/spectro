@@ -46,6 +46,7 @@
 
 static gint   return_val  = RETURN_SUCCESS;
 static gchar *output_file = NULL;
+static gshort   no_process = 0;
 
 
 static GstElement *
@@ -214,17 +215,24 @@ run_loop (gchar *infile, gchar *outfile)
   audiopad = gst_element_get_pad (conv, "sink");
 
   /* Create analyzer chain */
-  fft = make_element ("fftwspectrum_2", "fft");
-  g_object_set (G_OBJECT (fft), "def-size", 2048, "def-step", 1024,
-		"hiquality", TRUE, NULL);
-  spectgen = make_element ("spectgen", "spectgen");
-  g_object_set (G_OBJECT (spectgen), "height", 1, NULL);
-  g_object_set (G_OBJECT (spectgen), "max-width", MAIN_LEN, NULL);
+  if(no_process == 0) {
+	fft = make_element ("fftwspectrum_2", "fft");
+	g_object_set (G_OBJECT (fft), "def-size", 2048, "def-step", 1024,
+		      "hiquality", TRUE, NULL);
+	spectgen = make_element ("spectgen", "spectgen");
+	g_object_set (G_OBJECT (spectgen), "height", 1, NULL);
+	g_object_set (G_OBJECT (spectgen), "max-width", MAIN_LEN, NULL);
+  }
   sink = make_element ("filesink", "sink");
   g_object_set (G_OBJECT (sink), "location", outfile, NULL);
 
-  gst_bin_add_many (GST_BIN (audio), conv, fft, spectgen, sink, NULL);
-  gst_element_link_many (conv, fft, spectgen, sink, NULL);
+  if(no_process == 0) {
+	gst_bin_add_many (GST_BIN (audio), conv, fft, spectgen, sink, NULL);
+	gst_element_link_many (conv, fft, spectgen, sink, NULL);
+  } else {
+  	gst_bin_add_many(GST_BIN(audio), conv, sink, NULL);
+	gst_element_link_many(conv, sink, NULL);
+  }
   gst_element_add_pad (audio, gst_ghost_pad_new ("sink", audiopad));
   gst_object_unref (audiopad);
   gst_bin_add (GST_BIN (pipeline), audio);
@@ -258,6 +266,8 @@ main (gint argc, gchar *argv[])
     {
       { "output", 'o', 0, G_OPTION_ARG_FILENAME, &outfile,
 	"The output .spect file", NULL },
+      { "raw", 'r', 0, G_OPTION_ARG_NONE, &no_process, 
+	"Just dump the decoded file", NULL },
       { G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &array,
 	"The file to analyze", NULL },
       { NULL, '\0', 0, 0, NULL, NULL, NULL }
@@ -277,6 +287,11 @@ main (gint argc, gchar *argv[])
       return RETURN_COMMANDLINE;
     }
   g_option_context_free (ctx);
+
+  if(no_process)
+	g_print("Not processing\n");
+  else
+	g_print("Processing\n");
 
   if (outfile == NULL) 
     {
