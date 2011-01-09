@@ -21,11 +21,16 @@ use strict;
 use warnings;
 use File::Find;
 use File::Basename;
+use Getopt::Long;
 use threads ('yield',
 'stack_size' => 64*4096,
 'exit' => 'threads_only',
 'stringify');
 use threads::shared;
+
+my $optionDelete = 1;
+
+GetOptions("delete!" => \$optionDelete);
 
 if(scalar(@ARGV) < 1) {
 	print "USAGE: $0 <MusicDir> [Optional HistDB Name]\n";
@@ -77,7 +82,7 @@ find sub {
 
 	# XXX ADD Stuff here for ogg, etc support. Note, wma does not work that well.
 	# If you have wma files on a linux box... god help you, surely microsoft wont.
-	if($f =~ /\.[Mm][Pp]3$/) { 
+	if(IsSupportedFile($f)) { 
 		push @MP3Files, $f;
 	}
 }, ($MusicDir);
@@ -115,7 +120,7 @@ print "Takes less than half hour\n";
 print "#################################################################################\n";
 $start_time = time;
 system("genspectdb $SList $SDB") == 0 or die "Spect db generation failed";
-unlink $SList; # Not needed anymore
+unlink $SList if($optionDelete == 1); # Not needed anymore
 $end_time = time;
 PrintFormatTime("Spect DB generation time: ", $end_time - $start_time);
 print "#################################################################################\n";
@@ -141,7 +146,7 @@ print "I have seen it get over in less than 10 minutes\n";
 print "#################################################################################\n";
 $start_time = time;
 system("spect2hist $SDB $HDB 2> /dev/null") == 0 or die "spect2hist failed\n";
-unlink $SDB;
+unlink $SDB if($optionDelete == 1);
 $end_time = time;
 PrintFormatTime("Hist DB generation time: ", $end_time - $start_time);
 
@@ -168,15 +173,15 @@ sub spectgen
 	my $base = basename($mp3);
 	my $dir  = dirname($mp3);
 	my $spect;
-	if($base =~ /(.+)\.[Mm][Pp]3$/) {
+	if($base =~ /(.+)\....$/) {
 		$spect = $1;
 	} else {
 		return;
 	}
 	$spect = "$dir/.$spect.spect";
 	return "" if(-e $spect);
-	$mp3   =~ s/"/\\"/g;
-	$spect =~ s/"/\\"/g;
+	$mp3   = AddEscapes($mp3);
+	$spect = AddEscapes($spect);
 	return "spectgen \"$mp3\" -o \"$spect\" > /dev/null 2> /dev/null";
 }
 
@@ -397,3 +402,28 @@ sub GetUserPermission
 	}
 	exit;
 }
+
+sub IsSupportedFile
+{
+	my $file = shift;
+	my @supported_files = (
+		"mp3",
+		"mp2",
+		"ogg"
+	);
+	foreach my $sup_ext (@supported_files) {
+		if($file =~ /\.$sup_ext$/i) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+sub AddEscapes
+{
+	my $file = shift;
+	$file =~ s/"/\\"/g;
+	$file =~ s/`/\\`/g;
+	return $file;
+}
+
