@@ -18,6 +18,7 @@ PLOTBPM_OBJS = plotbpm.o
 PLOTHIST_OBJS = plothist.o
 NORM_SPECT_OBJS = norm_spect.o
 DWT_OBJS = dwt.o
+IEL_OBJS = inv_equal_loudness_vals.o
 
 SPECT2CSV_EXE = spect2csv
 GENSPECTDB_EXE = genspectdb
@@ -27,11 +28,12 @@ GETSIMILAR_EXE = getsimilar
 PLOTBPM_EXE    = plotbpm
 PLOTHIST_EXE = plothist
 NORM_SPECT_EXE = normspectdb
+IEL_EXE = inv_equal_loudness_vals
 
 INSTALL_DIR = /usr/local/bin
 
 
-all: spect2csv genspectdb spect2hist hist2pgm getsimilar plotbpm plothist normspectdb
+all: spect2csv genspectdb spect2hist hist2pgm getsimilar plotbpm plothist normspectdb iel
 
 spect2csv: $(SPECT2CSV_OBJS)
 	$(CC)  -o $(SPECT2CSV_EXE) $(LIBS) $(SPECT2CSV_OBJS)
@@ -57,13 +59,16 @@ plotbpm: $(BPM_OBJS) $(PLOTBPM_OBJS) $(DWT_OBJS)
 plothist: $(PLOTHIST_OBJS)
 	$(CC) -o $(PLOTHIST_EXE) $(LIBS) $(PLOTHIST_OBJS)
 
+iel: $(IEL_OBJS)
+	$(CC) -o $(IEL_EXE) $(IEL_OBJS)
+
 
 clean:
 	rm -f $(SPECT2CSV_EXE) $(GENSPECTDB_EXE) $(SPECT2HIST_EXE) $(HIST2PGM_EXE)
-	rm -f $(GETSIMILAR_EXE) $(PLOTBPM_EXE) $(PLOTHIST_EXE) $(NORM_SPECT_EXE)
+	rm -f $(GETSIMILAR_EXE) $(PLOTBPM_EXE) $(PLOTHIST_EXE) $(NORM_SPECT_EXE) $(IEL_EXE)
 	rm -f $(SPECT2CSV_OBJS) $(GENSPECTDB_OBJS) $(SPECT2HIST_OBJS) $(BPM_OBJS)
 	rm -f $(HIST2PGM_OBJS) $(GETSIMILAR_OBJS) $(PLOTBPM_OBJS)
-	rm -f $(PLOTHIST_OBJS) $(NORM_SPECT_OBJS)
+	rm -f $(PLOTHIST_OBJS) $(NORM_SPECT_OBJS) $(IEL_OBJS)
 
 install:
 	cp --target-directory $(INSTALL_DIR) $(SPECT2CSV_EXE) $(GENSPECTDB_EXE) $(SPECT2HIST_EXE) \
