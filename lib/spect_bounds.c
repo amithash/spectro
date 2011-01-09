@@ -122,6 +122,9 @@ static void find_quantile(float *_quantile, float *band, unsigned int len,
 			step = (quantile - min) / 2.0; /* Binary like search */
 			quantile = quantile - step;
 		}
+		if(APPROX_EQUAL(min, max, 0.0001) || min > max) {
+			break;
+		}
 		iter++;
 	} while(found == 0);
 
