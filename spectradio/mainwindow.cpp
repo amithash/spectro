@@ -50,6 +50,14 @@ HistDB htdb;
 #define ARTIST_COLOR QBrush(QColor(QRgb(qRgb(0xb2, 0xdb, 0xf7))))
 #define ALBUM_COLOR QBrush(QColor(QRgb(qRgb(0xb2, 0xdb, 0xf7))))
 
+#define TITLE_COLOR_FOREGROUND QBrush(QColor(QRgb(qRgb(0x60, 0x60, 0x60))))
+#define ALBUM_COLOR_FOREGROUND QBrush(QColor(QRgb(qRgb(0x30, 0x30, 0x30))))
+#define ARTIST_COLOR_FOREGROUND QBrush(QColor(QRgb(qRgb(0x00, 0x00, 0x00))))
+
+#define ARTIST_FONT QFont("" , 0 , QFont::Normal )
+#define ALBUM_FONT QFont("" , 0 , QFont::Normal )
+#define TITLE_FONT QFont("" , 0 , QFont::Normal )
+
 #define TITLE_COLUMN  0
 #define ARTIST_COLUMN 1
 #define ALBUM_COLUMN  2
@@ -59,6 +67,21 @@ HistDB htdb;
 #define STATUS_BAR_COLOR_RED QString("<font color='Red'>")
 #define STATUS_BAR_COLOR_BLACK QString("<font color='Black'>")
 #define STATUS_BAR_TEXT_END QString("</font>")
+
+#define ICON_PAUSE    QIcon::fromTheme("media-playback-pause")
+#define ICON_PLAY     QIcon::fromTheme("media-playback-start")
+#define ICON_STOP     QIcon::fromTheme("media-playback-stop")
+#define ICON_NEXT     QIcon::fromTheme("go-next")
+#define ICON_RETRY    QIcon::fromTheme("edit-redo")
+#define ICON_ABOUT    QIcon::fromTheme("help-about")
+#define ICON_SETTINGS QIcon::fromTheme("preferences-system")
+#define ICON_LOAD     QIcon::fromTheme("document-open")
+#define ICON_PLAYLIST QIcon::fromTheme("view-media-playlist")
+#define ICON_TITLE    ICON_PLAY
+#define ICON_ALBUM    QIcon::fromTheme("media-optical")
+#define ICON_ARTIST   QIcon::fromTheme("view-media-artist")
+#define ICON_SEARCH   QIcon::fromTheme("system-search")
+
 
 const QString AboutMessage =
 "\
@@ -99,6 +122,9 @@ void MainWindow::appendPlaylist(QString title, QString artist, QString album, in
 	table->insertRow(currentRow);
 	QString s_num;
 	s_num.setNum(ind);
+	if(title.contains(QRegExp("^\\d\\d - "))) {
+		title.replace(QRegExp("^\\d\\d - "), "");
+	}
 	QTableWidgetItem *titleItem = new QTableWidgetItem(title);
 	QTableWidgetItem *artistItem = new QTableWidgetItem(artist);
 	QTableWidgetItem *albumItem = new QTableWidgetItem(album);
@@ -126,6 +152,12 @@ QTreeWidgetItem *MainWindow::addEntry(QTreeWidget *tree, QString title, QString 
 {
 	int artistCount = tree->topLevelItemCount();
 	QTreeWidgetItem *artistItem = NULL;
+
+	if(artist.isEmpty())
+	      artist = "Various";
+	if(album.isEmpty())
+	      album = "Single";
+
 	for(int i = 0; i < artistCount; i++) {
 		QString i_artist = tree->topLevelItem(i)->text(0);
 		if(i_artist.compare(artist) == 0) {
@@ -136,6 +168,9 @@ QTreeWidgetItem *MainWindow::addEntry(QTreeWidget *tree, QString title, QString 
 	if(!artistItem) {
 		artistItem = new QTreeWidgetItem;
 		artistItem->setText(0, artist);
+		artistItem->setFont(0, ARTIST_FONT);
+		artistItem->setForeground(0, ARTIST_COLOR_FOREGROUND);
+		artistItem->setIcon(0, ICON_ARTIST);
 		tree->addTopLevelItem(artistItem);
 	}
 
@@ -152,6 +187,9 @@ QTreeWidgetItem *MainWindow::addEntry(QTreeWidget *tree, QString title, QString 
 	if(!albumItem) {
 		albumItem = new QTreeWidgetItem;
 		albumItem->setText(0, album);
+		albumItem->setFont(0, ALBUM_FONT);
+		albumItem->setForeground(0, ALBUM_COLOR_FOREGROUND);
+		albumItem->setIcon(0, ICON_ALBUM);
 		artistItem->addChild(albumItem);
 	}
 
@@ -160,7 +198,9 @@ QTreeWidgetItem *MainWindow::addEntry(QTreeWidget *tree, QString title, QString 
 	QString s_ind;
 	s_ind.setNum(ind);
 	titleItem->setText(1, s_ind);
-	titleItem->setIcon(0, style()->standardIcon(QStyle::SP_MediaPlay));
+	titleItem->setFont(0, TITLE_FONT);
+	titleItem->setForeground(0, TITLE_COLOR_FOREGROUND);
+	titleItem->setIcon(0, ICON_TITLE);
 
 	albumItem->addChild(titleItem);
 
@@ -444,7 +484,7 @@ void MainWindow::stateChanged(Phonon::State newState, Phonon::State /* oldState 
 		
 		case Phonon::PlayingState:
 			playAction->setEnabled(true);
-      playAction->setIcon(style()->standardIcon(QStyle::SP_MediaPause));
+			playAction->setIcon(ICON_PAUSE);
 			stopAction->setEnabled(true);
 			retryAction->setEnabled(true);
 			nextAction->setEnabled(true);
@@ -453,7 +493,7 @@ void MainWindow::stateChanged(Phonon::State newState, Phonon::State /* oldState 
 		case Phonon::StoppedState:
 			stopAction->setEnabled(false);
 			playAction->setEnabled(true);
-      playAction->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
+			playAction->setIcon(ICON_PLAY);
 			retryAction->setEnabled(false);
 			nextAction->setEnabled(false);
 			timeLcd->display("00:00");
@@ -461,7 +501,7 @@ void MainWindow::stateChanged(Phonon::State newState, Phonon::State /* oldState 
 
 		case Phonon::PausedState:
 			playAction->setEnabled(true);
-      playAction->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
+			playAction->setIcon(ICON_PLAY);
 			stopAction->setEnabled(true);
 			playAction->setEnabled(true);
 			retryAction->setEnabled(true);
@@ -544,6 +584,11 @@ void MainWindow::setTitle(QString title, QString artist, QString album)
 	QString windowTitle;
 	QString message;
 
+	if(title.contains(QRegExp("^\\d\\d - "))) {
+		title.replace(QRegExp("^\\d\\d - "), "");
+	}
+				
+
 	message = STATUS_BAR_COLOR_BLUE + title + STATUS_BAR_TEXT_END;
 	windowTitle = title;
 
@@ -564,42 +609,42 @@ void MainWindow::setTitle(QString title, QString artist, QString album)
 
 void MainWindow::setupActions()
 {
-	playAction = new QAction(style()->standardIcon(QStyle::SP_MediaPlay), tr("Play/Pause"), this);
+	playAction = new QAction(ICON_PLAY, tr("Play/Pause"), this);
 	playAction->setShortcut(tr("space"));
 	playAction->setToolTip("Play (space)");
 	playAction->setDisabled(true);
 
-	stopAction = new QAction(style()->standardIcon(QStyle::SP_MediaStop), tr("Stop"), this);
+	stopAction = new QAction(ICON_STOP, tr("Stop"), this);
 	stopAction->setShortcut(tr("Ctrl+S"));
 	stopAction->setToolTip("Stop (Ctrl+S)");
 	stopAction->setDisabled(true);
 
-	nextAction = new QAction(style()->standardIcon(QStyle::SP_MediaSkipForward), tr("Next"), this);
+	nextAction = new QAction(ICON_NEXT, tr("Next"), this);
 	nextAction->setShortcut(tr("Ctrl+N"));
 	nextAction->setToolTip("Skip the current playing track and play the next predicted (Ctrl+N)");
 	nextAction->setDisabled(true);
 
-	retryAction = new QAction(style()->standardIcon(QStyle::SP_DialogResetButton), tr("Retry"), this);
+	retryAction = new QAction(ICON_RETRY, tr("Retry"), this);
 	retryAction->setShortcut(tr("Ctrl+R"));
 	retryAction->setToolTip("Skip the current playing and rerun the prediction from the last played track (Ctrl+R)");
 	retryAction->setDisabled(true);
 
-	loadDBAction = new QAction(style()->standardIcon(QStyle::SP_DirOpenIcon), tr("Load DB"), this);
+	loadDBAction = new QAction(ICON_LOAD, tr("Load DB"), this);
 	loadDBAction->setShortcut(tr("Ctrl+L"));
 	loadDBAction->setToolTip("Load the hist DB (Ctrl+L)");
 	loadDBAction->setDisabled(false);
 
-	settingsAction = new QAction(style()->standardIcon(QStyle::SP_FileDialogInfoView), tr("Distance Function"), this);
+	settingsAction = new QAction(ICON_SETTINGS, tr("Distance Function"), this);
 	settingsAction->setShortcut(tr("Ctrl+D"));
 	settingsAction->setToolTip("Choose the distance function for track prediction (Ctrl+D)");
 	settingsAction->setDisabled(false);
 
-	togglePlaylistAction = new QAction(style()->standardIcon(QStyle::SP_FileDialogDetailedView), tr("Distance Function"), this);
+	togglePlaylistAction = new QAction(ICON_PLAYLIST, tr("Toggle Playlist"), this);
 	togglePlaylistAction->setShortcut(tr("Alt+P"));
 	togglePlaylistAction->setToolTip("Toggle playlist (Alt+P)");
 	settingsAction->setDisabled(false);
 
-	aboutAction = new QAction(style()->standardIcon(QStyle::SP_MessageBoxQuestion), tr("About"), this);
+	aboutAction = new QAction(ICON_ABOUT, tr("About"), this);
 	aboutAction->setDisabled(false);
 
 	searchAllAction = new QAction(tr("All"), this);
@@ -678,6 +723,7 @@ void MainWindow::setupUi()
 	searchOptionButton = new QToolButton(searchBar);
 	searchOptionButton->setPopupMode( QToolButton::MenuButtonPopup );
 	searchOptionButton->setText("All");
+	searchOptionButton->setIcon(ICON_SEARCH);
 	searchBar->addWidget(searchOptionButton);
 	searchBar->addWidget(searchBox);
 	searchBar->addAction(togglePlaylistAction); // toggle playlist
