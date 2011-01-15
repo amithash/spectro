@@ -63,14 +63,18 @@ int plot(float *x, float *y, unsigned int ncol, unsigned int len, plot_type_t ty
 	return 0;
 }
 
-int pgm(char *fname, float *_data, unsigned int len_x, unsigned int len_y, background_t bg)
+int pgm(char *fname, float *_data, unsigned int len_x, unsigned int len_y, background_t bg, foreground_t fg)
 {
 	float min = FLT_MAX, max = 0;
 	int i,j;
 	char buf[256];
 	FILE *f;
 	float *data;
-	int rc = -1;
+	int rc = -4;
+	unsigned int ui_val;
+	unsigned char val[3];
+	unsigned int val_len;
+	unsigned int mask = 0xff;
 
 	if(!_data)
 	      return -1;
@@ -89,26 +93,46 @@ int pgm(char *fname, float *_data, unsigned int len_x, unsigned int len_y, backg
 		if(data[i] > max)
 		      max = data[i];
 	}
+	if(fg == COLORED)
+	      mask = 0xffffff;
+
 	for(i = 0; i < len_x * len_y; i++) {
-		data[i] = 255 * (data[i] - min) / (max - min);
+		data[i] = (float)mask * (data[i] - min) / (max - min);
 	}
-	sprintf(buf, "P5\n%d %d\n255\n", len_x, len_y);
-	if(write(fileno(f), buf, strlen(buf) * sizeof(char)) != sizeof(char))
+	if(fg == COLORED) {
+		sprintf(buf, "P6\n%d %d\n255\n", len_x, len_y);
+		val_len = 3 * sizeof(unsigned char);
+	}
+	else {
+		sprintf(buf, "P5\n%d %d\n255\n", len_x, len_y);
+		val_len = sizeof(unsigned char);
+	}
+	if(write(fileno(f), buf, strlen(buf) * sizeof(char)) != strlen(buf) * sizeof(char))
 	      goto cleanup;
 	for(i = 0; i < len_y; i++) {
 		for(j = 0; j < len_x; j++) {
-			unsigned int ui_val = (unsigned int)data[(i * len_x) + j];
-			unsigned char val = (unsigned char)(ui_val & 0xff);
-			if(bg == BACKGROUND_WHITE)
-			      val = 255 - val;
+			ui_val = (unsigned int)data[(i * len_x) + j];
 
-			if(write(fileno(f), &val, sizeof(unsigned char)) != sizeof(unsigned char))
+			val[0] = (unsigned char)((ui_val >> 0) & 0xff);
+			if(bg == BACKGROUND_WHITE)
+			      val[0] = 255 - val[0];
+
+			if(fg == COLORED) {
+				val[1] = (unsigned char)((ui_val >> 8) & 0xff);
+				if(bg == BACKGROUND_WHITE)
+					val[1] = 255 - val[1];
+				val[2] = (unsigned char)((ui_val >> 16) & 0xff);
+				if(bg == BACKGROUND_WHITE)
+					val[2] = 255 - val[2];
+			}
+			if(write(fileno(f), val, val_len) != val_len)
 			      goto cleanup;
 		}
 	}
 	rc = 0;
 
 cleanup:
+	fclose(f);
 	free(data);
 	return rc;
 }
