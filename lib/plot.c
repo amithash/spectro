@@ -63,7 +63,7 @@ int plot(float *x, float *y, unsigned int ncol, unsigned int len, plot_type_t ty
 	return 0;
 }
 
-int pgm(char *fname, float *_data, unsigned int len_x, unsigned int len_y)
+int pgm(char *fname, float *_data, unsigned int len_x, unsigned int len_y, background_t bg)
 {
 	float min = FLT_MAX, max = 0;
 	int i,j;
@@ -98,7 +98,10 @@ int pgm(char *fname, float *_data, unsigned int len_x, unsigned int len_y)
 	for(i = 0; i < len_y; i++) {
 		for(j = 0; j < len_x; j++) {
 			unsigned int ui_val = (unsigned int)data[(i * len_x) + j];
-			unsigned char val = 255 - (unsigned char)(ui_val & 0xff);
+			unsigned char val = (unsigned char)(ui_val & 0xff);
+			if(bg == BACKGROUND_WHITE)
+			      val = 255 - val;
+
 			if(write(fileno(f), &val, sizeof(unsigned char)) != sizeof(unsigned char))
 			      goto cleanup;
 		}
