@@ -54,6 +54,7 @@ struct _GstFFTWSpectrum
   /* Properties */
   gint32   def_size, def_step;
   gboolean hi_q;
+  gboolean sdump;
 };
 
 struct _GstFFTWSpectrumClass 

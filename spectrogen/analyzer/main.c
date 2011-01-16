@@ -214,24 +214,26 @@ run_loop (gchar *infile, gchar *outfile)
   conv  = make_element ("audioconvert", "aconv");
   audiopad = gst_element_get_pad (conv, "sink");
 
+  sink = make_element ("filesink", "sink");
+  g_object_set (G_OBJECT (sink), "location", outfile, NULL);
+
   /* Create analyzer chain */
   if(no_process == 0) {
 	fft = make_element ("fftwspectrum_2", "fft");
 	g_object_set (G_OBJECT (fft), "def-size", 2048, "def-step", 1024,
-		      "hiquality", TRUE, NULL);
+		      "hiquality", TRUE, "streamdump", FALSE, NULL);
 	spectgen = make_element ("spectgen", "spectgen");
 	g_object_set (G_OBJECT (spectgen), "height", 1, NULL);
 	g_object_set (G_OBJECT (spectgen), "max-width", MAIN_LEN, NULL);
-  }
-  sink = make_element ("filesink", "sink");
-  g_object_set (G_OBJECT (sink), "location", outfile, NULL);
-
-  if(no_process == 0) {
 	gst_bin_add_many (GST_BIN (audio), conv, fft, spectgen, sink, NULL);
 	gst_element_link_many (conv, fft, spectgen, sink, NULL);
   } else {
-  	gst_bin_add_many(GST_BIN(audio), conv, sink, NULL);
-	gst_element_link_many(conv, sink, NULL);
+	fft = make_element ("fftwspectrum_2", "fft");
+	g_object_set (G_OBJECT (fft), "def-size", 2048, "def-step", 2048,
+		      "hiquality", TRUE, "streamdump", TRUE, NULL);
+  	gst_bin_add_many(GST_BIN(audio), conv, fft, sink, NULL);
+	gst_element_link_many(conv, fft, sink, NULL);
+  
   }
   gst_element_add_pad (audio, gst_ghost_pad_new ("sink", audiopad));
   gst_object_unref (audiopad);
