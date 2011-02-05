@@ -52,6 +52,7 @@
 #include <QLineEdit>
 #include <QDialogButtonBox>
 #include <QtGui>
+#include "hist.h"
 
 class QAction;
 class QTableWidget;
@@ -117,6 +118,8 @@ class MainWindow : public QMainWindow
 		int stop;
 		bool playlistVisible;
 		enum SearchOption currentSearchOption;
+		HistDB htdb;
+		bool radioMode;
 
 		QAction *playAction;
 		QAction *stopAction;

@@ -42,9 +42,6 @@
 #include <iostream>
 
 #include "mainwindow.h"
-#include "hist.h"
-
-HistDB htdb;
 
 #define TITLE_COLOR QBrush(QColor(QRgb(qRgb(0xb2, 0xdb, 0xf7))))
 #define ARTIST_COLOR QBrush(QColor(QRgb(qRgb(0xb2, 0xdb, 0xf7))))
@@ -536,13 +533,8 @@ void MainWindow::searchTreeClicked(QTreeWidgetItem *item, int /* column */)
 	treeClicked(browserItem, 0);
 }
 
-void MainWindow::treeClicked(QTreeWidgetItem *item, int /* column */)
+void MainWindow::playSource(int sourceIndex)
 {
-	if(item->childCount() > 0) {
-		item->setExpanded(!item->isExpanded());
-		return;
-	}
-	int sourcesIndex = item->text(1).toInt();
 	mediaObject->stop();
 	mediaObject->clearQueue();
 	if(sourcesIndex >= sources.size()) {
@@ -551,6 +543,16 @@ void MainWindow::treeClicked(QTreeWidgetItem *item, int /* column */)
 	htdb.set_playing(sourcesIndex);
 	mediaObject->setCurrentSource(sources[sourcesIndex]);
 	mediaObject->play();
+}
+
+void MainWindow::treeClicked(QTreeWidgetItem *item, int /* column */)
+{
+	if(item->childCount() > 0) {
+		item->setExpanded(!item->isExpanded());
+		return;
+	}
+	int sourcesIndex = item->text(1).toInt();
+	playSource(sourcesIndex);
 }
 
 void MainWindow::sourceChanged(const Phonon::MediaSource &source)
