@@ -6,11 +6,14 @@
 #include <string.h>
 #include <tag_c.h>
 #include <float.h>
+#include "plot.h"
+
+#define STARTING_NOTE 2
 
 #ifndef PI
 #define PI 3.1415926535897932384626433832
 #endif
-#define ERROR 0.000001
+#define ERROR 0.0001
 static float error_margin;
 
 float complex _gabor(float base_freq, float t)
@@ -33,7 +36,7 @@ float complex gabor(float t)
  */
 float complex gabor_scaled(float k, float u, float t)
 {
-	float den = pow(2, k/12.0);
+	float den = pow(2, -1.0 * k/12.0);
 	return (1.0 / sqrt(den)) * gabor((t - u) / den);
 }
 
@@ -41,24 +44,22 @@ float gabor_pow_kernel(float *data, unsigned int len, unsigned int srate, float 
 {
 	int i;
 	float complex val = 0;
-	unsigned int error = (unsigned int)((float)pow(2, k/12.0) * error_margin);
-	unsigned int u_uint = (unsigned int)((float)srate * u);
-	unsigned int to   = u_uint + error;
-	unsigned int from = u_uint - error;
 	float ret;
+	float error_f = ((float)pow(2, -1 * k/12.0) * error_margin);
+	float from_f = u - error_f;
+	float to_f   = u + error_f;
+	unsigned int from = (unsigned int)(from_f * (float)srate);
+	unsigned int to   = (unsigned int)(to_f * (float)srate);
 	to = to <=len ? to : len;
 	from = from > 0 ? from : 0;
 	for(i = from; i < to; i++) {
-		float psi = gabor_scaled(k, u, (float)i / (float)srate);
-		if(!finite(data[i]))
-		      data[i] = 0;
-		if(!finite(psi))
-		      psi = 0;
-		val += psi * data[i];
+		val += gabor_scaled(k, u, (float)i / (float)srate) * data[i];
 	}
 	ret = cabsf(val);
-	if(!finite(ret))
-	      ret = 0;
+	if(!finite(ret)) {
+		printf("Value is infinite\n");
+		ret = 0;
+	}
 	return ret;
 }
 
@@ -66,8 +67,8 @@ int _cwt_gabor(float **_out, float *data, unsigned int len, unsigned int num_oct
 {
 	int u,k;
 	float *out;
-	unsigned int alloc_len = 12 * num_octaves * len / step;
-	printf("Allocating %dMB\n", alloc_len * sizeof(float) / (1024 * 1024));
+	unsigned int alloc_len = 12 * (num_octaves - STARTING_NOTE) * len / step;
+	printf("Allocating %luKB\n", alloc_len * sizeof(float) / (1024));
 	*_out = out = (float *)calloc(alloc_len, sizeof(float));
 	if(!out)
 	      return -1;
@@ -75,17 +76,15 @@ int _cwt_gabor(float **_out, float *data, unsigned int len, unsigned int num_oct
 	for(k = 0; k < alloc_len; k++)
 	      out[k] = 0;
 
-	printf("Allocation done!\n");
 	error_margin = sqrt(2 * log(1.0 / ERROR));
 
-	for(k = 0; k < 12 * num_octaves; k++) {
+	/* This is not for cats. Humans cannot hear C0 (~16Hz) Note.
+	   Start with C1 */
+	for(k = 12 * STARTING_NOTE; k < 12 * num_octaves; k++) {
 		printf("Octave=%d, semitone=%d\n",k / 12, k % 12);
 		for(u = 0; u < len; u+=step) {
-			out[k*12*num_octaves + (u/step)] = gabor_pow_kernel(data, len, srate, k, (float)u/(float)srate);
-			if(!finite(out[k*12*num_octaves + (u/step)])) {
-				printf("Infinite value at k=%d,u=%d\n",k,u);
-				exit(-1);
-			}
+			out[(k-(12 * STARTING_NOTE)) * (len / step) + (u/step)] = 
+				gabor_pow_kernel(data, len, srate, k, (float)u/(float)srate);
 		}
 	}
 	return 0;
@@ -142,8 +141,19 @@ int get_file(float **_data, unsigned int *_len, const char *fname)
 
 	do {
 		unsigned int bytes = read(fileno(f), &data[len], WINDOW * sizeof(float));
-		if(bytes <= 0)
-		      break;
+		if(bytes < 0) {
+			printf("Error received from read\n");
+			break;
+		}
+		if(bytes < sizeof(float)) {
+			printf("Buffer read which is less than a float!\n");
+			break;
+		}
+		if(bytes % sizeof(float) != 0) {
+			printf("Fatal error unaligned read\n\n");
+			break;
+		}
+
 		len += bytes / sizeof(float);
 
 		max_len += WINDOW;
@@ -159,54 +169,17 @@ int get_file(float **_data, unsigned int *_len, const char *fname)
 	return 0;
 }
 
-void write_pgm(float *data, unsigned int width, unsigned int len, const char *fname)
-{
-	float min = FLT_MAX, max = 0;
-	int i,j;
-	FILE *f;
-	char buf[256];
-	for(i = 0; i < width * len; i++) {
-		if(data[i] < min)
-		      min = data[i];
-		if(data[i] > max)
-		      max = data[i];
-	}
-	printf("Max = %.3f, Min = %.3f\n", max, min);
-	for(i = 0; i < width * len; i++) {
-		data[i] = (data[i] - min) / (max - min);
-	}
-	f = fopen(fname, "w");
-	if(!f) {
-		printf("File open of %s failed\n", fname);
-		exit(-1);
-	}
-	sprintf(buf, "P5\n%d %d\n255\n", len, width);
-	write(fileno(f), buf, strlen(buf) * sizeof(char));
-	for(i = 0; i < width; i++) {
-		for(j = 0; j < len; j++) {
-			float i_val = data[i*width + j] * 255;
-			unsigned int ui_val = (unsigned int)i_val;
-			unsigned char val = 255 - (unsigned char)(ui_val & 0xff);
-			if(write(fileno(f), &val, sizeof(unsigned char)) != sizeof(unsigned char)) {
-				printf("Write error!\n");
-			}
-		}
-	}
-	fclose(f);
-}
-
 int main(int argc, char *argv[])
 {
 	float *data;
 	float *out;
 	char *mp3_file;
 	unsigned int srate;
-	unsigned int len;
+	unsigned int len = 0;
 	unsigned int num_octaves;
 	unsigned int out_len;
 	char *cmd;
 	TagLib_File *f;
-	FILE *rawf;
 	if(argc <= 1) {
 		printf("USAGE: %s <MP3 File>\n", argv[0]);
 		return 0;
@@ -258,7 +231,22 @@ int main(int argc, char *argv[])
 	free(data);
 	unlink("./tmp.raw");
 
-	write_pgm(out, 12 * num_octaves, out_len, "test.pgm");
+
+#if 0
+	{
+	    int i,j;
+	    for(i = 0; i < out_len; i++) {
+	    	for(j = 0; j < 12 * (num_octaves - 1); j++) {
+			printf("%.3f ", out[(j * (num_octaves - 1)) + i]);
+		}
+		printf("\n");
+	    }
+	}
+    	exit(-1);
+#endif
+
+	pgm("test.pgm", out, out_len, 12 * (num_octaves - 2), 
+				BACKGROUND_WHITE, GREYSCALE, COL_NORMALIZATION);
 
 	free(out);
 
