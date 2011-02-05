@@ -17,7 +17,15 @@ typedef enum {
 	COLORED
 } foreground_t;
 
+typedef enum {
+	NO_NORMALIZATION,
+	ROW_NORMALIZATION,
+	COL_NORMALIZATION,
+	ALL_NORMALIZATION
+} norm_t;
+
 int plot(float *x, float *y, unsigned int ncol, unsigned int len, plot_type_t type, int debug);
-int pgm(char *fname, float *_data, unsigned int len_x, unsigned int len_y, background_t bg, foreground_t fg);
+int pgm(char *fname, float *_data, unsigned int len_x, unsigned int len_y, 
+			background_t bg, foreground_t fg, norm_t norm);
 
 #endif

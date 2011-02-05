@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <math.h>
 #include <float.h>
 #include <string.h>
 #include "plot.h"
@@ -63,9 +64,109 @@ int plot(float *x, float *y, unsigned int ncol, unsigned int len, plot_type_t ty
 	return 0;
 }
 
-int pgm(char *fname, float *_data, unsigned int len_x, unsigned int len_y, background_t bg, foreground_t fg)
+static void row_normalize(float *data, unsigned int len_y, unsigned int len_x, float to)
 {
-	float min = FLT_MAX, max = 0;
+	int i,j;
+	float val;
+	for(i = 0; i < len_y; i++) {
+		float min = FLT_MAX, max = 0;
+		for(j = 0; j < len_x; j++) {
+			val = data[(len_x * i) + j];
+			if(val > max)
+			      max = val;
+			if(val < min)
+			      min = val;
+		}
+		if(max == min)
+		      continue;
+
+		for(j = 0; j < len_x; j++) {
+			data[(len_x * i) + j] = to * (data[(len_x * i) + j] - min) / (max - min);
+		}
+	}
+}
+
+static void col_normalize(float *data, unsigned int len_y, unsigned int len_x, float to)
+{
+	int i,j;
+	float val;
+
+	for(i = 0; i < len_x; i++) {
+		float min = FLT_MAX, max = 0;
+		for(j = 0; j < len_y; j++) {
+			val = data[(len_x * j) + i];
+			if(val > max)
+			      max = val;
+			if(val < min)
+			      min = val;
+		}
+		if(max == min)
+		      continue;
+		for(j = 0; j < len_y; j++) {
+			data[(len_x * j) + i] = to * (data[(len_x * j) + i] - min) / (max - min);
+		}
+	}
+
+}
+static void all_normalize(float *data, unsigned int len_y, unsigned int len_x, float to)
+{
+	int i;
+	float max = 0, min = FLT_MAX;
+	for(i = 0; i < len_x * len_y; i++) {
+		if(data[i] > max)
+		      max = data[i];
+		if(data[i] < min)
+		      min = data[i];
+	}
+	if(max == min)
+	      return;
+	for(i = 0; i < len_x * len_y; i++) {
+		data[i] = to * (data[i] - min) / (max - min);
+	}
+}
+
+static void no_normalize(float *data, unsigned int len_y, unsigned int len_x, float to)
+{
+	int i;
+	for(i = 0; i < len_x * len_y; i++) {
+		data[i] = data[i] * to;
+	}
+}
+
+static void normalize(float *data, unsigned int len_y, unsigned int len_x, norm_t norm, float to)
+{
+	int i;
+	switch(norm)
+	{
+	    	case ROW_NORMALIZATION:
+			row_normalize(data, len_y, len_x, to);
+			break;
+		case COL_NORMALIZATION:
+		      col_normalize(data, len_y, len_x, to);
+		      break;
+		case ALL_NORMALIZATION:
+		      all_normalize(data, len_y, len_x, to);
+		      break;
+		case NO_NORMALIZATION:
+		      no_normalize(data, len_y, len_x, to);
+		      break;
+		default:
+			break;
+	}
+	for(i = 0; i < len_x * len_y; i++) {
+		if(!finite(data[i]))
+		      data[i] = 0;
+		if(data[i] > to)
+		      data[i] = to;
+		if(data[i] < 0)
+		      data[i] = 0;
+	}
+}
+
+int pgm(char *fname, float *_data, unsigned int len_x, 
+	unsigned int len_y, background_t bg, foreground_t fg,
+	norm_t norm)
+{
 	int i,j;
 	char buf[256];
 	FILE *f;
@@ -75,6 +176,7 @@ int pgm(char *fname, float *_data, unsigned int len_x, unsigned int len_y, backg
 	unsigned char val[3];
 	unsigned int val_len;
 	unsigned int mask = 0xff;
+	unsigned int str_len;
 
 	if(!_data)
 	      return -1;
@@ -87,18 +189,12 @@ int pgm(char *fname, float *_data, unsigned int len_x, unsigned int len_y, backg
 	      return -3;
 	memcpy(data, _data, len_x * len_y * sizeof(float));
 
-	for(i = 0; i < len_x * len_y; i++) {
-		if(data[i] < min)
-		      min = data[i];
-		if(data[i] > max)
-		      max = data[i];
-	}
+
 	if(fg == COLORED)
 	      mask = 0xffffff;
 
-	for(i = 0; i < len_x * len_y; i++) {
-		data[i] = (float)mask * (data[i] - min) / (max - min);
-	}
+	normalize(data, len_y, len_x, norm, (float)mask);
+
 	if(fg == COLORED) {
 		sprintf(buf, "P6\n%d %d\n255\n", len_x, len_y);
 		val_len = 3 * sizeof(unsigned char);
@@ -107,8 +203,10 @@ int pgm(char *fname, float *_data, unsigned int len_x, unsigned int len_y, backg
 		sprintf(buf, "P5\n%d %d\n255\n", len_x, len_y);
 		val_len = sizeof(unsigned char);
 	}
-	if(write(fileno(f), buf, strlen(buf) * sizeof(char)) != strlen(buf) * sizeof(char))
+	str_len = strlen(buf) * sizeof(char);
+	if(write(fileno(f), buf, str_len) != str_len)
 	      goto cleanup;
+
 	for(i = 0; i < len_y; i++) {
 		for(j = 0; j < len_x; j++) {
 			ui_val = (unsigned int)data[(i * len_x) + j];
