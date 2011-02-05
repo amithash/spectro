@@ -21,18 +21,15 @@
 #include <unistd.h>
 #include <string.h>
 #include "hist.h"
+#include "plot.h"
 
 int main(int argc, char *argv[]) {
 	hist_t *hist = NULL;
 	hist_t *hist_list = NULL;
 	int rc;
-	FILE *pgf;
 	char outf_name[256] = "./tmp.ppm";
-	char buf[100];
-	int i,j;
+	int i;
 	unsigned int len;
-	float max = 0;
-	float min = 2;
 
 	if(argc < 3) {
 		printf("USAGE: %s <spectdb> FILE.spect4 (Optional output ppm file default: tmp.ppm)\n", argv[0]);
@@ -59,43 +56,13 @@ int main(int argc, char *argv[]) {
 		strcpy(outf_name, argv[3]);
 	}
 
-	for(i = 0; i < NBANDS; i++) {
-		for(j = 0; j < SPECT_HIST_LEN; j++) {
-			if(hist->spect_hist[i][j] > max)
-			      max = hist->spect_hist[i][j];
-			if(hist->spect_hist[i][j] < min)
-			      min = hist->spect_hist[i][j];
-		}
-	}
-
-
-
-	pgf = fopen(outf_name, "w");
-	if(pgf == NULL) {
-		printf("Creating %s failed!\n", outf_name);
+	if((rc = pgm(outf_name, (float *)hist->spect_hist, SPECT_HIST_LEN, NBANDS, BACKGROUND_BLACK, COLORED))){
+		spect_error("Write to %s failed with rc = %d",outf_name,rc);
 		exit(-1);
 	}
-	sprintf(buf, "P6\n%d %d\n255\n", SPECT_HIST_LEN, NBANDS);
-	write(fileno(pgf), buf, strlen(buf) * sizeof(char));
-	for(i = 0; i < NBANDS; i++) {
-		for(j = 0; j < SPECT_HIST_LEN; j++) {
-			float i_val = (hist->spect_hist[i][j] - min) / (max - min);
-			unsigned int ui_val = (unsigned int)(i_val * 255);
-			unsigned char val[3];
 
-			val[0] = (unsigned char)((ui_val) & 0xff);
-			val[1] = (unsigned char)((ui_val) & 0xff);
-			val[2] = (unsigned char)((ui_val) & 0xff);
-
-			if(write(fileno(pgf), &val, 3 * sizeof(unsigned char)) != 3 * sizeof(unsigned char)) {
-				printf("Write error!\n");
-			}
-		}
-	}
-	fclose(pgf);
 cleanup:
 	free(hist_list);
-
 	return 0;
 }
 
