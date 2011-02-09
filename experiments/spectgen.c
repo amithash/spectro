@@ -4,6 +4,7 @@
 #include <string.h>
 #include <fftw3.h>
 #include <math.h>
+#include <unistd.h>
 
 typedef int8_t b1_t;
 typedef int16_t b2_t;
@@ -28,19 +29,61 @@ typedef int64_t b8_t;
 #define MAX_BUFFER_SIZE (1024 * 1024 * 512)
 #define WINDOW_SIZE 1024
 #define STEP_SIZE 512
+#define NUMFREQS ((WINDOW_SIZE / 2) + 1)
 
-int do_band(fftwf_complex *buf)
+#define BAND_FREQ(i, sr) ((sr) * i / (WINDOW_SIZE))
+
+unsigned int *baseband;
+static const unsigned int bark_bands[24] 
+  = { 100,  200,  300,  400,  510,  630,  770,   920, 
+      1080, 1270, 1480, 1720, 2000, 2320, 2700,  3150, 
+      3700, 4400, 5300, 6400, 7700, 9500, 12000, 15500 };
+
+
+int do_band(float *buf, float *tmp, unsigned int sampling_rate, int fn)
 {
+	int i;
+	float band[24] = {0};
+	for(i = 0; i < 24; i++)
+	      band[i] = 0;
 
+	for(i = 0; i < NUMFREQS; i++) {
+		float real = buf[2 * i] / sqrt(WINDOW_SIZE);
+		float imag = buf[2 * i + 1] / sqrt(WINDOW_SIZE);
+		band[baseband[i]] += (real * real) + (imag * imag);
+	}
+	for(i = 0; i < 24; i++) {
+		band[i] = sqrt(band[i]);
+	}
+	if(write(fn, band, 24 * sizeof(float)) != sizeof(float) * 24) {
+		printf("Write failed\n");
+	}
+	return 0;
 }
 
-int do_fft(float *in, unsigned int len)
+void setup_baseband(unsigned int sampling_rate)
+{
+	int i;
+	unsigned int barkband = 0;
+	baseband = (unsigned int *)malloc(sizeof(unsigned int) * NUMFREQS);
+	for(i = 0; i < NUMFREQS; i++)
+	      baseband[i] = 0;
+	for(i = 0; i < NUMFREQS; i++) {
+		if(barkband < 23 &&
+			BAND_FREQ(i, sampling_rate) >= bark_bands[barkband])
+		      barkband++;
+		baseband[i] = barkband;
+	}
+}
+
+int do_fft(float *in, unsigned int len, unsigned int sampling_rate)
 {
 	fftwf_complex *tmp_out;
 	float *tmp_in;
 	float *buf = in;
 	int i;
 	fftwf_plan plan;
+	FILE *f;
 
 	tmp_out = (fftwf_complex *)malloc(sizeof(fftwf_complex) * WINDOW_SIZE / 2 + 1);
 	if(!tmp_out) {
@@ -50,43 +93,55 @@ int do_fft(float *in, unsigned int len)
 	if(!tmp_in)
 	      goto tmp_in_failed;
 
+	setup_baseband(sampling_rate);
+
 	plan = fftwf_plan_dft_r2c_1d(WINDOW_SIZE, tmp_in, tmp_out, FFTW_MEASURE);
+
+	f = fopen("test.spect", "w");
+	if(!f) {
+		printf("Creating file failed\n");
+		goto all_failed;
+	}
+
 	for(i = 0; i < len; i+=STEP_SIZE) {
 		if(i + WINDOW_SIZE > len)
 		      break;
 		memcpy(tmp_in, buf, WINDOW_SIZE * sizeof(float));
 		fftwf_execute(plan);
-		buf += WINDOW_SIZE;
-		do_band(tmp_out);
+		buf += STEP_SIZE;
+		do_band((float *)tmp_out, tmp_in, sampling_rate, fileno(f));
 	}
+	fclose(f);
+all_failed:
 	fftwf_destroy_plan(plan);
 	free(tmp_in);
+	free(baseband);
 tmp_in_failed:
 	free(tmp_out);
 tmp_out_failed:
 	return 0;
 }
 
-void char2float_2(float *data, unsigned char *_in, int nchannels, int nsamples)
+void char2float_2(float *data, char *_in, int nchannels, int nsamples)
 {
 	b2_t *in = (b2_t *)_in;
 	printf("Bytes per channel = 2\n"); fflush(stdout);
 	CONVERT(data, in, nsamples, nchannels);
 }
-void char2float_1(float *data, unsigned char *_in, int nchannels, int nsamples)
+void char2float_1(float *data, char *_in, int nchannels, int nsamples)
 {
 	b1_t *in = (b1_t *)_in;
 	printf("Bytes per channel = 1\n"); fflush(stdout);
 	CONVERT(data, in, nsamples, nchannels);
 }
-void char2float_4(float *data, unsigned char *_in, int nchannels, int nsamples)
+void char2float_4(float *data, char *_in, int nchannels, int nsamples)
 {
 	b4_t *in = (b4_t *)_in;
 	printf("Bytes per channel = 4\n"); fflush(stdout);
 	CONVERT(data, in, nsamples, nchannels);
 }
 
-void char2float(float *data, unsigned char *in, int nchannels, int nsamples, int size_per_sample)
+void char2float(float *data, char *in, int nchannels, int nsamples, int size_per_sample)
 {
 	int size_per_channel = size_per_sample / nchannels;
 	switch(size_per_channel) {
@@ -111,17 +166,14 @@ int main(int argc, char *argv[])
 	unsigned char *audio;
 	int mc;
 	size_t size;
-	unsigned int total_len = 0;
 	off_t frame_num;
 	unsigned int total_size = 0;
 	unsigned int samples;
 	long frate;
 	int channels;
 	int encoding;
-	int bperchannel;
 	float *data_f;
-	unsigned char *data;
-	int i;
+	char *data;
 	char *buffer;
 
 
@@ -162,7 +214,7 @@ int main(int argc, char *argv[])
 			}
 			if(mc == MPG123_NEW_FORMAT) {
 				mpg123_getformat(handle, &frate, &channels, &encoding);
-				printf("Frame Rate = %d\n", frate);
+				printf("Frame Rate = %lu\n", frate);
 				printf("Num Channels = %d\n", channels);
 			}
 		}
@@ -185,7 +237,7 @@ int main(int argc, char *argv[])
 	fflush(stdout);
 	char2float(data_f, buffer, channels, samples, total_size / samples);
 	free(buffer);
-	do_fft(data_f, samples);
+	do_fft(data_f, samples, frate);
 
 #if 0
 	for(i = 0; i < samples; i++) {
