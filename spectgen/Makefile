@@ -12,17 +12,12 @@ LIBS+=$(TAGLIB_LIB)
 
 DECODER_OBJS=decoder.o decoder_backend.o decoder_backend_mpg123.o queue.o decode_app.o
 DECODER_EXE=decoder
-SPECTGEN_OBJS=decoder.o decoder_backend.o decoder_backend_mpg123.o queue.o spectgen_2.o
+SPECTGEN_OBJS=decoder.o decoder_backend.o decoder_backend_mpg123.o queue.o spectgen.o
 SPECTGEN_EXE=spectgen
-SPECTGEN2_OBJS=spectgen.o
-SPECTGEN2_EXE=spectgen2
 
 INSTALL_DIR = /usr/local/bin
 
-default: spectgen decoder spectgen2
-
-spectgen2: $(SPECTGEN2_OBJS)
-	$(CC) -o $(SPECTGEN2_EXE) $(LIBS) $(SPECTGEN2_OBJS)
+default: spectgen decoder
 
 spectgen: $(SPECTGEN_OBJS)
 	$(CC) -o $(SPECTGEN_EXE) $(LIBS) $(SPECTGEN_OBJS)
@@ -33,7 +28,6 @@ decoder: $(DECODER_OBJS)
 clean:
 	rm -f $(DECODER_OBJS) $(DECODER_EXE)
 	rm -f $(SPECTGEN_OBJS) $(SPECTGEN_EXE)
-	rm -f $(SPECTGEN2_OBJS) $(SPECTGEN2_EXE)
 
 #install:
 
