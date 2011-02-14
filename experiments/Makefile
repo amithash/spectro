@@ -6,7 +6,9 @@ TAGLIB_LIB = `taglib-config --libs`_c
 
 FFTW_LIB = -lfftw3f
 
+CC=gcc-4.4
 CFLAGS += $(TAGLIB_CFLAGS)
+LIBS+=$(TAGLIB_LIB)
 
 KMEANS_OBJS = kmeans.o
 HIST_OPS_OBJS = hist_ops.o
@@ -20,10 +22,10 @@ TEST_KMEANS_EXE = test_kmeans
 
 INSTALL_DIR = /usr/local/bin
 
-default: test gabor
+default: gabor test cluster
 
 cluster: $(KMEANS_OBJS) $(HIST_OPS_OBJS) $(CLUSTER_OBJS)
-	$(CC)  -o $(CLUSTER_EXE)  $(LIBS) $(TAGLIB_LIB) $(KMEANS_OBJS) $(HIST_OPS_OBJS) $(CLUSTER_OBJS)
+	$(CC)  -o $(CLUSTER_EXE)  -lm $(LIBS) $(TAGLIB_LIB) $(KMEANS_OBJS) $(HIST_OPS_OBJS) $(CLUSTER_OBJS)
 
 test: $(KMEANS_OBJS) $(TEST_KMEANS_OBJS)
 	$(CC) -o $(TEST_KMEANS_EXE) -lm $(KMEANS_OBJS) $(TEST_KMEANS_OBJS)
