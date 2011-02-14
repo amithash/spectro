@@ -29,7 +29,11 @@ clean:
 	rm -f $(DECODER_OBJS) $(DECODER_EXE)
 	rm -f $(SPECTGEN_OBJS) $(SPECTGEN_EXE)
 
-#install:
+install:
+	cp -f $(SPECTGEN_EXE) $(INSTALL_DIR)
+	cp -f $(DECODER_EXE) $(INSTALL_DIR)
 
-#uninstall:
+uninstall:
+	rm -f $(INSTALL_DIR)/$(SPECTGEN_EXE)
+	rm -f $(INSTALL_DIR)/$(DECODER_EXE)
 
