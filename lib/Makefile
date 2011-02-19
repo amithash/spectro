@@ -4,6 +4,7 @@ MEMORY_KB := `cat /proc/meminfo | grep "MemTotal:" | perl -e '$$x = <stdin>; if(
 
 TAGLIB_CFLAGS = `taglib-config --cflags`
 TAGLIB_LIB = `taglib-config --libs`_c
+CC=gcc-4.4
 
 CFLAGS=  -O3 -g -Wall -mssse3 -mfpmath=sse -DMEMORY_SIZE=$(MEMORY_KB) $(TAGLIB_CFLAGS)
 CFLAGS += -fPIC -g
@@ -18,7 +19,7 @@ LIB_FULL_NAME=lib$(LIB_NAME).so.$(VERSION_MAJOR).$(VERSION_MINOR)
 LIB_SONAME=lib$(LIB_NAME).so.$(VERSION_MAJOR)
 
 # FIXME: Make this compatible for 32 bit system or non suse systems
-INSTALL_DIR = /usr/local/lib64
+INSTALL_DIR = /usr/local/lib
 
 all: libspect
 clean: libspect_clean

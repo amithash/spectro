@@ -2,11 +2,12 @@
 MEMORY_KB := `cat /proc/meminfo | grep "MemTotal:" | perl -e '$$x = <stdin>; if($$x =~ /(\d+)/){$$x=$$1;} print "$$x";'`
 
 TAGLIB_CFLAGS = `taglib-config --cflags`
-FFTW_LIB = -lfftw3f
 TAGLIB_LIB = `taglib-config --libs`_c
 
-CFLAGS=  -O3 -g -Wall -mssse3 -mfpmath=sse -I../lib $(TAGLIB_CFLAGS) -DMEMORY_SIZE=$(MEMORY_KB)
-LIBS= -lm -lgcc_s $(TAGLIB_LIB) $(FFTW_LIB) -L../lib -lspect
+CC=gcc-4.4
+
+CFLAGS=  -O3 -g -Wall -mssse3 -mfpmath=sse -DMEMORY_SIZE=$(MEMORY_KB) $(TAGLIB_CFLAGS) -I../lib
+LIBS=-lspect -L../lib -lm -lpthread -lfftw3f $(TAGLIB_LIB)
 
 SPECT2CSV_OBJS = spect2csv.o
 SPECT2HIST_OBJS = spect2hist.o
