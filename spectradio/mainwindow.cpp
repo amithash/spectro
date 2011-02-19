@@ -537,11 +537,11 @@ void MainWindow::playSource(int sourceIndex)
 {
 	mediaObject->stop();
 	mediaObject->clearQueue();
-	if(sourcesIndex >= sources.size()) {
+	if(sourceIndex >= sources.size()) {
 		return;
 	}
-	htdb.set_playing(sourcesIndex);
-	mediaObject->setCurrentSource(sources[sourcesIndex]);
+	htdb.set_playing(sourceIndex);
+	mediaObject->setCurrentSource(sources[sourceIndex]);
 	mediaObject->play();
 }
 
