@@ -33,7 +33,7 @@ libspect: $(OBJS)
 	ln -s libspect.so.0 libspect.so
 
 libspect_clean:
-	rm -f file_vecio.o hist.o hist_dist.o spect_bounds.o spect.o
+	rm -f file_vecio.o hist.o hist_dist.o spect_bounds.o spect.o plot.o
 	rm -f libspect.so*
 
 libspect_install:
