@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
 		strcpy(outf_name, argv[3]);
 	}
 
-	if((rc = pgm(outf_name, (float *)hist->spect_hist, SPECT_HIST_LEN, NBANDS, BACKGROUND_BLACK, COLORED))){
+	if((rc = pgm(outf_name, (float *)hist->spect_hist, SPECT_HIST_LEN, NBANDS, BACKGROUND_BLACK, COLORED, ROW_NORMALIZATION))){
 		spect_error("Write to %s failed with rc = %d",outf_name,rc);
 		exit(-1);
 	}
