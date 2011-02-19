@@ -182,7 +182,7 @@ sub spectgen
 	return "" if(-e $spect);
 	$mp3   = AddEscapes($mp3);
 	$spect = AddEscapes($spect);
-	return "spectgen \"$mp3\" -o \"$spect\" > /dev/null 2> /dev/null";
+	return "spectgen \"$mp3\" \"$spect\" > /dev/null 2> /dev/null";
 }
 
 sub SpectAppsExist
