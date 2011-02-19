@@ -99,6 +99,7 @@ class MainWindow : public QMainWindow
 		void searchOptionAlbum(void);
 		void searchOptionTitle(void);
 		void treeClicked(QTreeWidgetItem *item, int column);
+		void playSource(int index);
 
 	private:
 		void setupActions();
