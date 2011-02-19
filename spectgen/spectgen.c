@@ -9,8 +9,8 @@
 
 #include "decoder.h"
 
-#define WINDOW_SIZE 1024
-#define STEP_SIZE 512
+#define WINDOW_SIZE 2048
+#define STEP_SIZE 1024
 #define NUMFREQS ((WINDOW_SIZE / 2) + 1)
 
 #define SPECTRUM_BAND_FREQ(band, size, rate) \
