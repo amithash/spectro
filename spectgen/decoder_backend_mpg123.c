@@ -232,9 +232,9 @@ static int decoder_backend_mpg123_close(void *_handle)
 	if(!handle) {
 		return -1;
 	}
+	pthread_join(handle->thread, &pars);
 	mpg123_close(handle->mpg123_handle_private);
 	mpg123_delete(handle->mpg123_handle_private);
-	pthread_join(handle->thread, &pars);
 	free(handle);
 	return 0;
 }
