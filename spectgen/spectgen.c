@@ -18,6 +18,9 @@
 #define BAND_FREQ(i, sr) SPECTRUM_BAND_FREQ(i, WINDOW_SIZE, sr)
 
 
+float *fft_in = NULL;
+fftwf_complex *fft_out = NULL;
+fftwf_plan plan;
 unsigned int *bark_band_table = NULL;
 static const unsigned int bark_bands[24] 
   = { 100,  200,  300,  400,  510,  630,  770,   920, 
@@ -61,42 +64,33 @@ int do_band(float *buf, int fn)
 	return 0;
 }
 
-int do_fft(float *in, unsigned int len, int fd)
+
+int init_fft(void)
 {
-	fftwf_complex *tmp_out;
-	float *tmp_in;
-	float *buf = in;
-	int i;
-	fftwf_plan plan;
+	fft_in = malloc(sizeof(float) * WINDOW_SIZE);
+	if(!fft_in)
+	      goto fft_in_failed;
+	fft_out = malloc(sizeof(fftwf_complex) * (WINDOW_SIZE / 2 + 1));
+	if(!fft_out)
+	      goto fft_out_failed;
 
-	tmp_out = (fftwf_complex *)malloc(sizeof(fftwf_complex) * (WINDOW_SIZE / 2 + 1));
-	if(!tmp_out) {
-		goto tmp_out_failed;
-	}
-	tmp_in = (float *)malloc(sizeof(float) * WINDOW_SIZE);
-	if(!tmp_in)
-	      goto tmp_in_failed;
+	plan = fftwf_plan_dft_r2c_1d(WINDOW_SIZE, fft_in, fft_out, FFTW_MEASURE);
+	return 0;
+fft_out_failed:
+	free(fft_in);
+	fft_in = NULL;
+fft_in_failed:
+	return -1;
+}
 
-	plan = fftwf_plan_dft_r2c_1d(WINDOW_SIZE, tmp_in, tmp_out, FFTW_MEASURE);
-
-	for(i = 0; i < len; i+=STEP_SIZE) {
-		if(i + WINDOW_SIZE > len)
-		      break;
-		memcpy(tmp_in, buf, WINDOW_SIZE * sizeof(float));
-		fftwf_execute(plan);
-		buf += STEP_SIZE;
-		do_band((float *)tmp_out, fd);
-	}
-	fftwf_destroy_plan(plan);
-	free(tmp_in);
-tmp_in_failed:
-	free(tmp_out);
-tmp_out_failed:
+int do_fft(float *in, int fd)
+{
+	memcpy(fft_in, in, sizeof(float) * WINDOW_SIZE);
+	fftwf_execute(plan);
+	do_band((float *)fft_out, fd);
 	return 0;
 }
 
-
-#define MAX_BUFFER_SIZE (1024 * 1024 * 512)
 int main(int argc, char *argv[])
 {
 	FILE *f;
@@ -104,8 +98,10 @@ int main(int argc, char *argv[])
 	float *decode_buffer;
 	unsigned int decode_len;
 	unsigned int frate;
-	float *buffer;
-	unsigned int buffer_len;
+	float *buf = NULL;
+	int i;
+	float *leftover;
+	unsigned int leftover_len = 0;
 
 	if(argc != 3) {
 		printf("USAGE: %s <MP3 File> <Output file>\n", argv[0]);
@@ -131,35 +127,61 @@ int main(int argc, char *argv[])
 		printf("Could not start decoding\n");
 		goto start_failed;
 	}
-	buffer = (float *)malloc(sizeof(float) * MAX_BUFFER_SIZE);
-	if(!buffer) {
-		printf("Buffer malloc failed\n");
-		goto buffer_failed;
+	if(init_fft()) {
+		goto fft_init_failed;
 	}
-	buffer_len = 0;
+	leftover = malloc(sizeof(float) * WINDOW_SIZE);
+	if(!leftover)
+	      goto leftover_failed;
 
 	while(1) {
+		decode_len = 0;
 		decoder_data_pull(handle, &decode_buffer, &decode_len, &frate);
 		if(decode_len == 0)
 		      break;
 		if(!bark_band_table)
 		      setup_bark_band_table(frate);
 
-		memcpy(&buffer[buffer_len], decode_buffer, sizeof(float) * decode_len);
-		buffer_len += decode_len;
-		free(decode_buffer);
+		buf = decode_buffer;
+		if(leftover_len > 0) {
+			buf = malloc(sizeof(float) * (decode_len + leftover_len));
+			if(!buf) {
+				goto failed_in_loop;
+			}
+			memcpy(buf, leftover, sizeof(float) * leftover_len);
+			memcpy(&buf[leftover_len], decode_buffer, sizeof(float) * decode_len);
+			decode_len += leftover_len;
+			leftover_len = 0;
+			free(decode_buffer);
+		}
+		if(decode_len >= WINDOW_SIZE) {
+			for(i = 0; i < decode_len - WINDOW_SIZE; i+=STEP_SIZE) {
+				do_fft(&buf[i], fileno(f));
+			}
+			if(i < decode_len) {
+				memcpy(leftover, &buf[i], sizeof(float) * (decode_len - i));
+				leftover_len = decode_len - i;
+			}
+		} else {
+			memcpy(leftover, buf, decode_len * sizeof(float));
+			leftover_len = decode_len;
+		}
+		free(buf);
 	}
-	do_fft(buffer, buffer_len, fileno(f));
+failed_in_loop:
 	free(bark_band_table);
-	free(buffer);
-buffer_failed:
-init_failed:
-	fclose(f);
+leftover_failed:
+	free(fft_in);
+	free(fft_out);
+	fftwf_destroy_plan(plan);
+fft_init_failed:
 start_failed:
 	if(decoder_close(handle)) {
 		printf("Closing decoder handle failed\n");
 	}
 open_failed:
 	decoder_exit(handle);
+init_failed:
+	fclose(f);
 	return 0;
 }
