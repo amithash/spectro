@@ -10,15 +10,25 @@
  * q_init	=	Initialize the queue
  * q_put	=	Enqueues data
  * q_get	=	Dequeues data
+ * q_try_get    =       Dequeues data if avaliable, else
+ * 			returns NULL
  * q_destroy	=	Destroys (de-inits) the queue
- *
- * There is also a non-blocking varient of q_get aptly named:
- * q_get_nonblocking	Dequeues data, but does not block if
- * 			the queue is empty.
  *
  * Key aspects:
  * 1.	SMP Safe (Implemented using pthreads)
- * 2.	Blocking.
+ * 2.	Blocking - Very easy to create a pipeline.
+ *
+ * Key dangers:
+ * 1.  Always check for return of q_get. 
+ * 2.  Have a breaking condition on a queue. If you want to
+ *     transmit a limited amount of data, then you would need
+ *     a stopping condition (Like transmitting NULL), other than
+ *     this there is no way to tell q_get that a particular element
+ *     in the queue was the last and nothing will be put in it
+ *     ever after.
+ * 3.  q_put and q_get MUST be from two distinct threads.
+ *     If q_get and q_put may be called from the same thread,
+ *     use q_put and q_try_get instead of blocking.
  *=============================================================*/
 #include <pthread.h>
 
@@ -114,7 +124,7 @@ int q_put(q_type *queue, void *data);
 void *q_get(q_type *q);
 
 /******************************************************************* 
- * q_get_nonblocking
+ * q_try_get
  *
  * Discretion:
  * 	Removes and returns the first element in the queue.
@@ -128,6 +138,6 @@ void *q_get(q_type *q);
  * for the count to go to zero, and the last element in the queue
  * was removed, then this also signals the destroyer thread.
  *******************************************************************/
-void *q_get_nonblocking(q_type *q);
+void *q_try_get(q_type *q);
 
 #endif

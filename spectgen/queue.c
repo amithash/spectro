@@ -117,7 +117,7 @@ void *q_get(q_type *q)
 	return _q_get(q, 1);
 }
 
-void *q_get_nonblocking(q_type *q)
+void *q_try_get(q_type *q)
 {
 	return _q_get(q, 0);
 }
