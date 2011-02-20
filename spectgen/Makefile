@@ -1,5 +1,5 @@
-CFLAGS=  -O3 -g -Wall -mssse3 -mfpmath=sse -I../lib
-LIBS = -lm -lpthread -lgcc_s -lfftw3f -L../lib -lspect -lmpg123
+CFLAGS=  -O3 -g -Wall -mssse3 -mfpmath=sse
+LIBS = -lm -lpthread -lgcc_s -lfftw3f -lmpg123
 
 TAGLIB_CFLAGS = `taglib-config --cflags`
 TAGLIB_LIB = `taglib-config --libs`_c
