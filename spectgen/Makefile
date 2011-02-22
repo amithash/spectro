@@ -12,7 +12,7 @@ LIBS+=$(TAGLIB_LIB)
 
 DECODER_OBJS=decoder.o decoder_backend.o decoder_backend_mpg123.o queue.o decode_app.o
 DECODER_EXE=decoder
-SPECTGEN_OBJS=decoder.o decoder_backend.o decoder_backend_mpg123.o queue.o spectgen.o
+SPECTGEN_OBJS=decoder.o decoder_backend.o decoder_backend_mpg123.o queue.o spectgen.o spectgen_app.o
 SPECTGEN_EXE=spectgen
 
 INSTALL_DIR = /usr/local/bin
