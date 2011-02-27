@@ -1,0 +1,29 @@
+env = Environment()
+
+env.Append(LIBS = ['m','pthread', 'mpg123', 'vorbisfile', 'fftw3f'])
+
+
+DECODER_SOURCES = [
+	"decoder.c",
+	"decoder_backend.c",
+	"decoder_backend_mpg123.c",
+	"decoder_backend_vorbis.c",
+	"queue.c",
+]
+
+DECODER_APP_SOURCES = DECODER_SOURCES + [
+	"decode_app.c"
+]
+
+SPECTGEN_SOURCES = DECODER_SOURCES + [
+	"spectgen.c"
+]
+
+SPECTGEN_APP_SOURCES = SPECTGEN_SOURCES + [
+	"spectgen_app.c"
+]
+
+env.Program('decoder', DECODER_APP_SOURCES)
+env.Program('spectgen', SPECTGEN_APP_SOURCES)
+
+

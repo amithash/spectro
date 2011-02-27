@@ -52,7 +52,7 @@ void decoder_backend_example_init(void)
  * supported file extensions. But for now since this is
  * statically linked to the decoder, it is not needed.
  */
-__attribure__((destructor))
+__attribute__((destructor))
 void decoder_backend_example_exit(void)
 {
 	/* All global deinit function */
