@@ -1,2 +1,6 @@
 .sconsign.dblite
+*.o
+moc*.cpp
+*.os
+*.so
 
