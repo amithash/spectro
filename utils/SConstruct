@@ -1,6 +1,5 @@
 import os
 import re
-#import subprocess
 env = Environment()
 
 env.Append(LIBS = ['m','pthread', 'fftw3f', 'spect', 'tag_c'])
