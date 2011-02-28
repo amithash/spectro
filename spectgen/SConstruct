@@ -1,7 +1,13 @@
+import os
 env = Environment()
 
 env.Append(LIBS = ['m','pthread', 'mpg123', 'vorbisfile', 'fftw3f'])
 
+install_programs = []
+install_libs = []
+prefix = '/usr'
+bin_path = prefix + "/bin"
+lib_path = prefix + "/lib"
 
 DECODER_SOURCES = [
 	"decoder.c",
@@ -23,7 +29,13 @@ SPECTGEN_APP_SOURCES = SPECTGEN_SOURCES + [
 	"spectgen_app.c"
 ]
 
-env.Program('decoder', DECODER_APP_SOURCES)
-env.Program('spectgen', SPECTGEN_APP_SOURCES)
+
+install_programs += env.Program('decoder', DECODER_APP_SOURCES)
+install_programs += env.Program('spectgen', SPECTGEN_APP_SOURCES)
+
+env.Alias('install', env.Install(bin_path, install_programs))
+env.Alias('install', env.Install(lib_path, install_libs))
+if 'uninstall' in COMMAND_LINE_TARGETS:
+	env.Command("uninstall", None, Delete(FindInstalledFiles()))
 
 

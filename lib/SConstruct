@@ -1,0 +1,31 @@
+import os
+env = Environment()
+
+env.Append(LIBS = ['m','pthread', 'fftw3f', 'tag_c'])
+env.Append(LDFLAGS = ['-L../lib'])
+env.Append(CCFLAGS = ['-O3', '-I/usr/include/taglib'])
+
+install_programs = []
+install_libs = []
+prefix = '/usr'
+bin_path = prefix + "/bin"
+lib_path = prefix + "/lib"
+
+SPECT_SOURCES = [
+	"file_vecio.c",
+	"hist.c",
+	"hist_dist.c",
+	"spect_bounds.c",
+	"spect.c",
+	"plot.c"
+]
+
+install_libs += env.SharedLibrary('spect', SPECT_SOURCES)
+
+env.Alias('install', env.Install(bin_path, install_programs))
+env.Alias('install', env.Install(lib_path, install_libs))
+
+if 'uninstall' in COMMAND_LINE_TARGETS:
+	env.Command("uninstall", None, Delete(FindInstalledFiles()))
+
+

@@ -1,28 +1,28 @@
 all:
-	+make -C spectradio
-	+make -C lib
-	+make -C utils
-	+make -C spectgen
-	+make -C experiments
+	+scons -C spectradio
+	+scons -C lib
+	+scons -C utils
+	+scons -C experiments
+	+scons -C spectgen
 clean:
-	+make -C spectradio clean
-	+make -C lib clean
-	+make -C utils clean
-	+make -C spectgen clean
-	+make -C experiments clean
+	+scons -C spectradio -c
+	+scons -C lib -c
+	+scons -C utils -c
+	+scons -C experiments -c
+	+scons -C spectgen -c
 
 install:
-	+make -C spectradio install
-	+make -C lib install
-	+make -C utils install
-	+make -C spectgen install
+	+scons -C spectradio install
+	+scons -C lib install
+	+scons -C utils install
+	+scons -C spectgen install
 	cp genhistdb.pl /usr/local/bin/genhistdb
 	chmod +x /usr/local/bin/genhistdb
 
 uninstall:
-	+make -C spectradio uninstall
-	+make -C lib uninstall
-	+make -C utils uninstall
-	+make -C spectgen uninstall
+	+scons -C spectradio uninstall
+	+scons -C lib uninstall
+	+scons -C utils uninstall
+	+scons -C spectgen uninstall
 	rm -f /usr/local/bin/genhistdb
 

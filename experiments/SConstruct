@@ -1,0 +1,21 @@
+env = Environment()
+
+env.Append(LIBS = ['m','pthread', 'fftw3f', 'spect', 'tag_c'])
+env.Append(LIBPATH = ['../lib'])
+env.Append(CPPPATH = ['../lib','/usr/include/taglib'])
+env.Append(CCFLAGS = ['-O3'])
+
+CLUSTER_SOURCES = [
+	"kmeans.c",
+	"hist_ops.c",
+	"hist_cluster.c"
+]
+
+GABOR_SOURCES = [
+	"gabor.c"
+]
+
+env.Program('gabor', GABOR_SOURCES)
+env.Program('cluster', CLUSTER_SOURCES)
+
+
