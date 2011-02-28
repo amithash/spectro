@@ -1,9 +1,17 @@
+import re
 env = Environment()
 
 env.Append(LIBS = ['m','pthread', 'fftw3f', 'spect', 'tag_c'])
 env.Append(LIBPATH = ['../lib'])
 env.Append(CPPPATH = ['../lib','/usr/include/taglib'])
 env.Append(CCFLAGS = ['-O3'])
+
+# Let the programs know how much memory you have
+for line in open('/proc/meminfo', 'r').read().split('\n'):
+	if(not line.strip().find("MemTotal: ")):
+		numbers = re.search("([0-9]+)", line.strip()).group(0)
+		env.Append(CCFLAGS = '-DMEMORY_SIZE=' + numbers)
+
 
 CLUSTER_SOURCES = [
 	"kmeans.c",

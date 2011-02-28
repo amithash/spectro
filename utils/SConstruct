@@ -1,4 +1,6 @@
 import os
+import re
+#import subprocess
 env = Environment()
 
 env.Append(LIBS = ['m','pthread', 'fftw3f', 'spect', 'tag_c'])
@@ -12,6 +14,11 @@ prefix = '/usr'
 bin_path = prefix + "/bin"
 lib_path = prefix + "/lib"
 
+# Let the programs know how much memory you have
+for line in open('/proc/meminfo', 'r').read().split('\n'):
+	if(not line.strip().find("MemTotal: ")):
+		numbers = re.search("([0-9]+)", line.strip()).group(0)
+		env.Append(CCFLAGS = '-DMEMORY_SIZE=' + numbers)
 
 SPECT2CSV_SOURCES = [
 	"spect2csv.c"

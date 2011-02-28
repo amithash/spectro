@@ -1,9 +1,17 @@
 import os
+import re
 env = Environment()
 
 env.Append(LIBS = ['m','pthread', 'fftw3f', 'tag_c'])
 env.Append(LDFLAGS = ['-L../lib'])
 env.Append(CCFLAGS = ['-O3', '-I/usr/include/taglib'])
+
+# Let the programs know how much memory you have
+for line in open('/proc/meminfo', 'r').read().split('\n'):
+	if(not line.strip().find("MemTotal: ")):
+		numbers = re.search("([0-9]+)", line.strip()).group(0)
+		env.Append(CCFLAGS = '-DMEMORY_SIZE=' + numbers)
+
 
 install_programs = []
 install_libs = []
