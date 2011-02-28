@@ -14,6 +14,7 @@ int main(int argc, char *argv[])
 	float *band;
 	if(argc < 3) {
 		printf("Usage: %s <Input MP3 File> <Output Spect File>\n", argv[0]);
+		exit(-1);
 	}
 	f = fopen(argv[2], "w");
 	if(!f) {
