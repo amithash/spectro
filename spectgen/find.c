@@ -3,13 +3,7 @@
 #include <dirent.h>
 #include <string.h>
 #include <sys/stat.h>
-
-typedef struct Node_s Node;
-
-struct Node_s{
-	char name[256];
-	Node *next;
-};
+#include "find.h"
 
 int isdir(const char *dname) {
   struct stat sbuf;
@@ -44,7 +38,7 @@ int has_extension(char *name, char *ext)
 	for(;i < len_name && j < len_ext; i++, j++) {
 		char a = name[i];
 		if(a >= 'A' && a <= 'Z')
-		      a = a - 'A';
+		      a = 'a' + a - 'A';
 		if(a != ext[j])
 		      return 0;
 	}
@@ -66,18 +60,17 @@ Node *find(Node *head, char *dir_name, char **ext, int ext_len)
 {
 	DIR *d;
 	struct dirent *dcon;
-	struct stat dstuff;
 	char parent[256];
 	char entry[256];
-	int len;
 	Node *node;
 
 	d = opendir(dir_name);
 	if(!d) {
+		printf("Could not open dir %s\n",dir_name);
 		return head;
 	}
 	realpath(dir_name, parent);
-	while(dcon = readdir(d)) {
+	while((dcon = readdir(d))) {
 		if(strcmp(dcon->d_name, ".") == 0)
 		      continue;
 		if(strcmp(dcon->d_name, "..") == 0)
@@ -102,18 +95,6 @@ Node *find(Node *head, char *dir_name, char **ext, int ext_len)
 	return head;
 }
 
-void purge_results(Node *head)
-{
-	Node *node;
-	Node *to_free;
-
-	node = head;
-	while(node) {
-		to_free = node;
-		node = node->next;
-		free(to_free);
-	}
-}
 #ifdef FIND_TEST
 int main(int argc, char *argv[])
 {
@@ -136,7 +117,7 @@ int main(int argc, char *argv[])
 		node = node->next;
 	}
 
-	purge_results(head);
+	list_purge(head);
 
 	return 0;
 	
