@@ -7,17 +7,61 @@
 #include <fftw3.h>
 #include "queue.h"
 #include "spectgen.h"
+#include "spect-config.h"
 
 #include "decoder.h"
 
 #define SPECTRUM_BAND_FREQ(band, size, rate) \
       (unsigned int)(((float)(band))*((float)(rate))/((float)(size)))
 
+typedef struct {
+	unsigned int 	freq;
+	float		coef;
+} coef_t;
 
-static const unsigned int bark_bands[24] 
+static const coef_t inv_equal_loudness_coef[34] = {
+	    { 0,     0.5833333333333334 },
+	    { 20,    0.6194690265486725 },
+	    { 30,    0.6796116504854368 },
+	    { 40,    0.7216494845360825 },
+	    { 50,    0.7526881720430109 },
+	    { 60,    0.7692307692307693 },
+	    { 70,    0.7865168539325843 },
+	    { 80,    0.8045977011494253 },
+	    { 90,    0.813953488372093  },
+	    { 100,   0.8235294117647058 },
+	    { 200,   0.8974358974358975 },
+	    { 300,   0.9210526315789473 },
+	    { 400,   0.9210526315789473 },
+	    { 500,   0.9210526315789473 },
+	    { 600,   0.9210526315789473 },
+	    { 700,   0.9090909090909092 },
+	    { 800,   0.8974358974358975 },
+	    { 900,   0.8805031446540881 },
+	    { 1000,  0.8750000000000001 },
+	    { 1500,  0.8860759493670887 },
+	    { 2000,  0.9090909090909092 },
+	    { 2500,  0.9459459459459461 },
+	    { 3000,  0.9790209790209791 },
+	    { 3700,  1.0                },
+	    { 4000,  0.9929078014184397 },
+	    { 5000,  0.9459459459459461 },
+	    { 6000,  0.8860759493670887 },
+	    { 7000,  0.8333333333333333 },
+	    { 8000,  0.813953488372093  },
+	    { 9000,  0.813953488372093  },
+	    { 10000, 0.8235294117647058 },
+	    { 12000, 0.7368421052631579 },
+	    { 15000, 0.6363636363636364 },
+	    { 20000, 0.5600000000000001 }
+};
+
+static const unsigned int bark_bands[NBANDS] 
   = { 100,  200,  300,  400,  510,  630,  770,   920, 
       1080, 1270, 1480, 1720, 2000, 2320, 2700,  3150, 
       3700, 4400, 5300, 6400, 7700, 9500, 12000, 15500 };
+
+static float normalization_coef[NBANDS];
 
 /* fftwf create plan is not thread safe */
 pthread_mutex_t planner_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -42,6 +86,35 @@ struct spectgen_struct {
 };
 void *spectgen_thread(void *_handle);
 
+__attribute__((constructor))
+static void spectgen_init(void)
+{
+	int i, j = 1;
+	for(i = 0; i < NBANDS; i++) {
+		float x = (float)bark_bands[i];
+		float y;
+		float x1, x2, y1, y2;
+		int found = 0;
+		for(; j < 34; j++) {
+			x1 = inv_equal_loudness_coef[j-1].freq;
+			x2 = inv_equal_loudness_coef[j].freq;
+			y1 = inv_equal_loudness_coef[j-1].coef;
+			y2 = inv_equal_loudness_coef[j].coef;
+			if(x >= x1 && x <= x2) {
+				found = 1;
+				break;
+			}
+		}
+		if(found == 0) {
+			printf("Could not find X!\n");
+			exit(-1);
+		}
+		/* Linear interpolation */
+		y = ((x - x1) * (y2 - y1) / (x2 - x1)) + y1;
+		normalization_coef[i] = y;
+	}
+}
+
 static void setup_barkband_table(struct spectgen_struct *handle, unsigned int sampling_rate)
 {
 	int i;
@@ -65,7 +138,7 @@ static int do_band(struct spectgen_struct *handle, float *buf)
 	if(!handle->barkband_table_inited)
 	      return -1;
 
-	band = (float *)calloc(24, sizeof(float));
+	band = (float *)calloc(NBANDS, sizeof(float));
 	if(!band)
 	      return -1;
 
@@ -74,8 +147,8 @@ static int do_band(struct spectgen_struct *handle, float *buf)
 		float imag = buf[2 * i + 1];
 		band[handle->barkband_table[i]] += ((real * real) + (imag * imag)) / (float)handle->window_size;
 	}
-	for(i = 0; i < 24; i++) {
-		band[i] = sqrt(band[i]);
+	for(i = 0; i < NBANDS; i++) {
+		band[i] = sqrt(band[i]) * normalization_coef[i];
 	}
 	q_put(&handle->queue, band);
 
