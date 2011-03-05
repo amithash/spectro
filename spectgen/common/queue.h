@@ -46,6 +46,7 @@ struct link_struct                    /* Internal */
 
 typedef struct {
 	link_type      *head;
+	link_type      *tail;
 	pthread_mutex_t lock;
 	pthread_cond_t  cv;
 	pthread_mutex_t exit_lock;
