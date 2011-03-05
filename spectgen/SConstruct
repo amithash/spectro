@@ -1,7 +1,11 @@
 import os
 env = Environment()
 
-env.Append(LIBS = ['m','pthread', 'mpg123', 'vorbisfile', 'fftw3f'])
+env.Append(LIBS = ['m','pthread', 'mpg123', 'vorbisfile', 'fftw3f', 'tag_c'])
+
+env.Append(CPPPATH = ['decoder', 'spectgen', 'common', '../', '/usr/include/taglib'])
+
+env.Append(CCFLAGS = ['-Wall', '-g', '-DDEBUG'])
 
 install_programs = []
 install_libs = []
@@ -10,28 +14,40 @@ bin_path = prefix + "/bin"
 lib_path = prefix + "/lib"
 
 DECODER_SOURCES = [
-	"decoder.c",
-	"decoder_backend.c",
-	"decoder_backend_mpg123.c",
-	"decoder_backend_vorbis.c",
-	"queue.c",
+	"decoder/decoder.c",
+	"decoder/decoder_backend.c",
+	"decoder/decoder_backend_mpg123.c",
+	"decoder/decoder_backend_vorbis.c",
+	"common/queue.c",
 ]
 
 DECODER_APP_SOURCES = DECODER_SOURCES + [
-	"decode_app.c"
+	"decoder/decode_app.c"
 ]
 
 SPECTGEN_SOURCES = DECODER_SOURCES + [
-	"spectgen.c"
+	"spectgen/spectgen.c"
 ]
 
 SPECTGEN_APP_SOURCES = SPECTGEN_SOURCES + [
-	"spectgen_app.c"
+	"spectgen/spectgen_app.c"
+]
+
+GENHISTDB_SOURCES = SPECTGEN_SOURCES + [
+	"genhistdb/genhistdb.c",
+	"genhistdb/find.c",
+	"genhistdb/list.c",
+	"genhistdb/hist.c"
+]
+
+GENHISTDB_APP_SOURCES = GENHISTDB_SOURCES + [
+	"genhistdb/genhistdb_app.c"
 ]
 
 
-install_programs += env.Program('decoder', DECODER_APP_SOURCES)
-install_programs += env.Program('spectgen', SPECTGEN_APP_SOURCES)
+install_programs += env.Program('build/decoder', DECODER_APP_SOURCES)
+install_programs += env.Program('build/spectgen', SPECTGEN_APP_SOURCES)
+install_programs += env.Program('build/genhistdb', GENHISTDB_APP_SOURCES)
 
 env.Alias('install', env.Install(bin_path, install_programs))
 env.Alias('install', env.Install(lib_path, install_libs))
