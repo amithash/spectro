@@ -25,6 +25,7 @@ struct decoder_backend_generic_handle
 int decoder_backend_open(struct decoder_handle_struct *handle, char *fname);
 int decoder_backend_start(struct decoder_handle_struct *handle);
 int decoder_backend_close(struct decoder_handle_struct *handle);
+void decoder_backend_supported_extensions(char **extensions, unsigned int *out_len);
 
 
 /* Backend visible interface */

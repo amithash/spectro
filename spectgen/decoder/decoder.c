@@ -129,3 +129,7 @@ void decoder_data_pull(decoder_handle _handle, float **_buffer,
 	}
 	free(buf);
 }
+void decoder_supported_extensions(char **extensions, unsigned int *out_len)
+{
+	decoder_backend_supported_extensions(extensions, out_len);
+}

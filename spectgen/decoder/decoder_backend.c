@@ -14,6 +14,24 @@ struct decoder_backend_struct
 static struct decoder_backend_struct *head = NULL;
 static pthread_mutex_t head_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+void decoder_backend_supported_extensions(char **extensions, unsigned int *out_len)
+{
+	int i = 0;
+	int max_len = *out_len;
+	struct decoder_backend_struct *node;
+
+	pthread_mutex_lock(&head_mutex);
+	node = head;
+	for(i = 0; i < max_len; i++) {
+		if(!node)
+		      break;
+		strcpy(extensions[i], node->ext);
+		node = node->next;
+	}
+	pthread_mutex_unlock(&head_mutex);
+	*out_len = i;
+}
+
 static void get_file_extension(char *out, char *in)
 {
 	int len = strlen(in);

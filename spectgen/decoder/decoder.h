@@ -9,5 +9,6 @@ int decoder_start(decoder_handle handle);
 int decoder_close(decoder_handle handle);
 void decoder_exit(decoder_handle handle);
 void decoder_data_pull(decoder_handle handle, float **buffer, unsigned int *len, unsigned int *frate);
+void decoder_supported_extensions(char **extensions, unsigned int *out_len);
 
 #endif
