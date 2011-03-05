@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include "hist.h"
+#include "histdb.h"
 #include "spectgen.h"
 #include "spect-config.h"
 #include <tag_c.h>

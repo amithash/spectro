@@ -6,7 +6,6 @@
 #include "decoder.h"
 #include "spectgen.h"
 #include "spect-config.h"
-#include "hist.h"
 #include "find.h"
 #include "histdb.h"
 
