@@ -158,7 +158,6 @@ bailout:
 
 static int write_hist(int fd, hist_t *hist)
 {
-	int i;
 	if(!hist)
 		return -1;
 	if(write(fd, hist, sizeof(hist_t)) != sizeof(hist_t))
@@ -168,8 +167,6 @@ static int write_hist(int fd, hist_t *hist)
 
 static int read_hist(int fd, hist_t *hist) 
 {
-	int i;
-	if(!hist)
 		return -1;
 	if(read(fd, hist, sizeof(hist_t)) != sizeof(hist_t))
 		return -1;
