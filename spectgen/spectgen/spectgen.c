@@ -19,6 +19,11 @@ static const unsigned int bark_bands[24]
       1080, 1270, 1480, 1720, 2000, 2320, 2700,  3150, 
       3700, 4400, 5300, 6400, 7700, 9500, 12000, 15500 };
 
+/* fftwf create plan is not thread safe */
+pthread_mutex_t planner_lock = PTHREAD_MUTEX_INITIALIZER;
+
+/* TODO: Consider creating wisdom files fft might get a lot faster */
+
 struct spectgen_struct {
 	pthread_t      thread;
 	char           filename[256];
@@ -113,8 +118,12 @@ int spectgen_open(spectgen_handle *_handle, char *fname, unsigned int window_siz
 	if(!handle->fft_out)
 	      goto fft_out_failed;
 	
+	/* Even though we are thread safe, the planner is not. so 
+	 * serialize the calls to fftwf plan create */
+	pthread_mutex_lock(&planner_lock);
 	handle->plan = fftwf_plan_dft_r2c_1d(handle->window_size, handle->fft_in, 
-				handle->fft_out, FFTW_MEASURE);
+				handle->fft_out, FFTW_MEASURE | FFTW_DESTROY_INPUT);
+	pthread_mutex_unlock(&planner_lock);
 
 	if(q_init(&handle->queue))
 	      goto q_init_failed;
@@ -200,6 +209,7 @@ void *spectgen_thread(void *_handle)
 	float *decode_buffer;
 	unsigned int decode_len;
 	unsigned int frate;
+	unsigned int old_frate = 0;
 	unsigned int leftover_len = 0;
 	float *buf = NULL;
 	int i;
@@ -214,8 +224,12 @@ void *spectgen_thread(void *_handle)
 		if(decode_len == 0)
 		      break;
 
-		if(!handle->barkband_table_inited)
-		      setup_barkband_table(handle, frate);
+		/* Handle the case when the frame rate changes in the middle.
+		 * This is an odd case, but we need to handle it */
+		if(!handle->barkband_table_inited || old_frate != frate) {
+			old_frate = frate;
+			setup_barkband_table(handle, frate);
+		}
 
 		buf = decode_buffer;
 		if(leftover_len > 0) {
