@@ -8,7 +8,7 @@
 #include "spect-config.h"
 #include "hist.h"
 #include "find.h"
-#include "genhistdb.h"
+#include "histdb.h"
 
 #define DEFAULT_NTHREADS 2
 

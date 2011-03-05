@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "genhistdb.h"
+#include "histdb.h"
 
 int main(int argc, char *argv[])
 {
