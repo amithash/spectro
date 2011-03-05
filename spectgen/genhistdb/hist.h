@@ -31,29 +31,8 @@ typedef struct {
 	float spect_hist[NBANDS][SPECT_HIST_LEN];
 } hist_t;
 
-#define HIST_MAGIC 0xdeadbeef
-
-typedef struct {
-	unsigned int hist_magic_start;	/* Always the first */
-	unsigned int len; /* db len */
-	/* Spect configuration */
-	unsigned int fname_len;
-	unsigned int title_len;
-	unsigned int artist_len;
-	unsigned int album_len;
-	unsigned int nbands;
-	unsigned int spect_hist_len;
-	unsigned int window_size;
-	unsigned int step_size;
-	float min_val;
-	float max_val;
-	unsigned int hist_magic_end;	/* Always the last */
-} hist_info_t;
-
 hist_t *gen_hist(char *fname);
 int read_histdb(hist_t **hist, unsigned int *len, char *fname);
 int write_histdb(hist_t *hist, unsigned int len, char *fname);
-int read_hist(int fd, hist_t *hist);
-int write_hist(int fd, hist_t *hist);
 
 #endif

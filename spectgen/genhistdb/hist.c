@@ -14,6 +14,25 @@
 
 #define NUM2BIN(val)    (unsigned int)(FLOOR_MIN(CEIL_MAX(val)) / BIN_WIDTH)
 
+#define HIST_MAGIC 0xdeadbeef
+
+typedef struct {
+	unsigned int hist_magic_start;	/* Always the first */
+	unsigned int len; /* db len */
+	/* Spect configuration */
+	unsigned int fname_len;
+	unsigned int title_len;
+	unsigned int artist_len;
+	unsigned int album_len;
+	unsigned int nbands;
+	unsigned int spect_hist_len;
+	unsigned int window_size;
+	unsigned int step_size;
+	float min_val;
+	float max_val;
+	unsigned int hist_magic_end;	/* Always the last */
+} hist_info_t;
+
 static hist_info_t current_config_info = {
 	HIST_MAGIC,
 	0,
@@ -137,116 +156,23 @@ bailout:
 	return hist;
 }
 
-static int write_char_vec(int fd, char *vec, unsigned int len) 
-{
-	if(write(fd, vec, sizeof(char) * len) != (len * sizeof(char))) {
-		return -1;
-	}
-	return 0;
-}
-
-static int read_char_vec(int fd, char *vec, unsigned int len) 
-{
-	if(read(fd, vec, sizeof(char) * len) != (len * sizeof(char))) {
-		return -1;
-	}
-	return 0;
-}
-
-static int write_uint(int fd, unsigned int val)
-{
-	if(write(fd, &val, sizeof(unsigned int)) != sizeof(unsigned int)) {
-		return -1;
-	}
-	return 0;
-}
-
-static int read_uint(int fd, unsigned int *val)
-{
-	if(read(fd, val, sizeof(unsigned int)) != sizeof(unsigned int)) {
-		return -1;
-	}
-	return 0;
-}
-
-static int write_float_vec(int fd, float *vec, unsigned int len) 
-{
-	if(write(fd, vec, sizeof(float) * len) != (len * sizeof(float))) {
-		return -1;
-	}
-	return 0;
-}
-
-static int read_float_vec(int fd, float *vec, unsigned int len) 
-{
-	if(read(fd, vec, sizeof(float) * len) != (len * sizeof(float))) {
-		return -1;
-	}
-	return 0;
-}
-
-
-int write_hist(int fd, hist_t *hist)
+static int write_hist(int fd, hist_t *hist)
 {
 	int i;
-	if(!hist) {
+	if(!hist)
 		return -1;
-	}
-	if(write_char_vec(fd, hist->fname, FNAME_LEN)) {
+	if(write(fd, hist, sizeof(hist_t)) != sizeof(hist_t))
 		return -1;
-	}
-	if(write_char_vec(fd, hist->title, TITLE_LEN)) {
-		return -1;
-	}
-	if(write_char_vec(fd, hist->artist, ARTIST_LEN)) {
-		return -1;
-	}
-	if(write_char_vec(fd, hist->album, ALBUM_LEN)) {
-		return -1;
-	}
-	if(write_uint(fd, hist->track)) {
-		return -1;
-	}
-	if(write_uint(fd, hist->length)) {
-		return -1;
-	}
-	for(i = 0; i < NBANDS; i++) {
-		if(write_float_vec(fd, hist->spect_hist[i], SPECT_HIST_LEN)) {
-			return -1;
-		}
-	}
 	return 0;
 }
 
-int read_hist(int fd, hist_t *hist) 
+static int read_hist(int fd, hist_t *hist) 
 {
 	int i;
-	if(!hist) {
+	if(!hist)
 		return -1;
-	}
-	if(read_char_vec(fd, hist->fname, FNAME_LEN)) {
+	if(read(fd, hist, sizeof(hist_t)) != sizeof(hist_t))
 		return -1;
-	}
-	if(read_char_vec(fd, hist->title, TITLE_LEN)) {
-		return -1;
-	}
-	if(read_char_vec(fd, hist->artist, ARTIST_LEN)) {
-		return -1;
-	}
-	if(read_char_vec(fd, hist->album, ALBUM_LEN)) {
-		return -1;
-	}
-	if(read_uint(fd, &hist->track)) {
-		return -1;
-	}
-	if(read_uint(fd, &hist->length)) {
-		return -1;
-	}
-	for(i = 0; i < NBANDS; i++) {
-		if(read_float_vec(fd, hist->spect_hist[i], SPECT_HIST_LEN)) {
-			return -1;
-		}
-	}
 	return 0;
 }
 
