@@ -69,7 +69,10 @@ Node *find(Node *head, char *dir_name, char **ext, int ext_len)
 		printf("Could not open dir %s\n",dir_name);
 		return head;
 	}
-	realpath(dir_name, parent);
+	if(!realpath(dir_name, parent)) {
+		printf("Real path failed!\n");
+		return head;
+	}
 	while((dcon = readdir(d))) {
 		if(strcmp(dcon->d_name, ".") == 0)
 		      continue;
