@@ -1,4 +1,9 @@
-#include "hist_dist.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+
+#include "histdb.h"
 
 void cent_clear(void *h)
 {
@@ -60,6 +65,6 @@ void *hist_calloc(int len)
 
 float hist_dist(void *a, void *b)
 {
-	return hist_distance((hist_t *)a, (hist_t *)b);
+	return hist_distance((hist_t *)a, (hist_t *)b, KL_DIVERGANCE);
 }
 

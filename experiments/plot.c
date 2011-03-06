@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -57,9 +58,11 @@ int plot(float *x, float *y, unsigned int ncol, unsigned int len, plot_type_t ty
 	}
 	fprintf(f, " pause -1\n");
 	fclose(f);
-	system("gnuplot __out.gp");
+	if(system("gnuplot __out.gp"))
+	      printf("call to gnuplot failed\n");
 	if(!debug) {
-		system("rm -f __out.gp __data.txt");
+		if(system("rm -f __out.gp __data.txt"))
+		      printf("removing outs failed\n");
 	}
 	return 0;
 }

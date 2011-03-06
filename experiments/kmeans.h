@@ -7,7 +7,7 @@
 
 /* Take in pointers representing two points and return the
  * distance between them */
-typedef float (* dist_t)(void *a, void *b);
+typedef float (* dist_func_t)(void *a, void *b);
 
 /* Take in pointer representing the point and zero it */
 typedef void (*zero_t)(void *a);
@@ -34,7 +34,7 @@ typedef void *(*calloc_t)(int len);
 /* Virtual table pointer for the callbacks mentioned above.
  * This allows kmeans to be performed on any kind of point */
 typedef struct {
-	dist_t dist;
+	dist_func_t dist;
 	zero_t zero;
 	copy_t copy;
 	accum_t accum;

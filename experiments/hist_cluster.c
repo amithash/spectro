@@ -1,5 +1,7 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include "kmeans.h"
-#include "hist_dist.h"
+#include "histdb.h"
 #include "hist_ops.h"
 #include <math.h>
 #include <string.h>
@@ -39,7 +41,7 @@ int main(int argc, char *argv[])
 	ops.calloc = hist_calloc;
 	ops.index = hist_ind;
 
-	if(read_hist_db(&list, &len, argv[1])) {
+	if(read_histdb(&list, &len, argv[1])) {
 		printf("ERROR Reading db!\n");
 		exit(-1);
 	}

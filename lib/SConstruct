@@ -8,8 +8,9 @@ subdirs = [
 	"histdb"
 ]
 
+
 if 'uninstall' in COMMAND_LINE_TARGETS:
-	for dir in installdirs:
+	for dir in subdirs:
 		os.system("scons -C " + dir + " uninstall")
 else:
-	SConscript(dirs=subdirs, name = "SConstruct")
+	SConscript(dirs=subdirs, name="SConstruct")
