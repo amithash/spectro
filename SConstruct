@@ -2,12 +2,12 @@ import os
 import re
 env = Environment()
 pwd = os.getcwd()
-env.Append(CCFLAGS = ['-O3'])
+env.Append(CCFLAGS = ['-O3', '-Wall'])
+env.Append(CCFLAGS = ['-mtune=native', '-march=native', '-mfpmath=sse', '-msse4'])
 env.Append(CPPPATH = [pwd + '/include'])
 env.Append(LIBPATH = [pwd + '/lib/decoder', pwd + '/lib/spectgen', pwd + '/lib/histdb'])
 
-env.Append(CCFLAGS = ['-g', '-Wall'])
-
+#env.Append(CCFLAGS = ['-g'])
 
 # Let the programs know how much memory you have
 for line in open('/proc/meminfo', 'r').read().split('\n'):

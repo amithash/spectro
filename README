@@ -116,6 +116,153 @@ The "Distance choice" lets you choose which distance function is used.
 Obviously, this is mostly there to try out different algorithms.
 
 ===============================================================================
+				Design
+===============================================================================
+
+The design follows a pipelined paradim. The pipeline stages are as follows.
+
+ *---------*    Queue    *----------*  Queue   *-----------* In Memory *--------*
+ | DECODER |------------>| SPECTGEN |--------->| GENHISTDB |---------->| HISTDB |
+ *---------* Float Mono  *----------*  spect   *-----------*  spect    *--------*
+              samples                 samples               histograms
+
+The decoder and spectgen stages are in their own respective threads. 
+Genhistdb is a function call which initiates the pipeline for each music file,
+accumilates the spect histograms in memory, and finally commits the results
+to the histdb.
+
+Thus even with nr_threads = 1, on a dual core CPU, you would find genhistdb
+to consume around 150% CPU. Setting nr_threads to greater than 1 implies
+that there will be multiple decoder and spectgen pipelines (all connecting to
+genhistdb) with a guarded (mutex) write to the memory location. This essentially
+makes use of the fact that procesessing each music file is independent of the
+next and hence can be parallelizable. 
+
+DECODER
+-------
+
+The decoder is split in to multiple segments:
+1. Decoder backend: Registers the file extensions it can process.
+2. Decoder:         Based on the file extension of the input file, it will
+		    call the open of the respective registered backend.
+
+Currently I have support for the following backends:
+mpg123 - All mpg files.
+vorbis - Vorbis media (.ogg)
+
+There exists lib/decoder/decoder_backend_example.c which should aid in
+writing backends to new formats. Please note that the term "backend" might
+be misleading, as it is just an abstraction to the real libs which do the 
+decoding and does not do any decoding on its own. 
+
+I am not motivated enough to write any more backends other than the two.
+(All my music files are mp3's, and I wrote the vorbis backend as no 
+open-source music application is complete without supporting the open 
+format)
+
+SPECTGEN
+--------
+
+Spectgen reads the PCM samples from the decoder as floating point mono
+samples with the range [-1, +1]. 
+
+It collects enough samples to form an array of SPECT_WINDOW_SIZE.
+
+runs the amalgamated array through fftw to get the fourier transform of 
+the window.
+
+Groups the result into signal powers into 24 bands based on the bark.
+
+Multiplies the power in each bark-band with the inverse equal loudness
+coefficients (Which is computed for each bark band at init).
+
+queues up the resultant array of size 24.
+
+Shifts by SPECT_STEP_SIZE samples of the input, and restarts.
+
+GENHISTDB
+---------
+
+For each mp3 file, starts the above two stages to get the band stream.
+
+For each sample (array of 24), it increments the respective bin.
+Note, the histogram has SPECT_HIST_LEN bins, with the minimum value
+of SPECT_MIN_VAL and maximum value of SPECT_MAX_VAL. 
+
+Once the stream ends, it checks if there were sufficient samples, and if so,
+run the music files through taglib to get the tags, and populates a
+hist structure with the result and stores it in memory.
+
+HISTDB FORMAT:
+--------------
+
+The final Hist DB in file, has a header which is a structure containing
+all configuration and the length of the array of hist elements.
+Finally the file contains the array of hist elements. 
+
+CONFIGURATION/TWEAKING:
+-----------------------
+
+All mentions of values in CAPITAL_LETTERS are the configuration of
+the hist db. These can be tweaked in include/spect-config.h
+
+Note, currently NBANDS cannot be changed. It just exists for the global
+define advantage in spect-config.h
+
+===============================================================================
+			       Performance
+===============================================================================
+System:
+Intel Core 2 Duo (Dual core CPU)
+CPU Governor set to "performance" to run at the maximum frequency: 2101 MHz
+
+Music Files: 8109
+Number of sessions set: 4 (The nr_threads parameter to genhistdb)
+
+Time to complete: 
+Average time per music file: 
+
+Average CPU Load: 196% (Fire in all the cylinders)
+Note, my CPU kept dropping to low speeds... So I ran this script
+
+sudo ./setmaxspeed.pl
+
+and killed it after genhistdb
+
+
+Maximum Memory requirements
+---------------------------
+
+Average HIST DB size per MP3 ~2kB. This is usually negligable unless
+you have close to a billion music files, or running this on a 1980's computer
+
+Per session computation maximum memory:
+MAX_SAMPLING_RATE - the maximum sampling rate of all music files.
+MAX_LENGTH        - The longest song length in seconds.
+
+MAXIMUM_POSSIBLE_MEMORY_USE = MAX_SAMPLING_RATE * MAX_LENGTH * 8
+8 = 4 for float, 2 for each 16bit PCM channel (Assuming stereo). 
+
+Assuming a maximum song length of 40 minutes (Trust me, I have a few of those!):
+MAX_LENGTH = 2400
+MAX_SAMPLIN_RATE = 44100 (This is generally the default for most music files).
+   =   807MB!!!
+
+Now multiply that with the number of sessions. 
+
+Of course, this is the maximum in theory. even with the assumed maximums,
+it will never reach that as this assumes that the decoder allocated memory
+for all samples were consumed so slowly that the entire pipeline ended
+before genhistdb got to process them! :-)
+
+On my dual core CPU, I use an average of 20MB of my memory!
+Thats a drastic reduction as samples are consumed as fast as they are 
+generated due to the pipelined nature. You might see more memory 
+consumption on single core CPUs and performance might be worse due to
+constant switching between the decoder, spectgen and genhistdb threads.
+
+
+===============================================================================
 				Caveats
 ===============================================================================
 1. The paths of mp3 files are stored as absolute paths in the .hdb file.
@@ -126,13 +273,15 @@ a. You cannot rename/move your music directory. Everything will fail afterwhich.
 b. The hdb files is not portable from one machine to another. 
 
 You can probably move your MP3 collection and hdb file to
-another machine only if:
+another machine if and only if:
 a. They are of the same architecture (32bit to 32bit, or 64 bit to 64bit).
 b. The Music directory is placed in exactly the same absolute path.
 
 It is also recommended that you do not move the binaries around. Some binaries,
 are compiled with specific information about the machine like RAM size, and
-num cpus. This is especially true for normspectdb. You gotta compile from source.
+num cpus. The binaries are also compiled with optimization parameters which
+are native to the current CPU. Essentially the compilation is to generate
+the least portable and most performant binaries.
 
 ===============================================================================
 			Credit where credit is due

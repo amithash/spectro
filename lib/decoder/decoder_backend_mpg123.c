@@ -261,16 +261,15 @@ static int decoder_backend_mpg123_decode(void *_handle)
 		rc = mpg123_decode_frame(handle->mpg123_handle_private,
 					&frame_num, &pcm, &size);
 		if(rc != MPG123_OK) {
-			if(rc == MPG123_ERR || rc == MPG123_NO_SPACE) {
-				printf("Backend ran out of memory or had an error\n");
-				return -1;
-			}
 			if(rc == MPG123_DONE) {
 				in_progress = 0;
-			}
-			if(rc == MPG123_NEW_FORMAT) {
+			} else if(rc == MPG123_NEW_FORMAT) {
 				mpg123_getformat(handle->mpg123_handle_private,
 							&frate, &channels, &encoding);
+			} else {
+#ifdef DEBUG
+				printf("BACKEND ERROR: %s\n", mpg123_plain_strerror(rc));
+#endif
 			}
 		}
 		if(size > 0) {

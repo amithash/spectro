@@ -142,7 +142,23 @@ hist_t *gen_hist(char *fname)
 		num_samples++;
 		free(spect);
 	}
-	if(num_samples == 0) {
+	/* Each band sample has SPECT_STEP_SIZE music samples.
+	 * (Note that we move in steps of that value, thus
+	 * using SPECT_WINDOW_SIZE would be wrong)
+	 * Assuming a sampling rate of 44100 samples/sec.
+	 *
+	 * ~44000 = 8 seconds,
+	 * ~22000 = 16 seconds,
+	 * ~11000 = 32 seconds. 
+	 *
+	 * Thus even with the worst sampling rate, we at worst
+	 * consider something greater than 30 seconds as a 
+	 * music file. 
+	 *
+	 * 44100 * 8       = Total PCM samples.
+	 * SPECT_STEP_SIZE = Real PCM samples per spect sample.
+	 */
+	if(num_samples < (44100 * 8 / SPECT_STEP_SIZE)) {
 		free(hist);
 		hist = NULL;
 		goto bailout;
@@ -265,11 +281,15 @@ int read_append_histdb(hist_t **out_hist, unsigned int *len, char *fname)
 	}
 	if(read_histdb(&hist_list, &new_len, fname))
 	      return -1;
+
+	if(new_len == 0)
+	      return 0;
+
 	old_hist_list = *out_hist;
 	old_hist_list = realloc(old_hist_list, sizeof(hist_t) * (*len + new_len));
 	if(!old_hist_list)
 	      return -1;
-	memcpy(&old_hist_list[*len], hist_list, new_len);
+	memcpy(&old_hist_list[*len], hist_list, new_len * sizeof(hist_t));
 	*len = *len + new_len;
 	*out_hist = old_hist_list;
 	return 0;
@@ -282,7 +302,7 @@ int write_histdb(hist_t *hist, unsigned int len, char *fname)
 	int rc = -1;
 	if(hist == NULL || fname == NULL)
 	      return -1;
-	fp = fopen(fname, "r");
+	fp = fopen(fname, "w");
 	if(fp == NULL) {
 		return -1;
 	}

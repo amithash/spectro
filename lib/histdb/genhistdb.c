@@ -157,6 +157,7 @@ void *process_thread(void *par)
 	while(node) {
 		hist_t *hist;
 		hist = gen_hist(node->name);
+		completed++;
 		if(!hist) {
 			printf("Hist generation for %s failed\n", node->name);
 			node = node->next;
@@ -165,7 +166,6 @@ void *process_thread(void *par)
 		pthread_mutex_lock(&hist_list_lock);
 		memcpy(&hist_list[hist_len], hist, sizeof(hist_t));
 		hist_len++;
-		completed++;
 		pthread_mutex_unlock(&hist_list_lock);
 		free(hist);
 		node = node->next;
@@ -264,9 +264,11 @@ int generate_histdb(char *dirname, char *dbname, unsigned int nr_threads, genera
 	for(i = threads_started; i < nr_threads; i++)
 	      list_purge(per_thread_list[i]);
 	if(threads_started == nr_threads) {
-		write_histdb(hist_list, hist_len, dbname);
-		rc = 0;
-	
+		if(write_histdb(hist_list, hist_len, dbname)) {
+			printf("Writing hist db failed!\n");
+		} else {
+			rc = 0;
+		}
 	}
 	free(per_thread_list);
 list_creation_failed:

@@ -157,6 +157,8 @@ static int do_band(struct spectgen_struct *handle, float *buf)
 
 static int do_fft(struct spectgen_struct *handle, float *in)
 {
+	/* Copy is bad, but in might be unaligned, and fft computaion
+	 * might eat more than the time saved by not copying */
 	memcpy(handle->fft_in, in, sizeof(float) * handle->window_size);
 	fftwf_execute(handle->plan);
 	return do_band(handle, (float *)handle->fft_out);
@@ -183,11 +185,11 @@ int spectgen_open(spectgen_handle *_handle, char *fname, unsigned int window_siz
 
 	strncpy(handle->filename, fname, 256);
 	handle->filename[255] = '\0';
-	handle->fft_in = (float *)malloc(sizeof(float) * handle->window_size);
+	handle->fft_in = (float *)fftwf_malloc(sizeof(float) * handle->window_size);
 	if(!handle->fft_in)
 	      goto fft_in_failed;
 	handle->fft_out = (fftwf_complex *)
-	    malloc(sizeof(fftwf_complex) * handle->numfreqs);
+	    fftwf_malloc(handle->numfreqs * sizeof(fftwf_complex));
 	if(!handle->fft_out)
 	      goto fft_out_failed;
 	
@@ -196,6 +198,7 @@ int spectgen_open(spectgen_handle *_handle, char *fname, unsigned int window_siz
 	pthread_mutex_lock(&planner_lock);
 	handle->plan = fftwf_plan_dft_r2c_1d(handle->window_size, handle->fft_in, 
 				handle->fft_out, FFTW_MEASURE | FFTW_DESTROY_INPUT);
+
 	pthread_mutex_unlock(&planner_lock);
 
 	if(q_init(&handle->queue))
@@ -231,9 +234,9 @@ leftover_failed:
 	q_destroy(&handle->queue);
 q_init_failed:
 	fftwf_destroy_plan(handle->plan);
-	free(handle->fft_out);
+	fftwf_free(handle->fft_out);
 fft_out_failed:
-	free(handle->fft_in);
+	fftwf_free(handle->fft_in);
 fft_in_failed:
 	free(handle);
 	return -1;
@@ -253,8 +256,8 @@ int spectgen_close(spectgen_handle _handle)
 	decoder_exit(handle->d_handle);
 	q_destroy(&handle->queue);
 	fftwf_destroy_plan(handle->plan);
-	free(handle->fft_out);
-	free(handle->fft_in);
+	fftwf_free(handle->fft_out);
+	fftwf_free(handle->fft_in);
 	free(handle->leftover);
 	free(handle->barkband_table);
 
