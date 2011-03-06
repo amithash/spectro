@@ -18,7 +18,7 @@
 #ifndef _HIST_H_
 #define _HIST_H_
 
- #include "../spect-config.h"
+ #include "spect-config.h"
 
  #include <vector>
  #include <phonon/audiooutput.h>

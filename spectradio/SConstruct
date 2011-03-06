@@ -35,7 +35,8 @@ env.Append(CPPPATH = [
 	"/usr/include/phonon",
 	"/usr/include/qt4",
 	"/usr/include/qt4/phonon_compat",
-	"."
+	".",
+	"../include"
 ])
 
 env.Append(LIBPATH = [
