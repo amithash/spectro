@@ -1,6 +1,9 @@
 #ifndef __GENHISTDB_H_
 #define __GENHISTDB_H_
 
+#ifdef __cplusplus
+	extern "C" {
+#endif
 #include "spect-config.h"
 
 typedef enum {
@@ -49,5 +52,8 @@ int write_histdb(hist_t *hist, unsigned int len, char *fname);
 int generate_histdb(char *dirname, char *dbname, 
 		unsigned int nr_threads, generate_mode_t mode);
 
+#ifdef __cplusplus
+	}
+#endif 
 
 #endif
