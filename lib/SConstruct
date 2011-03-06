@@ -1,39 +1,15 @@
 import os
-import re
 env = Environment()
+Export('env')
 
-env.Append(LIBS = ['m','pthread', 'fftw3f', 'tag_c'])
-env.Append(LDFLAGS = ['-L../lib'])
-env.Append(CCFLAGS = ['-O3', '-I/usr/include/taglib'])
-
-# Let the programs know how much memory you have
-for line in open('/proc/meminfo', 'r').read().split('\n'):
-	if(not line.strip().find("MemTotal: ")):
-		numbers = re.search("([0-9]+)", line.strip()).group(0)
-		env.Append(CCFLAGS = '-DMEMORY_SIZE=' + numbers)
-
-
-install_programs = []
-install_libs = []
-prefix = '/usr'
-bin_path = prefix + "/bin"
-lib_path = prefix + "/lib"
-
-SPECT_SOURCES = [
-	"file_vecio.c",
-	"hist.c",
-	"hist_dist.c",
-	"spect_bounds.c",
-	"spect.c",
-	"plot.c"
+subdirs = [
+	"decoder",
+	"spectgen",
+	"histdb"
 ]
 
-install_libs += env.SharedLibrary('spect', SPECT_SOURCES)
-
-env.Alias('install', env.Install(bin_path, install_programs))
-env.Alias('install', env.Install(lib_path, install_libs))
-
 if 'uninstall' in COMMAND_LINE_TARGETS:
-	env.Command("uninstall", None, Delete(FindInstalledFiles()))
-
-
+	for dir in installdirs:
+		os.system("scons -C " + dir + " uninstall")
+else:
+	SConscript(dirs=subdirs, name = "SConstruct")

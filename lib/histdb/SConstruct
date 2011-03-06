@@ -1,0 +1,35 @@
+import os
+import re
+env = Environment()
+
+env.Append(LIBS = ['m','pthread', 'decoder', 'spectgen', 'tag_c'])
+env.Append(CPPPATH = ['../../include', '/usr/include/taglib'])
+env.Append(LIBPATH = ['../decoder', '../spectgen'])
+
+# Let the programs know how much memory you have
+for line in open('/proc/meminfo', 'r').read().split('\n'):
+	if(not line.strip().find("MemTotal: ")):
+		numbers = re.search("([0-9]+)", line.strip()).group(0)
+		env.Append(CCFLAGS = '-DMEMORY_SIZE=' + numbers)
+
+
+install_libs = []
+prefix = '/usr'
+lib_path = prefix + "/lib"
+
+HISTDB_SOURCES = [
+	"find.c",
+	"genhistdb.c",
+	"hist.c",
+	"hist_dist.c",
+	"list.c"
+]
+
+install_libs += env.SharedLibrary('histdb', HISTDB_SOURCES)
+
+env.Alias('install', env.Install(lib_path, install_libs))
+
+if 'uninstall' in COMMAND_LINE_TARGETS:
+	env.Command("uninstall", None, Delete(FindInstalledFiles()))
+
+

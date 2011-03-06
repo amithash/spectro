@@ -47,7 +47,7 @@ static const dist_t supported_distances[] = {
 
 void get_supported_distances(dist_t **dist)
 {
-	*dist = supported_distances;
+	*dist = (dist_t *)supported_distances;
 }
 
 float hist_distance(hist_t *hist1, hist_t *hist2, hist_dist_func_t dist_type)

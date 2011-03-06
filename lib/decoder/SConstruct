@@ -1,0 +1,34 @@
+import os
+import re
+env = Environment()
+
+env.Append(LIBS = ['m','pthread', 'mpg123', 'vorbisfile'])
+env.Append(CPPPATH = ['../../include'])
+
+# Let the programs know how much memory you have
+for line in open('/proc/meminfo', 'r').read().split('\n'):
+	if(not line.strip().find("MemTotal: ")):
+		numbers = re.search("([0-9]+)", line.strip()).group(0)
+		env.Append(CCFLAGS = '-DMEMORY_SIZE=' + numbers)
+
+
+install_libs = []
+prefix = '/usr'
+lib_path = prefix + "/lib"
+
+DECODER_SOURCES = [
+	"decoder.c",
+	"decoder_backend.c",
+	"decoder_backend_mpg123.c",
+	"decoder_backend_vorbis.c",
+	"queue.c"
+]
+
+install_libs += env.SharedLibrary('decoder', DECODER_SOURCES)
+
+env.Alias('install', env.Install(lib_path, install_libs))
+
+if 'uninstall' in COMMAND_LINE_TARGETS:
+	env.Command("uninstall", None, Delete(FindInstalledFiles()))
+
+
