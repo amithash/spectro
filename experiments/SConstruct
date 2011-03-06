@@ -1,17 +1,9 @@
 import re
-env = Environment()
+Import('env')
+env = env.Clone()
 
 env.Append(LIBS = ['m','pthread', 'fftw3f', 'histdb', 'decoder', 'spectgen', 'tag_c'])
-env.Append(LIBPATH = ['../lib/histdb', '../lib/spectgen', '../lib/decoder'])
-env.Append(CPPPATH = ['../lib','/usr/include/taglib', '../include'])
-env.Append(CCFLAGS = ['-O3'])
-
-# Let the programs know how much memory you have
-for line in open('/proc/meminfo', 'r').read().split('\n'):
-	if(not line.strip().find("MemTotal: ")):
-		numbers = re.search("([0-9]+)", line.strip()).group(0)
-		env.Append(CCFLAGS = '-DMEMORY_SIZE=' + numbers)
-
+env.Append(CPPPATH = ['/usr/include/taglib'])
 
 CLUSTER_SOURCES = [
 	"kmeans.c",

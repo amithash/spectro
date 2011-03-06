@@ -60,8 +60,8 @@ Node *find(Node *head, char *dir_name, char **ext, int ext_len)
 {
 	DIR *d;
 	struct dirent *dcon;
-	char parent[256];
-	char entry[256];
+	char parent[PATH_MAX] = "";
+	char entry[PATH_MAX] = "";
 	Node *node;
 
 	d = opendir(dir_name);

@@ -428,16 +428,16 @@ void MainWindow::loadDB(char *s_dbfile)
 	treeItemList.reserve(htdb.length());
 	browserTree->hide();
 	for(unsigned int i = at; i < htdb.length(); i++) {
-		QString string(htdb.ind_name(i));
+		QString string(htdb.name(i));
 		Phonon::MediaSource source(string);
 		sources.append(source);
-		QString title(htdb.ind_title(i));
-		QString track(htdb.ind_track(i));
-		QString artist(htdb.ind_artist(i));
-		QString album(htdb.ind_album(i));
+		QString title(htdb.title(i));
+		QString track(htdb.track(i));
+		QString artist(htdb.artist(i));
+		QString album(htdb.album(i));
 
 		if(title.isEmpty()) {
-			title = QString(htdb.ind_name(i));
+			title = QString(htdb.name(i));
 		} else if(!artist.isEmpty() && !album.isEmpty()) {
 			title = track + " - " + title;
 		}

@@ -5,10 +5,6 @@
 int main(int argc, char *argv[])
 {
 	unsigned int nr_threads = 0;
-#ifdef DEBUG
-	char *dirname = "/home/aeprasad/Music";
-	char *dbname = "/home/aeprasad/test.hdb";
-#else
 	char *dirname;
 	char *dbname;
 
@@ -18,9 +14,9 @@ int main(int argc, char *argv[])
 	}
 	dirname = argv[1];
 	dbname  = argv[2];
-	if(argc < 4)
+	if(argc > 3)
 		nr_threads = atoi(argv[3]);
-#endif
+	printf("Starting!\n"); fflush(stdout);
 
 	if(generate_histdb(dirname, dbname, nr_threads, UPDATE_MODE)) {
 		printf("Generating histdb failed\n");

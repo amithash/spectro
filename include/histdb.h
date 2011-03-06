@@ -47,6 +47,7 @@ void get_supported_distances(dist_t **dist);
 
 hist_t *gen_hist(char *fname);
 int read_histdb(hist_t **hist, unsigned int *len, char *fname);
+int read_append_histdb(hist_t **hist, unsigned int *len, char *fname);
 int write_histdb(hist_t *hist, unsigned int len, char *fname);
 
 int generate_histdb(char *dirname, char *dbname, 

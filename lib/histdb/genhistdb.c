@@ -198,6 +198,8 @@ int generate_histdb(char *dirname, char *dbname, unsigned int nr_threads, genera
 	void *par;
 	int rc = -1;
 	unsigned int threads_started = 0;
+	if(!dirname || !dbname)
+	      return -1;
 
 	if(nr_threads == 0)
 		nr_threads = DEFAULT_NTHREADS;

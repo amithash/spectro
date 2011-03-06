@@ -18,7 +18,7 @@
 #ifndef _HIST_H_
 #define _HIST_H_
 
- #include "spect-config.h"
+ #include "histdb.h"
 
  #include <vector>
  #include <phonon/audiooutput.h>
@@ -27,18 +27,11 @@
  #include <phonon/volumeslider.h>
  #include <phonon/backendcapabilities.h>
 
+// Aux list which has a 1:1 equivalance to hist_list
 class Hist
 {
 	public:
-	QString fname;
-	QString title;
-	QString artist;
-	QString album;
-	unsigned int track;
-	unsigned int length;
-	float spect_hist[NBANDS][SPECT_HIST_LEN];
 	int played;
-
 	Hist(void)
 	{
 	    	played = 0;
@@ -48,12 +41,12 @@ class Hist
 class HistDB
 {
 	std::vector<Hist> list;
+	hist_t *hist_list;
+	unsigned int hist_len;
 	unsigned int valid;
-	QString curDistance;
-	QList<QString> supportedDistances;
+	hist_dist_func_t curDistance;
+	dist_t *supportedDistances;
 	QList<QString> database;
-
-	float (*pdf_distance)(float *a, float *b, unsigned int len);
 
 	public:
 	HistDB(void);
@@ -69,11 +62,11 @@ class HistDB
 	void set_playing(unsigned int ind);
 	int get_next(int current);
 	void LoadDB(const char *dbname);
-	QString ind_name(unsigned int ind);
-	QString ind_title(unsigned int ind);
-	QString ind_artist(unsigned int ind);
-	QString ind_album(unsigned int ind);
-	QString ind_track(unsigned int ind);
+	QString name(unsigned int ind);
+	QString title(unsigned int ind);
+	QString artist(unsigned int ind);
+	QString album(unsigned int ind);
+	QString track(unsigned int ind);
 
 	QList<QString> getSupportedDistanceFunctions();
 	void setDistanceFunction(QString dist);

@@ -1,16 +1,9 @@
 import os
-env = Environment()
-Export('env')
-
+Import('env')
 subdirs = [
 	"decoder",
 	"spectgen",
 	"histdb"
 ]
 
-
-if 'uninstall' in COMMAND_LINE_TARGETS:
-	for dir in subdirs:
-		os.system("scons -C " + dir + " uninstall")
-else:
-	SConscript(dirs=subdirs, name="SConstruct")
+SConscript(dirs=subdirs, name="SConstruct")

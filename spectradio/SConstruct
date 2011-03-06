@@ -1,5 +1,8 @@
+Import('env')
+env = env.Clone()
+
 bld_moc = Builder(action = '/usr/bin/moc-qt4 ${MOCFLAGS} -I. ${SOURCE} -o ${TARGET}')
-env = Environment(BUILDERS = {'GenMoc' : bld_moc})
+env.Append(BUILDERS = {'GenMoc' : bld_moc})
 
 
 install_programs = []
@@ -36,12 +39,11 @@ env.Append(CPPPATH = [
 	"/usr/include/qt4",
 	"/usr/include/qt4/phonon_compat",
 	".",
-	"../include"
 ])
 
 env.Append(LIBPATH = [
 	"/usr/lib",
-	"."
+	".",
 ])
 
 env.Append(LIBS = [
@@ -49,7 +51,10 @@ env.Append(LIBS = [
 	"phonon",
 	"QtGui",
 	"QtCore",
-	"pthread"
+	"pthread",
+	"decoder",
+	"spectgen",
+	"histdb"
 ])
 
 moc_out = env.GenMoc('moc_mainwindow.cpp', 'mainwindow.h')
@@ -61,9 +66,8 @@ SOURCES = [
 ]
 install_programs += env.Program('spectradio', [SOURCES + moc_out])
 
-env.Alias('install', env.Install(bin_path, install_programs))
-env.Alias('install', env.Install(lib_path, install_libs))
-
-if 'uninstall' in COMMAND_LINE_TARGETS:
-	env.Command("uninstall", None, Delete(FindInstalledFiles()))
+inst = env.Install(bin_path, install_programs)
+env.Alias( "install", inst )
+env.Depends( inst, install_programs )
+Ignore( '.', inst )
 

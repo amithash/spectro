@@ -81,7 +81,7 @@
 #define progress2(done,outof)					\
 do {								\
 	int ____i;						\
-	int ____perc = done / (2 * outof);			\
+	int ____perc = (done * 50) / (outof);			\
 	printf("[");						\
 	for(____i = 0; ____i < ____perc; ____i++) {		\
 		printf("#");					\

@@ -49,6 +49,11 @@ static hist_info_t current_config_info = {
 	HIST_MAGIC
 };
 
+void int_strncpy(char *out, char *in, int len)
+{
+	strncpy(out, in, len);
+	out[len - 1] = '\0';
+}
 
 static int set_tags(hist_t *hist)
 {
@@ -65,13 +70,13 @@ static int set_tags(hist_t *hist)
         tag = taglib_file_tag(f);
 
         p_title = taglib_tag_title(tag);
-        strcpy(hist->title, p_title);
+	int_strncpy(hist->title, p_title, TITLE_LEN);
 
         p_artist = taglib_tag_artist(tag);
-        strcpy(hist->artist, p_artist);
+	int_strncpy(hist->artist, p_artist, ARTIST_LEN);
 
         p_album = taglib_tag_album(tag);
-        strcpy(hist->album, p_album);
+	int_strncpy(hist->album, p_album, ALBUM_LEN);
 
         hist->track = taglib_tag_track(tag);
 
@@ -109,16 +114,13 @@ hist_t *gen_hist(char *fname)
 		hist = NULL;
 		goto bailout;
 	}
-	strcpy(hist->fname, fname);
-#if 0
+	strncpy(hist->fname, fname, FNAME_LEN);
+	hist->fname[FNAME_LEN - 1] = '\0';
 	for(i = 0; i < NBANDS; i++) {
 		for(j = 0; j < SPECT_HIST_LEN; j++) {
 			hist->spect_hist[i][j] = 0;
 		}
 	}
-#else
-	memset(hist->spect_hist, 0, sizeof(float) * NBANDS * SPECT_HIST_LEN);
-#endif
 	while((spect = spectgen_pull(spect_handle)) != NULL) {
 		for(i = 0; i < NBANDS; i++) {
 		      if(spect[i] != 0)
@@ -132,9 +134,10 @@ hist_t *gen_hist(char *fname)
 		for(i = 0; i < NBANDS; i++) {
 			unsigned int ind = NUM2BIN(spect[i]);
 			if(ind >= SPECT_HIST_LEN) {
-				print("Macro is wrong\n");
+				print("Macro is wrong\n"); fflush(stdout);
+				continue;
 			}
-			hist->spect_hist[i][NUM2BIN(spect[i])]++;
+			hist->spect_hist[i][ind]++;
 		}
 		num_samples++;
 		free(spect);
@@ -250,6 +253,26 @@ bailout:
 	*hist = NULL;
 	fclose(fp);
 	return -1;
+}
+
+int read_append_histdb(hist_t **out_hist, unsigned int *len, char *fname)
+{
+	hist_t *hist_list = NULL;
+	hist_t *old_hist_list;
+	unsigned int new_len;
+	if(*out_hist == NULL) {
+		return read_histdb(out_hist, len, fname);
+	}
+	if(read_histdb(&hist_list, &new_len, fname))
+	      return -1;
+	old_hist_list = *out_hist;
+	old_hist_list = realloc(old_hist_list, sizeof(hist_t) * (*len + new_len));
+	if(!old_hist_list)
+	      return -1;
+	memcpy(&old_hist_list[*len], hist_list, new_len);
+	*len = *len + new_len;
+	*out_hist = old_hist_list;
+	return 0;
 }
 
 int write_histdb(hist_t *hist, unsigned int len, char *fname)
