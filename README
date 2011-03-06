@@ -14,15 +14,14 @@ similar to an initially predetermined song name. Usage of each tool is provided
 Install:
 -------
 In the root directory, 
-./configure.sh
-make
-sudo make install
-# or make install # as root
+scons
+sudo scons install
+# or scons install # as root
 
 Uninstall
 ---------
-sudo make uninstall
-# or make uninstall # as root
+sudo scons install -c
+# or scons install -c # as root
 
 ===============================================================================
 			Requirements
@@ -30,23 +29,26 @@ sudo make uninstall
 I cannot right now, describe what all are required. I can state the basic minimum
 (probably incomplete) required to compile and use the package:
 
-0. Compilers - gcc, g++, make
+0. Compilers - gcc, g++, scons (And in turn python)
 
-spectrogen:
------------
-pkg-config
+Decoders
+--------
+libmpg123
+libmpg123-dev
+libvorbis0a
+libvorbis-dev
+
+Spectgen
+--------
 libfftw3-3
 libfftw3-dev
-libgstreamer0.10-0
-libgstreamer0.10-dev
-libgstreamer-plugins-base0.10-dev
 
-#If you have mp3s or ther non-free music formats, you would need these too:
-gstreamer0.10-plugins-bad
-gstreamer0.10-plugins-base
-gstreamer0.10-plugins-good
-gstreamer0.10-plugins-ugly  
-
+Histdb
+------
+libtag1-dev
+libtag1c2a 
+libtagc0
+libtagc0-dev
 
 spectradio
 ----------
@@ -59,121 +61,26 @@ libphonon4
 phonon-backend-gstreamer 
 phonon-backend-xine
 phonon-backend-vlc
-#(Kubuntu is usually packaged with the xine backend)
-
-utils:
-------
-libfftw3-3
-libfftw3-dev
-libtag1-dev
-libtag1c2a 
-libtagc0
-libtagc0-dev
-
+#(Kubuntu is usually packaged with the xine or gstreamer backend)
+#If you are on a KDE desktop (Like I), then you probably dont care as something should be installed :-)
 
 ===============================================================================
-			Automated DB Generation
+				DB Generation
 ===============================================================================
-1. Make sure you have run make install as root in the root dir.
-2. Run genhistdb.pl /path/to/Music/Dir
+Run genhistdb 
 
-Notes:
-1. This is a _very_ heavy and time consuming process. It performs all the 
-   manual steps described below. Please disable all power management, 
-   if you have an external fan, it would not hurt putting your laptop on it.
-   :-) 
+genhistdb <Music Dir> <Hist DB File> [<Optional number of threads to use>]
 
-2. Depending on your music collection, you need quite a bit of disk space.
-   You need at least 58% of your music collection (Assuming they are MP3 files)
-   as free space. After the process is done, a total of 19% is already consumed.
-   (A lot of that 58% is temp files).
+1. If "Hist DB File" does not exist (Or was generated some time ago during
+   which is no longer compatible), a new one will be created.
+2. If "Hist DB File" exists, any music files in "Music Dir" not in the DB
+   will be generated and appended to the DB (Update mode).
 
-===============================================================================
-		Steps to perform before using spectradio
-===============================================================================
-If the above process fails, use the manual procedure described  below.
-I use this more often, as I keep a lot of the temp files around for experimenting
-with different procedures, algorithms and formulas.
+You can also use the "auto update mode" of genhistdb to add multiple 
+music directories to the db.
 
-Usage:
-------
-
-1. Generate "spect" files for your MP3 collection.
-	run gen_spectro.sh from the directory containing your music collection.
-
-	********** NOTE ********
-	This is a _very_ _very_ heavy and time consuming step. For my 8000 song
-	collection, it takes ~7 hours on a dual core machine. This is best done
-	before bed time and if on a laptop = connect the damn charger!
-
-	It generates files which are ~1.2MB per song (depends on song duration).
-	So make sure you have disk space. (For 8300 tracks the total space = 9.2 GB)
-	
-	The generated *.spect files are hidden. If you mp3 is "01 - 2112.mp3", then
-	the spect files will be ".01 - 2112.spect".
-	(The first 19% of the space requirement, these are the files which are 
-	recommended to be kept around in case you want to update your music 
-	collection.) - Unless I decide to add a feature to automatically check
-	what is not there...
-
-2. Generate the spect file list.
-	find /full/path/to/your/music/collection -name *.spect > filelist.txt
-	This step generates a file list.
-
-3. Generate the sdb file.
-	genspectdb /path/to/file/created/in/step/2/filelist.txt /path/to/place/out.sdb
-
-	**** NOTE ****
-	This consumes some time. It takes about 10 minutes for 8000 spect files.
-	The out file is <Num Mp3> * 1.2MB ~ 9.3 GB for 8300 tracks.
-	The next 19% of the space requirement. This will be deleted after step 5.
-
-4. Normalize the sdb file.
-	normspectdb /path/to/file/created/in/step/3/out.sdb
-
-	**** NOTE ****
-	This consumes some time. It takes about 40 minutes for 8000 spect files.
-	This step will generate temp files band_0.dat to band_23.dat with a total
-	space of 19% (The last 19%). But unlike the step 3, the temp files 
-	are automatically deleted if the normalization is done successfully.
-
-	This is a _very_ memory hungry process. The more you have, the faster it
-	is. If you have less than NumMp3Files * 1.2MB * 0.75 / 24 of RAM, the
-	process is performed on disk which can be quite slow. 
-
-	The normalization is done in place. That is, it modifies the sdb file
-	in place. Thus if this step fails, based on the step it fails in,
-	the sdb file might be corrupted.
-
-
-5. Generate the hdb file.
-	spect2hist /path/to/file.sdb /path/to/output/file.hdb
-
-	This is quite quick, and the generated .hdb is also quite small. ~100MB for 8000 tracks.
-
-Notes:
-	a. After step 4, you can delete the sdb file.
-	b. This is the only file required for spectradio to work. 
-	
-
-Updating collection:
---------------------
-
-In case you add more tracks to your collection,
-
-Repeat all the above steps. 
-Step 1 wont take as long, as it generates the spect files only for the newly added files.
-So updating collection should get over within 10-20 minutes depending on how many more files
-you add. This is the same case if you go the automated approach with genhistdb.pl.
-
-Freeing up space:
------------------
-
-If you decide to delete all the generated spect files:
-	find /path/to/Music/Collection -name *.spect -exec rm -f {} \;
-
-*But be warned*, if you want to update your collection, Step 1 will end up taking 
-the same time. 
+Please note that, even if you provide number of threads as 1, the program
+is pipelined and hence is already parallelized. 
 
 ===============================================================================
 				Using spectradio
@@ -231,23 +138,11 @@ num cpus. This is especially true for normspectdb. You gotta compile from source
 			Credit where credit is due
 ===============================================================================
 
-spectrogen == moodbar
----------------------
-spectrogen is a line by line copy of moodbar 0.1.2. In fact the *.spect files
-are just glorified .mood files. So, mood files are 1000 elements in length,
-and has information of 3 bands (Used for R, G & B colors). Spect files have
-a length varying on the song length and has 24 bands (Essentially the maximum).
+I started off with the code of moodbar which I no longer use, but it did help
+start off the project.
 
-A simple diff of moodbar source with spectrogen, will provide you with a lot
-of lines changed, but if you observe closely, I had to rename a few things
-so that the filters do not interfere with moodbar (If it also exists).
-
-spectradio == Qt Music player example + My crap
------------------------------------------------
-
-http://doc.qt.nokia.com/4.7/phonon-qmusicplayer.html
-You will notice that my player is based on that code. Even though it started
-from the example code, it is currently totally modified. But, hey, I could
-never have this without the example code!
+spectradio was started using the base example code of the QT Music player
+example code. Of course, it no longer the same, but it was based off it,
+and hence my thanks.
 
 
