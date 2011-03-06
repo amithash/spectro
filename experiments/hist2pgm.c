@@ -20,7 +20,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include "hist.h"
+#include "histdb.h"
 #include "plot.h"
 
 int main(int argc, char *argv[]) {
@@ -35,8 +35,8 @@ int main(int argc, char *argv[]) {
 		printf("USAGE: %s <spectdb> FILE.spect4 (Optional output ppm file default: tmp.ppm)\n", argv[0]);
 		exit(-1);
 	}
-	if((rc = read_hist_db(&hist_list, &len, argv[1])) != 0) {
-		printf("Reading spect file %s failed with error=%s\n",argv[1], RM_RC_STR(rc));
+	if((rc = read_histdb(&hist_list, &len, argv[1])) != 0) {
+		printf("Reading spect file %s failed\n",argv[1]);
 		exit(-1);
 	}
 
@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	if(!hist) {
-		spect_error("Could not find %s in db", argv[2]);
+		printf("Could not find %s in db\n", argv[2]);
 		goto cleanup;
 	}
 
@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	if((rc = pgm(outf_name, (float *)hist->spect_hist, SPECT_HIST_LEN, NBANDS, BACKGROUND_BLACK, COLORED, ROW_NORMALIZATION))){
-		spect_error("Write to %s failed with rc = %d",outf_name,rc);
+		printf("Write to %s failed with rc = %d\n",outf_name,rc);
 		exit(-1);
 	}
 

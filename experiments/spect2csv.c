@@ -19,7 +19,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "../spect-config.h"
+#include "spect-config.h"
 
 #define SEP " "
 

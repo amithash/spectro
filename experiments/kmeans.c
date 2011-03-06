@@ -17,7 +17,7 @@ static int naked_man(void *centroids, void *data, int cent_len, int data_len, km
 
 	for(i = 1; i < cent_len; i++) {
 		double min_distance = DBL_MAX;
-		void *point;
+		void *point = NULL;
 		for(k = 0; k < data_len; k++) {
 			double total = 0;
 			for(j = 0; j < i; j++) {

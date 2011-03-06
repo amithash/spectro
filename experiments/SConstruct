@@ -10,13 +10,38 @@ CLUSTER_SOURCES = [
 	"hist_ops.c",
 	"hist_cluster.c"
 ]
+env.Program('cluster', CLUSTER_SOURCES)
 
 GABOR_SOURCES = [
 	"gabor.c",
 	"plot.c"
 ]
-
 env.Program('gabor', GABOR_SOURCES)
-env.Program('cluster', CLUSTER_SOURCES)
+
+SPECT2CSV_SOURCES = [
+	"spect2csv.c"
+]
+env.Program('spect2csv', SPECT2CSV_SOURCES)
+
+PLOT_SOURCES = [
+	"plot.c"
+]
+
+#PLOTBPM_SOURCES = PLOT_SOURCES + [
+#	"plotbpm.c",
+#	"bpm.c"
+#]
+#env.Program('plotbpm', PLOTBPM_SOURCES)
+
+PLOTHIST_SOURCES = PLOT_SOURCES + [
+	"plothist.c"
+]
+env.Program('plothist', PLOTHIST_SOURCES)
+
+HIST2PGM_SOURCES = PLOT_SOURCES + [
+	"hist2pgm.c"
+]
+env.Program('hist2pgm', HIST2PGM_SOURCES)
+
 
 

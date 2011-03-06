@@ -19,7 +19,7 @@
 #ifndef __BPM_H_
 #define __BPM_H_
 
-#include "spect.h"
+#include "spect-config.h"
 
 #define WINDOW_LEN 3
 int spect2bpm(float bpm[BPM_LEN], spect_t *spect);

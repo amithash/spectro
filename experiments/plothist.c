@@ -15,8 +15,11 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *******************************************************************************/
-
-#include "hist.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "histdb.h"
+#include "plot.h"
 
 int main(int argc, char *argv[])
 {
@@ -25,11 +28,11 @@ int main(int argc, char *argv[])
 	unsigned int len;
 	int i;
 	if(argc <= 2) {
-		spect_error("USAGE: %s <Hist DB File> <MP3 file>\n",argv[0]);
+		printf("USAGE: %s <Hist DB File> <MP3 file>\n",argv[0]);
 		exit(-1);
 	}
-	if(read_hist_db(&hist_list, &len, argv[1])) {
-		spect_error("Reading DB:%s failed", argv[1]);
+	if(read_histdb(&hist_list, &len, argv[1])) {
+		printf("Reading DB:%s failed\n", argv[1]);
 		exit(-1);
 	}
 
@@ -41,11 +44,11 @@ int main(int argc, char *argv[])
 		}
 	}
 	if(!hist) {
-		spect_error("%s was not found in the db", argv[2]);
+		printf("%s was not found in the db\n", argv[2]);
 		goto cleanup;
 	}
 
-	plot_hist(hist);
+	plot(NULL, (float *)hist->spect_hist, NBANDS, SPECT_HIST_LEN, PLOT_LINES, 0);
 cleanup:
 	free(hist_list);
 
