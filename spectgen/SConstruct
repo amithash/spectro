@@ -37,7 +37,8 @@ GENHISTDB_SOURCES = SPECTGEN_SOURCES + [
 	"histdb/genhistdb.c",
 	"histdb/find.c",
 	"histdb/list.c",
-	"histdb/hist.c"
+	"histdb/hist.c",
+	"histdb/hist_dist.c"
 ]
 
 GENHISTDB_APP_SOURCES = GENHISTDB_SOURCES + [
