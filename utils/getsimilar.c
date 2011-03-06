@@ -15,8 +15,11 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *******************************************************************************/
-
-#include "hist_dist.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include "histdb.h"
 #include <pthread.h>
 #include <float.h>
 
@@ -42,7 +45,7 @@ int get_most_similar(hist_t *list, unsigned int len, int this_i, int n, similar_
 		return -1;
 	}
 	for(i = 0; i < len; i ++) {
-		dlist[i] = hist_distance(&list[this_i], &list[i]);
+		dlist[i] = hist_distance(&list[this_i], &list[i], KL_DIVERGANCE);
 	}
 
 	for(i = 0; i < n; i++) {
@@ -80,15 +83,15 @@ int main(int argc, char *argv[])
 	similar_t *similar = NULL;
 
 	if(argc < 3) {
-		spect_error("USAGE: HIST_DB ref_spect_file.spect");
+		printf("USAGE: HIST_DB <music file>\n");
 		exit(-1);
 	}
 	if(argc == 4) {
 		maxes_len = atoi(argv[3]);
 	}
 
-	if(read_hist_db(&hist_list, &len, argv[1])) {
-		spect_error("Could not read hist db: %s", argv[1]);
+	if(read_histdb(&hist_list, &len, argv[1])) {
+		printf("Could not read hist db: %s\n", argv[1]);
 		exit(-1);
 	}
 	for(i = 0; i < len; i++) {
@@ -98,11 +101,11 @@ int main(int argc, char *argv[])
 		}
 	}
 	if(ref_ind == -1) {
-		spect_error("Cound not find %s in db",argv[2]);
+		printf("Cound not find %s in db\n",argv[2]);
 		exit(-1);
 	}
 	if(get_most_similar(hist_list, len, ref_ind, maxes_len, &similar)) {
-		spect_error("Malloc failed!\n");
+		printf("Malloc failed!\n");
 		exit(-1);
 	}
 

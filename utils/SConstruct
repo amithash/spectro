@@ -2,9 +2,9 @@ import os
 import re
 env = Environment()
 
-env.Append(LIBS = ['m','pthread', 'fftw3f', 'spect', 'tag_c'])
-env.Append(LIBPATH = ['../lib'])
-env.Append(CPPPATH = ['../lib','/usr/include/taglib'])
+env.Append(LIBS = ['m','pthread', 'decoder', 'spectgen', 'histdb'])
+env.Append(LIBPATH = ['../lib/decoder', '../lib/spectgen', '../lib/histdb'])
+env.Append(CPPPATH = ['../include'])
 env.Append(CCFLAGS = ['-O3'])
 
 install_programs = []
@@ -19,51 +19,25 @@ for line in open('/proc/meminfo', 'r').read().split('\n'):
 		numbers = re.search("([0-9]+)", line.strip()).group(0)
 		env.Append(CCFLAGS = '-DMEMORY_SIZE=' + numbers)
 
-SPECT2CSV_SOURCES = [
-	"spect2csv.c"
+SPECTGEN_APP_SOURCES = [
+	"spectgen_app.c"
 ]
-install_programs += env.Program('spect2csv', SPECT2CSV_SOURCES)
+install_programs += env.Program('spectgen', SPECTGEN_APP_SOURCES)
 
-SPECT2HIST_SOURCES = [
-	"spect2hist.c"
+DECODER_APP_SOURCES = [
+	"decoder_app.c"
 ]
-install_programs += env.Program('spect2hist', SPECT2HIST_SOURCES)
+install_programs += env.Program('decoder', DECODER_APP_SOURCES)
 
-GENSPECTDB_SOURCES = [
-	"genspectdb.c"
+GENHISTDB_APP_SOURCES = [
+	"genhistdb_app.c"
 ]
-install_programs += env.Program('genspectdb', GENSPECTDB_SOURCES)
-
-HIST2PGM_SOURCES = [
-	"hist2pgm.c"
-]
-install_programs += env.Program('hist2pgm', HIST2PGM_SOURCES)
+install_programs += env.Program('genhistdb', GENHISTDB_APP_SOURCES)
 
 GETSIMILAR_SOURCES = [
 	"getsimilar.c"
 ]
 install_programs += env.Program('getsimilar', GETSIMILAR_SOURCES)
-
-PLOTBPM_SOURCES = [
-	"plotbpm.c",
-	"dwt.c"
-]
-install_programs += env.Program('plotbpm', PLOTBPM_SOURCES)
-
-PLOTHIST_SOURCES = [
-	"plothist.c"
-]
-install_programs += env.Program('plothist', PLOTHIST_SOURCES)
-
-NORM_SPECTDB_SOURCES = [
-	"norm_spect.c"
-]
-install_programs += env.Program('normspectdb', NORM_SPECTDB_SOURCES)
-
-IEL_SOURCES = [
-	"inv_equal_loudness_vals.c"
-]
-install_programs += env.Program('inv_equal_loudness_vals', IEL_SOURCES)
 
 env.Alias('install', env.Install(bin_path, install_programs))
 env.Alias('install', env.Install(lib_path, install_libs))
