@@ -23,6 +23,53 @@
 #define NMAX_DEFAULT 10
 #define INIT_DIST DBL_MAX
 
+typedef struct {
+	int ind;
+	float dist;
+} similar_t;
+
+int get_most_similar(hist_t *list, unsigned int len, int this_i, int n, similar_t **_out)
+{
+	similar_t *out = NULL;
+	int i,j,k;
+	float *dlist;
+	*_out = NULL;
+	if((out = calloc(n, sizeof(similar_t))) == NULL) {
+		return -1;
+	}
+	if((dlist = (float *)calloc(len, sizeof(float))) == NULL)  {
+		free(out);
+		return -1;
+	}
+	for(i = 0; i < len; i ++) {
+		dlist[i] = hist_distance(&list[this_i], &list[i]);
+	}
+
+	for(i = 0; i < n; i++) {
+		out[i].ind = -1;
+		out[i].dist = FLT_MAX;
+	}
+	for(k = 0; k < n; k++) {
+		for(i = 0; i < len; i++) {
+			if(i == this_i)
+				continue;
+			float idist = dlist[i];
+			for(j = 0; j < n; j++) {
+				if(idist <= out[j].dist) {
+					out[j].dist = idist;
+					out[j].ind  = i;
+					break;
+				}
+			}
+		}
+	}
+	free(dlist);
+
+	*_out = out;
+	return 0;
+}
+
+
 int main(int argc, char *argv[])
 {
 	unsigned int len;

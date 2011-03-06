@@ -34,14 +34,14 @@ SPECTGEN_APP_SOURCES = SPECTGEN_SOURCES + [
 ]
 
 GENHISTDB_SOURCES = SPECTGEN_SOURCES + [
-	"genhistdb/genhistdb.c",
-	"genhistdb/find.c",
-	"genhistdb/list.c",
-	"genhistdb/hist.c"
+	"histdb/genhistdb.c",
+	"histdb/find.c",
+	"histdb/list.c",
+	"histdb/hist.c"
 ]
 
 GENHISTDB_APP_SOURCES = GENHISTDB_SOURCES + [
-	"genhistdb/genhistdb_app.c"
+	"histdb/genhistdb_app.c"
 ]
 
 
