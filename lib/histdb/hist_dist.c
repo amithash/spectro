@@ -66,10 +66,22 @@ float hist_distance(hist_t *hist1, hist_t *hist2, hist_dist_func_t dist_type)
 	return dist;
 }
 
+#define ALMOST_ZERO 0.0001
+static void hist_raise(float *a, unsigned int len)
+{
+	int i;
+	for(i = 0; i < len; i++) {
+		a[i] += ALMOST_ZERO;
+		a[i] = a[i] / (1.0 + ((float)len * ALMOST_ZERO));
+	}
+}
+
 static float k_divergance(float *a, float *b, unsigned int len)
 {
 	int i;
 	float dist = 0;
+	hist_raise(a,len);
+	hist_raise(b,len);
 	for(i = 0; i < len; i++) {
 		dist += a[i] * log(2 * a[i] / (a[i] + b[i]));
 	}
@@ -108,6 +120,8 @@ static float kl_distance(float *a, float *b, unsigned int len)
 	if(a == NULL || b == NULL) {
 		return 0;
 	}
+	hist_raise(a, len);
+	hist_raise(b, len);
 	for(i = 0; i < len; i++) {
 		dist += (a[i]) * log(a[i] / b[i]) / log_2;
 	}
@@ -121,6 +135,8 @@ static float jeffery_distance(float *a, float *b, unsigned int len)
 	if(a == NULL || b == NULL) {
 		return 0;
 	}
+	hist_raise(a, len);
+	hist_raise(b, len);
 	for(i = 0; i < len; i++) {
 		dist += (a[i] - b[i]) * log(a[i] / b[i]) / log_2;
 	}
@@ -146,6 +162,8 @@ static float jensen_distance(float *a, float *b, unsigned int len)
 	if(a == NULL || b == NULL) {
 		return 0;
 	}
+	hist_raise(a, len);
+	hist_raise(b, len);
 	for(i = 0; i < len; i++) {
 
 		dist +=(((a[i] * log(a[i])) + (b[i] * log(b[i]))) / 2) - 

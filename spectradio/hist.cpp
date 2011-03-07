@@ -29,7 +29,7 @@ HistDB::HistDB(void)
 	valid = 0;
 	supportedDistances = NULL;
 	get_supported_distances(&supportedDistances);
-	curDistance = KL_DIVERGANCE;
+	curDistance = HELLINGER_DIVERGANCE;
 	hist_list = NULL;
 	hist_len = 0;
 }
@@ -49,8 +49,9 @@ void HistDB::LoadDB(const char *dbname)
 	}
 	list.reserve(hist_len);
 	for(unsigned int i = old_len; i < hist_len; i++) {
-		list[i].played = 0;
+		list.push_back(0);
 	}
+	std::cout << "List size = " << list.size() << std::endl;
 	valid = 1;
 	return;
 }
@@ -133,7 +134,7 @@ void HistDB::set_playing(unsigned int current)
 {
 	if(current >= list.size())
 	      return;
-	list[current].played = 1;
+	list[current] = 1;
 }
 
 int HistDB::get_next(int _ind)
@@ -153,20 +154,20 @@ int HistDB::get_next(int _ind)
 	ind_title = title(ind);
 	ind_artist = artist(ind);
 
-	list[ind].played = 1;
+	list[ind] = 1;
 	for(unsigned int i = 0; i < list.size(); i++) {
 		i_title = title(i);
 		i_artist = artist(i);
 
 		// Find out what you can do with ind_length and i_length.
 
-		if(list[i].played == 1 || i == (unsigned int)ind) {
+		if(list[i] == 1 || i == (unsigned int)ind) {
 			continue;
 		}
 
 		if(ind_title.toLower().compare(i_title.toLower()) == 0 && ind_artist.toLower().compare(i_artist.toLower()) == 0) {
 			std::cout << "Skipping the same song in another album" << std::endl;
-			list[i].played = 1;
+			list[i] = 1;
 			continue;
 		}
 
@@ -176,7 +177,7 @@ int HistDB::get_next(int _ind)
 			dist = t_dist;
 		}
 	}
-	list[ret].played = 1;
+	list[ret] = 1;
 	return (int)ret;
 }
 

@@ -28,19 +28,9 @@
  #include <phonon/backendcapabilities.h>
 
 // Aux list which has a 1:1 equivalance to hist_list
-class Hist
-{
-	public:
-	int played;
-	Hist(void)
-	{
-	    	played = 0;
-	}
-};
-
 class HistDB
 {
-	std::vector<Hist> list;
+	std::vector<int> list;
 	hist_t *hist_list;
 	unsigned int hist_len;
 	unsigned int valid;

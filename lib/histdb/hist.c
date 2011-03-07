@@ -186,7 +186,6 @@ static int write_hist(int fd, hist_t *hist)
 
 static int read_hist(int fd, hist_t *hist) 
 {
-		return -1;
 	if(read(fd, hist, sizeof(hist_t)) != sizeof(hist_t))
 		return -1;
 	return 0;
@@ -257,7 +256,7 @@ int read_histdb(hist_t **hist, unsigned int *len, char *fname)
 
 	for(i = 0; i < *len; i++) {
 		if(read_hist(fileno(fp), &this[i])) {
-			printf("Read %d resulted in error!\n",i);
+			printf("Read %d resulted in error!\n",i); fflush(stdout);
 			goto free_bailout;
 		}
 	}
@@ -267,6 +266,7 @@ free_bailout:
 	free(this);
 bailout:
 	*hist = NULL;
+	*len = 0;
 	fclose(fp);
 	return -1;
 }
@@ -277,6 +277,7 @@ int read_append_histdb(hist_t **out_hist, unsigned int *len, char *fname)
 	hist_t *old_hist_list;
 	unsigned int new_len;
 	if(*out_hist == NULL) {
+		printf("Loading new hdb\n");
 		return read_histdb(out_hist, len, fname);
 	}
 	if(read_histdb(&hist_list, &new_len, fname))

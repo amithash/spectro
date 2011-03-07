@@ -219,8 +219,8 @@ CPU Governor set to "performance" to run at the maximum frequency: 2101 MHz
 Music Files: 8109
 Number of sessions set: 4 (The nr_threads parameter to genhistdb)
 
-Time to complete: 
-Average time per music file: 
+Time to complete: 4.00 hours
+Average time per music file: ~1.77 seconds. 
 
 Average CPU Load: 196% (Fire in all the cylinders)
 Note, my CPU kept dropping to low speeds... So I ran this script
@@ -255,7 +255,7 @@ it will never reach that as this assumes that the decoder allocated memory
 for all samples were consumed so slowly that the entire pipeline ended
 before genhistdb got to process them! :-)
 
-On my dual core CPU, I use an average of 20MB of my memory!
+On my dual core CPU, I use an average of 200MB of my memory!
 Thats a drastic reduction as samples are consumed as fast as they are 
 generated due to the pipelined nature. You might see more memory 
 consumption on single core CPUs and performance might be worse due to

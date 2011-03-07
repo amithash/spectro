@@ -45,7 +45,7 @@ int get_most_similar(hist_t *list, unsigned int len, int this_i, int n, similar_
 		return -1;
 	}
 	for(i = 0; i < len; i ++) {
-		dlist[i] = hist_distance(&list[this_i], &list[i], KL_DIVERGANCE);
+		dlist[i] = hist_distance(&list[this_i], &list[i], HELLINGER_DIVERGANCE);
 	}
 
 	for(i = 0; i < n; i++) {
