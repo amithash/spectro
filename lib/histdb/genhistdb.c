@@ -16,6 +16,14 @@
 
 #define HASH_TABLE_SIZE 1024
 
+#define LOCK_HANDLE(handle, id) do {				\
+	pthread_mutex_lock(&(handle)->hist_list_lock);		\
+} while(0)
+
+#define UNLOCK_HANDLE(handle, id) do {				\
+	pthread_mutex_unlock(&(handle)->hist_list_lock);	\
+} while(0)
+
 struct genhistdb_struct {
 	pthread_mutex_t hist_list_lock;
 	hist_t *hist_list;
@@ -31,6 +39,7 @@ struct genhistdb_struct {
 	pthread_barrier_t barrier;
 
 	char dbname[1024];
+	void *priv;
 
 	genhistdb_notification_type notification;
 	int every_perc;
@@ -103,8 +112,8 @@ static void *process_thread(void *par)
 	struct genhistdb_struct *handle = (struct genhistdb_struct *)par;
 	pthread_t self_thread;
 	Node *node;
-	int self_ind;
 	hist_t *hist = NULL;
+	int self_ind;
 	if(!handle)
 	      goto bailout;
 
@@ -126,7 +135,7 @@ static void *process_thread(void *par)
 
 	while(node) {
 		hist = gen_hist(node->name);
-		pthread_mutex_lock(&handle->hist_list_lock);
+		LOCK_HANDLE(handle, self_ind);
 		handle->completed++;
 		if(!hist) {
 			printf("Hist generation for %s failed\n", node->name);
@@ -135,11 +144,41 @@ static void *process_thread(void *par)
 			free(hist);
 			handle->hist_len++;
 		}
-		pthread_mutex_unlock(&handle->hist_list_lock);
+		UNLOCK_HANDLE(handle, self_ind);
 		node = node->next;
 	}
 bailout:
 	pthread_exit(NULL);
+}
+
+static int generate_histdb_finalize(genhistdb_handle_type _handle)
+{
+	int i;
+	void *par;
+	int rc = -1;
+	struct genhistdb_struct *handle = (struct genhistdb_struct *)_handle;
+	if(!handle)
+	      return -1;
+	for(i = 0; i < handle->nr_threads; i++) {
+		if(handle->error == 0)
+			pthread_join(handle->threads[i], &par);
+		list_purge(handle->per_thread_list[i]);
+	}
+	free(handle->per_thread_list);
+	free(handle->threads);
+	if(handle->error == 0) {
+	      if(write_histdb(handle->hist_list, handle->hist_len, handle->dbname)) {
+	      } else {
+	      	rc = 0;
+	      }
+	} else {
+		printf("There was an error. Not commiting to %s\n", handle->dbname);
+	}
+	free(handle->hist_list);
+	pthread_mutex_destroy(&handle->hist_list_lock);
+	pthread_barrier_destroy(&handle->barrier);
+	free(handle);
+	return rc;
 }
 
 static void *progress_routine(void *par)
@@ -147,6 +186,8 @@ static void *progress_routine(void *par)
 	struct genhistdb_struct *handle = (struct genhistdb_struct *)par;
 	int perc;
 	int last_perc = 0;
+	genhistdb_notification_type notification;
+	void *priv;
 
 	if(!handle)
 	      goto bailout;
@@ -156,25 +197,26 @@ static void *progress_routine(void *par)
 	if(handle->error != 0) {
 		goto bailout;
 	}
+	notification = handle->notification;
+	priv         = handle->priv;
 
-	handle->notification(0);
-	while(1) {
-		pthread_mutex_lock(&handle->hist_list_lock);
-		if(handle->to_complete == 0)
-			perc = 100;
-		else
-			perc = (100 * handle->completed) / handle->to_complete;
-		pthread_mutex_unlock(&handle->hist_list_lock);
+	notification(priv, 0);
+	while(handle->to_complete > 0) {
+		perc = (100 * handle->completed) / handle->to_complete;
 		if(perc == 100) {
-			handle->notification(perc);
 			break;
 		}
 		if(perc >= (last_perc + handle->every_perc)) {
 			last_perc = perc;
-			handle->notification(perc);
+			notification(priv, perc);
 		}
 		sleep(1);
 	}
+	/* You will get here only when perc = 100%. At this point, we send out
+	 * the last notification, the client may call finalize and free the
+	 * handle from underneath us. So do not depend on it. */
+	generate_histdb_finalize(handle);
+	notification(priv, 100);
 bailout:
 	pthread_exit(NULL);
 }
@@ -213,6 +255,9 @@ int generate_histdb_prepare(genhistdb_handle_type *_handle, char *dirname, char 
 	}
 	compute_len = list_len(compute);
 	handle->hist_list = realloc(handle->hist_list, sizeof(hist_t) * (handle->hist_len + compute_len));
+	if(compute_len <= handle->nr_threads)
+	      handle->nr_threads = 1;
+
 	if(!handle->hist_list) {
 		free(handle);
 		goto realloc_failed;
@@ -243,21 +288,24 @@ realloc_failed:
 	return -1;
 }
 
-int generate_histdb_start(genhistdb_handle_type *_handle, 
-			genhistdb_notification_type cb, int perc)
+int generate_histdb_start(genhistdb_handle_type _handle, 
+			genhistdb_notification_type cb, void *priv, int perc)
 {
 	int i;
 	int threads_started = 0;
 	void *par;
+	pthread_attr_t attr;
 	struct genhistdb_struct *handle = (struct genhistdb_struct *)_handle;
 	if(!handle)
 	      return -1;
 	handle->error = -1;
 	handle->notification = cb;
+	handle->priv = priv;
 	if(perc <= 0)
 	      perc = 1;
 	handle->every_perc = perc;
 
+	pthread_mutex_init(&handle->hist_list_lock, NULL);
 	pthread_barrier_init(&handle->barrier, NULL, handle->nr_threads + 2);
 
 	for(i = 0; i < handle->nr_threads; i++) {
@@ -273,11 +321,15 @@ int generate_histdb_start(genhistdb_handle_type *_handle,
 		}
 		return -1;
 	}
-	if(pthread_create(&handle->progress_thread, 0, progress_routine, handle)){
+	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+	if(pthread_create(&handle->progress_thread, &attr, progress_routine, handle)){
 		for(i = 0; i < handle->nr_threads; i++)
 		      pthread_join(handle->threads[i], &par);
 		return -1;
 	}
+	pthread_attr_destroy(&attr);
 
 	fclose(stderr);
 	stderr = fopen("/dev/null", "w");
@@ -285,36 +337,5 @@ int generate_histdb_start(genhistdb_handle_type *_handle,
 	handle->error = 0;
 	pthread_barrier_wait(&handle->barrier);
 	return 0;
-}
-
-int generate_histdb_finalize(genhistdb_handle_type _handle)
-{
-	int i;
-	void *par;
-	int rc = -1;
-	struct genhistdb_struct *handle = (struct genhistdb_struct *)_handle;
-	if(!handle)
-	      return -1;
-	for(i = 0; i < handle->nr_threads; i++) {
-		if(handle->error == 0)
-			pthread_join(handle->threads[i], &par);
-		list_purge(handle->per_thread_list[i]);
-	}
-	if(handle->error == 0)
-		pthread_join(handle->progress_thread, &par);
-	free(handle->per_thread_list);
-	free(handle->threads);
-	if(handle->error == 0) {
-	      if(write_histdb(handle->hist_list, handle->hist_len, handle->dbname)) {
-	      	printf("Writing %s failed\n", handle->dbname);
-	      } else {
-	      	rc = 0;
-	      }
-	}
-	free(handle->hist_list);
-	pthread_mutex_destroy(&handle->hist_list_lock);
-	pthread_barrier_destroy(&handle->barrier);
-	free(handle);
-	return rc;
 }
 

@@ -52,15 +52,13 @@ int write_histdb(hist_t *hist, unsigned int len, char *fname);
 
 typedef void *genhistdb_handle_type;
 
-typedef void (*genhistdb_notification_type)(int perc);
+typedef void (*genhistdb_notification_type)(void *priv, int perc);
 
 int generate_histdb_prepare(genhistdb_handle_type *handle, char *dirname, char *dbname, 
 			unsigned int nr_threads, generate_mode_t mode);
 
-int generate_histdb_start(genhistdb_handle_type *_handle, 
-			genhistdb_notification_type cb, int perc);
-
-int generate_histdb_finalize(genhistdb_handle_type _handle);
+int generate_histdb_start(genhistdb_handle_type _handle, 
+			genhistdb_notification_type cb, void *priv, int perc);
 
 #ifdef __cplusplus
 	}
