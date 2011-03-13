@@ -14,7 +14,8 @@
 
 #define NUM2BIN(val)    (unsigned int)(FLOOR_MIN(CEIL_MAX(val)) / BIN_WIDTH)
 
-#define HIST_MAGIC 0xdeadbeef
+#define HIST_MAGIC_START 0xdeadbeef
+#define HIST_MAGIC_END   0xbeefcafe
 
 typedef struct {
 	unsigned int hist_magic_start;	/* Always the first */
@@ -34,7 +35,7 @@ typedef struct {
 } hist_info_t;
 
 static hist_info_t current_config_info = {
-	HIST_MAGIC,
+	HIST_MAGIC_START,
 	0,
 	FNAME_LEN,
 	TITLE_LEN,
@@ -46,7 +47,7 @@ static hist_info_t current_config_info = {
 	SPECT_STEP_SIZE,
 	SPECT_MIN_VAL,
 	SPECT_MAX_VAL,
-	HIST_MAGIC
+	HIST_MAGIC_END
 };
 
 void int_strncpy(char *out, char *in, int len)
@@ -197,9 +198,9 @@ int read_hist_info(int fd, unsigned int *_len)
 	hist_info_t info;
 	if(read(fd, &info, sizeof(hist_info_t)) != sizeof(hist_info_t))
 		return -1;
-	if(info.hist_magic_start != HIST_MAGIC)
+	if(info.hist_magic_start != HIST_MAGIC_START)
 	      return -1;
-	if(info.hist_magic_end != HIST_MAGIC)
+	if(info.hist_magic_end != HIST_MAGIC_END)
 	      return -1;
 	if(info.fname_len != FNAME_LEN)
 	      return -1;
@@ -229,45 +230,52 @@ int read_hist_info(int fd, unsigned int *_len)
 
 int write_hist_info(int fd, unsigned int len)
 {
+	hist_info_t info;
+	memcpy(&info, &current_config_info, sizeof(hist_info_t));
+	info.len = len;
 	current_config_info.len = len;
-	if(write(fd, &current_config_info, sizeof(hist_info_t)) != sizeof(hist_info_t)) {
+	if(write(fd, &info, sizeof(hist_info_t)) != sizeof(hist_info_t)) {
 		return -1;
 	}
 	return 0;
 }
 
-int read_histdb(hist_t **hist, unsigned int *len, char *fname)
+int read_histdb(hist_t **hist, unsigned int *_len, char *fname)
 {
 	FILE *fp;
 	hist_t *this;
 	int i;
+	unsigned int len = 0;
 	if(hist == NULL || fname == NULL)
 		return -1;
+
+	*hist = NULL;
+	*_len = 0;
 
 	fp = fopen(fname, "r");
 	if(fp == NULL) {
 		return -1;
 	}
-	if(read_hist_info(fileno(fp), len))
+	if(read_hist_info(fileno(fp), &len))
 		goto bailout;
 
-	*hist = this = (hist_t *)calloc(*len, sizeof(hist_t));
-	if(*hist == NULL)
+	this = (hist_t *)calloc(len, sizeof(hist_t));
+	if(this == NULL)
 		goto bailout;
 
-	for(i = 0; i < *len; i++) {
+	for(i = 0; i < len; i++) {
 		if(read_hist(fileno(fp), &this[i])) {
 			printf("Read %d resulted in error!\n",i); fflush(stdout);
 			goto free_bailout;
 		}
 	}
+	*hist = this;
+	*_len = len;
 	fclose(fp);
 	return 0;
 free_bailout:
 	free(this);
 bailout:
-	*hist = NULL;
-	*len = 0;
 	fclose(fp);
 	return -1;
 }
@@ -317,6 +325,7 @@ int write_histdb(hist_t *hist, unsigned int len, char *fname)
 		      goto bailout;
 	}
 	rc = 0;
+	fflush(fp);
 bailout:
 	fclose(fp);
 	return rc;
