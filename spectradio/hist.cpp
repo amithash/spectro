@@ -43,6 +43,12 @@ void HistDB::LoadDB(const char *dbname)
 {
 	unsigned int old_len = hist_len;
 
+	valid = 0;
+	if(!dbname) {
+		std::cout << "Invalid (NULL) pointer passed as DB name" << std::endl;
+		return;
+	}
+
 	if(read_append_histdb(&hist_list, &hist_len, (char *)dbname)) {
 		std::cout << "Reading " << dbname << " failed" << std::endl;
 		return;
@@ -51,7 +57,6 @@ void HistDB::LoadDB(const char *dbname)
 	for(unsigned int i = old_len; i < hist_len; i++) {
 		list.push_back(0);
 	}
-	std::cout << "List size = " << list.size() << std::endl;
 	valid = 1;
 	return;
 }
@@ -166,7 +171,6 @@ int HistDB::get_next(int _ind)
 		}
 
 		if(ind_title.toLower().compare(i_title.toLower()) == 0 && ind_artist.toLower().compare(i_artist.toLower()) == 0) {
-			std::cout << "Skipping the same song in another album" << std::endl;
 			list[i] = 1;
 			continue;
 		}

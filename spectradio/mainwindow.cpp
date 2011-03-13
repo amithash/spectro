@@ -73,18 +73,18 @@
 #define ICON_ABOUT    QIcon::fromTheme("help-about")
 #define ICON_SETTINGS QIcon::fromTheme("preferences-system")
 #define ICON_LOAD     QIcon::fromTheme("document-open")
+#define ICON_HISTORY  QIcon::fromTheme("voicecall")
 #define ICON_PLAYLIST QIcon::fromTheme("view-media-playlist")
 #define ICON_TITLE    ICON_PLAY
 #define ICON_ALBUM    QIcon::fromTheme("media-optical")
 #define ICON_ARTIST   QIcon::fromTheme("view-media-artist")
 #define ICON_SEARCH   QIcon::fromTheme("system-search")
 
-
 const QString AboutMessage =
 "\
 Author: Amithash Prasad <amithash@gmail.com>	\n\
 						\n\
-spectradio is a personal auto-playlist which 	\n\
+spectradio is a personal auto-history which 	\n\
 automatically plays songs similar to each other.\n\
 Please refer to the README file which comes	\n\
 with the source for more information on creating\n\
@@ -104,6 +104,7 @@ MainWindow::MainWindow()
 	connect(mediaObject, SIGNAL(aboutToFinish()), this, SLOT(aboutToFinish()));
 
 	Phonon::createPath(mediaObject, audioOutput);
+	playlistCurrentRow = -1;
 
 	setupActions();
 	setupUi();
@@ -111,10 +112,62 @@ MainWindow::MainWindow()
 	setAcceptDrops(true);
 }
 
-
-void MainWindow::appendPlaylist(QString title, QString artist, QString album, int ind)
+void MainWindow::setPerc(int perc)
 {
-	QTableWidget *table = playlistTable;
+	if(perc == 0) {
+		QMetaObject::invokeMethod(progressBar, 
+				"show",
+				Qt::QueuedConnection);
+	} else if(perc < 100) {
+		QMetaObject::invokeMethod(progressBar, 
+				"setValue",
+				Qt::QueuedConnection, 
+				Q_ARG(int, perc));
+	
+	} else {
+		QMetaObject::invokeMethod(progressBar, 
+				"hide",
+				Qt::QueuedConnection);
+	}
+}
+
+void MainWindow::genhistdb_progress(void *priv, int perc)
+{
+	MainWindow *window = (MainWindow *)priv;
+	window->setPerc(perc);
+	if(perc == 100) {
+		window->genhistFinalize();
+	}
+}
+
+void MainWindow::genhistFinalize(void)
+{
+	loadDB(dbname.toAscii().data());
+}
+
+void MainWindow::genhistClicked(void)
+{
+	QFileDialog dialog(this);
+	genhistdb_handle_type genhist_handle;
+	QString dir = dialog.getExistingDirectory(this, tr("Select Music Directory"),
+				QDesktopServices::storageLocation(QDesktopServices::HomeLocation),
+				QFileDialog::ShowDirsOnly);
+	dbname = dir + "/db.hdb";
+	if(generate_histdb_prepare(&genhist_handle, 
+				dir.toAscii().data(),
+				dbname.toAscii().data(),
+				4, UPDATE_MODE)) {
+		std::cout << "Preparation failed!" << std::endl;
+		return;
+	}
+	if(generate_histdb_start(genhist_handle, 
+				MainWindow::genhistdb_progress, (void *)this, 1)) {
+		std::cout << "Start failed" << std::endl;
+	}
+}
+
+void MainWindow::appendTable(QTableWidget *table, QString title, QString artist, QString album, int ind)
+{
 	int currentRow = table->rowCount();
 	table->insertRow(currentRow);
 	QString s_num;
@@ -144,6 +197,15 @@ void MainWindow::appendPlaylist(QString title, QString artist, QString album, in
 	table->setColumnHidden(INDEX_COLUMN, true);
 }
 
+void MainWindow::appendHistory(QString title, QString artist, QString album, int ind)
+{
+	appendTable(historyTable, title, artist, album, ind);
+}
+
+void MainWindow::appendPlaylist(QString title, QString artist, QString album, int ind)
+{
+	appendTable(playlistTable, title, artist, album, ind);
+}
 
 QTreeWidgetItem *MainWindow::addEntry(QTreeWidget *tree, QString title, QString artist, QString album, int ind)
 {
@@ -205,19 +267,26 @@ QTreeWidgetItem *MainWindow::addEntry(QTreeWidget *tree, QString title, QString 
 
 }
 
-void MainWindow::playlistTableClicked(int row, int /* column */)
+void MainWindow::historyTableClicked(int row, int /* column */)
 {
-	int realRow = playlistTable->item(row, INDEX_COLUMN)->text().toInt();
+	int realRow = historyTable->item(row, INDEX_COLUMN)->text().toInt();
 	QTreeWidgetItem *item = treeItemList[realRow];
 	treeClicked(item, 0);
 }
 
+void MainWindow::playlistTableClicked(int row, int /* column */)
+{
+	playlistCurrentRow = row;
+	int realRow = playlistTable->item(row, INDEX_COLUMN)->text().toInt();
+	playSource(realRow);
+}
+
 void MainWindow::retry(void)
 {
-	int last = playlistTable->rowCount() - 2;
+	int last = historyTable->rowCount() - 2;
 	if(last < 0)
 	      return;
-	int playRow = playlistTable->item(last, INDEX_COLUMN)->text().toInt();
+	int playRow = historyTable->item(last, INDEX_COLUMN)->text().toInt();
 	if(playRow >= sources.size()) {
 		std::cerr << "playRow invalid: " << playRow << std::endl; 
 		return;
@@ -235,10 +304,10 @@ void MainWindow::retry(void)
 
 void MainWindow::next(void)
 {
-	int thisInd = playlistTable->rowCount() - 1;
+	int thisInd = historyTable->rowCount() - 1;
 	if(thisInd < 0)
 	      return;
-	int sourcesIndex = playlistTable->item(thisInd, INDEX_COLUMN)->text().toInt();
+	int sourcesIndex = historyTable->item(thisInd, INDEX_COLUMN)->text().toInt();
 	if(sourcesIndex >= sources.size()) {
 		std::cerr << "sourcesIndex invalid: " << sourcesIndex << std::endl;
 		return;
@@ -257,14 +326,24 @@ void MainWindow::next(void)
 	mediaObject->play();
 }
 
-void MainWindow::togglePlaylist()
+void MainWindow::toggleHistory()
 {
-	if(playlistVisible) {
-		playlistVisible = false;
+	if(playlistHistoryToggle) {
+		playlistHistoryToggle = false;
+		historyTable->show();
 		playlistTable->hide();
+		toggleHistoryAction->setIcon(ICON_PLAYLIST);
+		toggleHistoryAction->setToolTip("Set Player Mode (Alt+P)");
+		tableHeader->setText("Radio History");
+		tableHeader->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 	} else {
-		playlistVisible = true;
+		playlistHistoryToggle = true;
+		historyTable->hide();
 		playlistTable->show();
+		toggleHistoryAction->setIcon(ICON_HISTORY);
+		toggleHistoryAction->setToolTip("Set Radio Mode (Alt+P)");
+		tableHeader->setText("Playlist");
+		tableHeader->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 	}
 }
 
@@ -372,20 +451,6 @@ void MainWindow::settings()
 	dialogBox->show();
 }
 
-void MainWindow::loadDB()
-{
-	QFileDialog dialog(this);
-	dialog.setNameFilter("*.hdb");
-	dialog.setNameFilterDetailsVisible(true);
-
-	QStringList files = dialog.getOpenFileNames(this, tr("Select Hist DB File generated by spect2hist"),
-		QDesktopServices::storageLocation(QDesktopServices::HomeLocation));
-
-	foreach (QString string, files) {
-		loadDB(string.toAscii().data());
-	}
-}
-
 void MainWindow::loadDB(char *s_dbfile)
 {
 	QString dbfile(s_dbfile);
@@ -406,6 +471,7 @@ void MainWindow::loadDB(char *s_dbfile)
 
 	int at = htdb.length();
 
+
 	if(htdb.existsInDB(dbfile)) {
 		QString str(s_dbfile);
 		str.append(" Already loaded, so skipping it");
@@ -417,7 +483,7 @@ void MainWindow::loadDB(char *s_dbfile)
 
 	statusBar->showMessage("Loading DB...", 2000);
 	htdb.LoadDB(dbfile.toAscii().data());
-	statusBar->showMessage("Done loading DB", 2000);
+//	statusBar->showMessage("Done loading DB", 2000);
 
 	if(htdb.is_valid() != true) {
 		statusBar->showMessage("Error! Db not read!");
@@ -426,7 +492,7 @@ void MainWindow::loadDB(char *s_dbfile)
 
 	sources.reserve(htdb.length());
 	treeItemList.reserve(htdb.length());
-	browserTree->hide();
+//	browserTree->hide();
 	for(unsigned int i = at; i < htdb.length(); i++) {
 		QString string(htdb.name(i));
 		Phonon::MediaSource source(string);
@@ -446,7 +512,7 @@ void MainWindow::loadDB(char *s_dbfile)
 		treeItemList.append(item);
 	}
 	browserTree->sortItems(0, Qt::AscendingOrder);
-	browserTree->show();
+//	browserTree->show();
 }
 
 void MainWindow::about()
@@ -552,7 +618,19 @@ void MainWindow::treeClicked(QTreeWidgetItem *item, int /* column */)
 		return;
 	}
 	int sourcesIndex = item->text(1).toInt();
-	playSource(sourcesIndex);
+	if(playlistHistoryToggle == false)
+		playSource(sourcesIndex);
+	else {
+		appendPlaylist(item->text(0), item->parent()->parent()->text(0), 
+					item->parent()->text(0), sourcesIndex);
+		if(playlistCurrentRow == -1) {
+			playlistCurrentRow = 0;
+			playSource(sourcesIndex);
+			playlistTable->item(0, TITLE_COLUMN)->setSelected(true);
+
+		}
+	}
+
 }
 
 void MainWindow::sourceChanged(const Phonon::MediaSource &source)
@@ -564,7 +642,7 @@ void MainWindow::sourceChanged(const Phonon::MediaSource &source)
 	browserTree->setCurrentItem(titleItem);
 	titleItem->setSelected(true);
 	setTitle(titleItem->text(0), artistItem->text(0), albumItem->text(0));
-	appendPlaylist( titleItem->text(0),
+	appendHistory( titleItem->text(0),
 			artistItem->text(0),
 			albumItem->text(0),
 			sourcesIndex);
@@ -574,6 +652,18 @@ void MainWindow::sourceChanged(const Phonon::MediaSource &source)
 
 void MainWindow::aboutToFinish()
 {
+	if(playlistHistoryToggle) {
+		if(playlistTable->rowCount() - 1 == (int)playlistCurrentRow)
+		      return;
+		int realRow = playlistTable->item(++playlistCurrentRow, INDEX_COLUMN)->text().toInt();
+		if(sources.size() > realRow) {
+			playlistTable->item(playlistCurrentRow, TITLE_COLUMN)->setSelected(true);
+			if(playlistCurrentRow - 1 >= 0)
+				playlistTable->item(playlistCurrentRow - 1, TITLE_COLUMN)->setSelected(false);
+			mediaObject->enqueue(sources.at(realRow));
+		}
+		return;
+	}
 	int index = sources.indexOf(mediaObject->currentSource());
 	index = htdb.get_next(index);
 	if (sources.size() > index) {
@@ -641,9 +731,9 @@ void MainWindow::setupActions()
 	settingsAction->setToolTip("Choose the distance function for track prediction (Ctrl+D)");
 	settingsAction->setDisabled(false);
 
-	togglePlaylistAction = new QAction(ICON_PLAYLIST, tr("Toggle Playlist"), this);
-	togglePlaylistAction->setShortcut(tr("Alt+P"));
-	togglePlaylistAction->setToolTip("Toggle playlist (Alt+P)");
+	toggleHistoryAction = new QAction(ICON_PLAYLIST, tr("Toggle Radio/Player Mode"), this);
+	toggleHistoryAction->setShortcut(tr("Alt+P"));
+	toggleHistoryAction->setToolTip("Player Mode (Alt+P)");
 	settingsAction->setDisabled(false);
 
 	aboutAction = new QAction(ICON_ABOUT, tr("About"), this);
@@ -659,15 +749,14 @@ void MainWindow::setupActions()
 	connect(searchAlbumAction, SIGNAL(triggered()), this, SLOT(searchOptionAlbum()));
 	connect(searchTitleAction, SIGNAL(triggered()), this, SLOT(searchOptionTitle()));
 
-
+	connect(loadDBAction, SIGNAL(triggered()), this, SLOT(genhistClicked()));
 	connect(playAction, SIGNAL(triggered()), this, SLOT(togglePlay()));
 	connect(stopAction, SIGNAL(triggered()), mediaObject, SLOT(stop()));
-	connect(loadDBAction, SIGNAL(triggered()), this, SLOT(loadDB()));
 	connect(settingsAction, SIGNAL(triggered()), this, SLOT(settings()));
 	connect(aboutAction, SIGNAL(triggered()), this, SLOT(about()));
 	connect(retryAction, SIGNAL(triggered()), this, SLOT(retry()));
 	connect(nextAction, SIGNAL(triggered()), this, SLOT(next()));
-	connect(togglePlaylistAction, SIGNAL(triggered()), this, SLOT(togglePlaylist()));
+	connect(toggleHistoryAction, SIGNAL(triggered()), this, SLOT(toggleHistory()));
 }
 
 void MainWindow::setupUi()
@@ -705,6 +794,7 @@ void MainWindow::setupUi()
 
 	QToolBar *tbar2 = new QToolBar;
 	tbar2->addAction(settingsAction);	// settings
+	tbar2->addAction(toggleHistoryAction);  // toggle history
 	tbar2->addAction(aboutAction);		// about
 
 	QHBoxLayout *toolBar = new QHBoxLayout;	// the toolbar layout
@@ -712,7 +802,7 @@ void MainWindow::setupUi()
 	toolBar->addWidget(seekSlider);		// slider
 	toolBar->addWidget(volumeLabel);	// volume label
 	toolBar->addWidget(volumeSlider);	// volume slider
-	toolBar->addWidget(tbar2);		// toggle Playlist
+	toolBar->addWidget(tbar2);		// toggle History
 
 	// ------------- Browser Layout ------------------------
 	//
@@ -728,7 +818,6 @@ void MainWindow::setupUi()
 	searchOptionButton->setIcon(ICON_SEARCH);
 	searchBar->addWidget(searchOptionButton);
 	searchBar->addWidget(searchBox);
-	searchBar->addAction(togglePlaylistAction); // toggle playlist
 
 	QMenu *searchMenu = new QMenu(searchBar);
 	searchOptionButton->setMenu(searchMenu);
@@ -753,10 +842,22 @@ void MainWindow::setupUi()
 	connect(browserTree, SIGNAL(itemActivated(QTreeWidgetItem *, int)), this, SLOT(treeClicked(QTreeWidgetItem *, int)));
 
 
-	// +++++++++++++ Playlist Table +++++++++++++++++++
+	// +++++++++++++ History Table +++++++++++++++++++
 	QStringList headers;
 	headers << tr("Title") << tr("Artist") << tr("Album") << tr("Index");
 
+	historyTable = new QTableWidget(0, 4);
+	historyTable->setHorizontalHeaderLabels(headers);
+	historyTable->setSelectionMode(QAbstractItemView::SingleSelection);
+	historyTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+	historyTable->verticalHeader()->hide();
+	historyTable->setColumnHidden(3, true);
+	historyTable->horizontalHeader()->setResizeMode(QHeaderView::Stretch);
+	playlistHistoryToggle = false;
+	connect(historyTable, SIGNAL(cellPressed(int, int)), 
+		this, SLOT(historyTableClicked(int, int)));
+
+	// +++++++++++++ Playlist Table +++++++++++++++++++
 	playlistTable = new QTableWidget(0, 4);
 	playlistTable->setHorizontalHeaderLabels(headers);
 	playlistTable->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -764,22 +865,29 @@ void MainWindow::setupUi()
 	playlistTable->verticalHeader()->hide();
 	playlistTable->setColumnHidden(3, true);
 	playlistTable->horizontalHeader()->setResizeMode(QHeaderView::Stretch);
-	playlistVisible = true;
+	playlistTable->hide();
 	connect(playlistTable, SIGNAL(cellPressed(int, int)), 
 		this, SLOT(playlistTableClicked(int, int)));
 
+	
 	// +++++++++++ layout ++++++++++++++++++++++++++
 	QVBoxLayout *DBLayout = new QVBoxLayout;
 	DBLayout->addWidget(searchBar);
 	DBLayout->addWidget(searchTree);
 	DBLayout->addWidget(browserTree);
 
-	QVBoxLayout *PlaylistLayout = new QVBoxLayout;
-	PlaylistLayout->addWidget(playlistTable);
+	tableHeader = new QLabel;
+	tableHeader->setText("Radio History");
+	tableHeader->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+
+	QVBoxLayout *HistoryLayout = new QVBoxLayout;
+	HistoryLayout->addWidget(tableHeader);
+	HistoryLayout->addWidget(historyTable);
+	HistoryLayout->addWidget(playlistTable);
 
 	QHBoxLayout *SubMainLayout = new QHBoxLayout;
 	SubMainLayout->addLayout(DBLayout);
-	SubMainLayout->addLayout(PlaylistLayout);
+	SubMainLayout->addLayout(HistoryLayout);
 
 	// ------------ STATUS BAR ---------------
 	songLabel = new QLabel;
@@ -791,11 +899,16 @@ void MainWindow::setupUi()
 	timeLcd = new QLCDNumber;
 	timeLcd->setPalette(palette);
 
+	progressBar = new QProgressBar;
+	progressBar->setRange(0, 100);
+	progressBar->hide();
+
 	// status bar
 	statusBar = new QStatusBar;
 	statusBar->clearMessage();
 	statusBar->addPermanentWidget(songLabel);	// Song label
 	statusBar->addPermanentWidget(timeLcd);		// time LCD
+	statusBar->addPermanentWidget(progressBar);	// Gen Progress Bar
 
 	// ------------- Main layout ------------a
 	QVBoxLayout *mainLayout = new QVBoxLayout;

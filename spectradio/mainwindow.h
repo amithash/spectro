@@ -77,21 +77,24 @@ class MainWindow : public QMainWindow
          	return QSize(800, 600);
      	}
 	void loadDB(char *dbfile);
+	void setPerc(int perc);
+	void genhistFinalize(void);
+	static void genhistdb_progress(void *priv, int perc);
 
 	private slots:
-		void loadDB();
 		void settings();
 		void searchDB();
 		void about();
 		void retry();
 		void next();
 		void togglePlay();
-		void togglePlaylist();
+		void toggleHistory();
 		void stateChanged(Phonon::State newState, Phonon::State oldState);
 		void tick(qint64 time);
 		void sourceChanged(const Phonon::MediaSource &source);
 		void aboutToFinish();
 		void searchTreeClicked(QTreeWidgetItem *item, int column);
+		void historyTableClicked(int row, int column);
 		void playlistTableClicked(int row, int column);
 		void acceptSettings(QAbstractButton * button);
 		void searchOptionAll(void);
@@ -100,12 +103,15 @@ class MainWindow : public QMainWindow
 		void searchOptionTitle(void);
 		void treeClicked(QTreeWidgetItem *item, int column);
 		void playSource(int index);
+		void genhistClicked(void);
 
 	private:
 		void setupActions();
 		void setupUi();
 		QTreeWidgetItem *addEntry(QTreeWidget *tree, QString title, QString artist, QString album, int ind);
+		void appendHistory(QString title, QString artist, QString album, int ind);
 		void appendPlaylist(QString title, QString artist, QString album, int ind);
+		void appendTable(QTableWidget *table, QString title, QString artist, QString album, int ind);
 		void clearSearchWindow();
 		void setTitle(QString title, QString artist, QString album);
 		void closeSettings();
@@ -117,7 +123,8 @@ class MainWindow : public QMainWindow
 		QList<Phonon::MediaSource> sources;
 		QList<QTreeWidgetItem *> treeItemList;
 		int stop;
-		bool playlistVisible;
+		bool playlistHistoryToggle; /* True playlist, false history */
+		int playlistCurrentRow;
 		enum SearchOption currentSearchOption;
 		HistDB htdb;
 		bool radioMode;
@@ -129,14 +136,16 @@ class MainWindow : public QMainWindow
 		QAction *settingsAction;
 		QAction *aboutAction;
 		QAction *retryAction;
-		QAction *togglePlaylistAction;
+		QAction *toggleHistoryAction;
 		QAction *searchAllAction;
 		QAction *searchArtistAction;
 		QAction *searchAlbumAction;
 		QAction *searchTitleAction;
 
+		QString dbname;
 		QLCDNumber *timeLcd;
 		QTreeWidget *searchTree;	// Last column is an index to entry in sources
+		QTableWidget *historyTable;	// Last column is an index to entry in sources
 		QTableWidget *playlistTable;	// Last column is an index to entry in sources
 		QLineEdit *searchBox;
 		QStatusBar *statusBar;
@@ -144,6 +153,8 @@ class MainWindow : public QMainWindow
 		QToolButton *searchOptionButton;
 		QLabel *songLabel;
 		QTreeWidget *browserTree;
+		QProgressBar *progressBar;
+		QLabel *tableHeader;
 	protected:
 		void dropEvent(QDropEvent *event);
 		void dragEnterEvent(QDragEnterEvent *event);
