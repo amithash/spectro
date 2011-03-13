@@ -50,8 +50,17 @@ int read_histdb(hist_t **hist, unsigned int *len, char *fname);
 int read_append_histdb(hist_t **hist, unsigned int *len, char *fname);
 int write_histdb(hist_t *hist, unsigned int len, char *fname);
 
-int generate_histdb(char *dirname, char *dbname, 
-		unsigned int nr_threads, generate_mode_t mode);
+typedef void *genhistdb_handle_type;
+
+typedef void (*genhistdb_notification_type)(int perc);
+
+int generate_histdb_prepare(genhistdb_handle_type *handle, char *dirname, char *dbname, 
+			unsigned int nr_threads, generate_mode_t mode);
+
+int generate_histdb_start(genhistdb_handle_type *_handle, 
+			genhistdb_notification_type cb, int perc);
+
+int generate_histdb_finalize(genhistdb_handle_type _handle);
 
 #ifdef __cplusplus
 	}

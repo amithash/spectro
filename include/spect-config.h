@@ -78,47 +78,24 @@
 #define END(fmt)
 #endif
 
-#define progress2(done,outof)					\
-do {								\
-	int ____i;						\
-	int ____perc = (done * 50) / (outof);			\
-	printf("[");						\
-	for(____i = 0; ____i < ____perc; ____i++) {		\
-		printf("#");					\
-	}							\
-	for(____i = ____perc; ____i < 50; ____i++) {		\
-		printf("-");					\
-	}							\
-	printf("] [%d/%d] Done",done, outof);			\
-	if(____perc == 50) {					\
-		printf("\n");					\
-	} else {						\
-		printf("\r");					\
-	}							\
-	fflush(stdout);						\
-} while(0)
-
 #define progress(perc)						\
 do {								\
 	int ____i;						\
-	int ____perc = ((int)perc)/2;				\
+	int ____perc = perc;					\
 	printf("[");						\
 	for(____i = 0; ____i < ____perc; ____i++) {		\
 		printf("#");					\
 	}							\
-	for(____i = ____perc; ____i < 50; ____i++) {		\
+	for(____i = ____perc; ____i < 100; ____i++) {		\
 		printf("-");					\
 	}							\
-	printf("] %.2f%% Done",(float)perc * 1.0);		\
-	if(____perc == 50) {					\
+	printf("] %d%% Done", perc);				\
+	if(____perc == 100) {					\
 		printf("\n");					\
 	} else {						\
 		printf("\r");					\
 	}							\
 	fflush(stdout);						\
 } while(0)
-
-
-
 
 #endif

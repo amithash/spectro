@@ -93,13 +93,13 @@ static int set_tags(hist_t *hist)
 #define print(fmt, a...) printf(fmt,##a); fflush(stdout)
 hist_t *gen_hist(char *fname)
 {
-	hist_t *hist;
+	hist_t *hist = NULL;
 	spectgen_handle spect_handle;
 	float *spect;
 	unsigned int num_samples = 0;
 	int i,j;
 	
-	hist = malloc(sizeof(hist_t));
+	hist = (hist_t *)calloc(1, sizeof(hist_t));
 	if(!hist)
 	      return NULL;
 
@@ -114,6 +114,7 @@ hist_t *gen_hist(char *fname)
 		hist = NULL;
 		goto bailout;
 	}
+
 	strncpy(hist->fname, fname, FNAME_LEN);
 	hist->fname[FNAME_LEN - 1] = '\0';
 	for(i = 0; i < NBANDS; i++) {

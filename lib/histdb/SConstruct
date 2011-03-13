@@ -15,7 +15,8 @@ HISTDB_SOURCES = [
 	"genhistdb.c",
 	"hist.c",
 	"hist_dist.c",
-	"list.c"
+	"list.c",
+	"hash.c"
 ]
 
 install_libs += env.SharedLibrary('histdb', HISTDB_SOURCES)
