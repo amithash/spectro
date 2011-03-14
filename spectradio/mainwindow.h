@@ -76,9 +76,9 @@ class MainWindow : public QMainWindow
 	QSize sizeHint() const {
          	return QSize(800, 600);
      	}
-	void loadDB(char *dbfile);
+	void loadDB(QString dbfile);
 	void setPerc(int perc);
-	void genhistFinalize(void);
+	void genhistFinalize();
 	static void genhistdb_progress(void *priv, int perc);
 
 	private slots:

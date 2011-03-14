@@ -80,6 +80,14 @@
 #define ICON_ARTIST   QIcon::fromTheme("view-media-artist")
 #define ICON_SEARCH   QIcon::fromTheme("system-search")
 
+// Do an indirect call to status bar... This is required when any
+// element is called for from a pthread (outside lib callbacks)
+#define PRINT_STATUS(msg, dur) QMetaObject::invokeMethod(progressBar, 	\
+				"showMessage",				\
+				Qt::QueuedConnection, 			\
+				Q_ARG(QString, msg),			\
+				Q_ARG(int, dur))
+
 const QString AboutMessage =
 "\
 Author: Amithash Prasad <amithash@gmail.com>	\n\
@@ -128,6 +136,7 @@ void MainWindow::setPerc(int perc)
 		QMetaObject::invokeMethod(progressBar, 
 				"hide",
 				Qt::QueuedConnection);
+		loadDB(dbname.toAscii().data());
 	}
 }
 
@@ -135,12 +144,9 @@ void MainWindow::genhistdb_progress(void *priv, int perc)
 {
 	MainWindow *window = (MainWindow *)priv;
 	window->setPerc(perc);
-	if(perc == 100) {
-		window->genhistFinalize();
-	}
 }
 
-void MainWindow::genhistFinalize(void)
+void MainWindow::genhistFinalize()
 {
 	loadDB(dbname.toAscii().data());
 }
@@ -150,7 +156,7 @@ void MainWindow::genhistClicked(void)
 	QFileDialog dialog(this);
 	genhistdb_handle_type genhist_handle;
 	QString dir = dialog.getExistingDirectory(this, tr("Select Music Directory"),
-				QDesktopServices::storageLocation(QDesktopServices::HomeLocation),
+				QDesktopServices::storageLocation(QDesktopServices::MusicLocation),
 				QFileDialog::ShowDirsOnly);
 	dbname = dir + "/db.hdb";
 	if(generate_histdb_prepare(&genhist_handle, 
@@ -451,20 +457,19 @@ void MainWindow::settings()
 	dialogBox->show();
 }
 
-void MainWindow::loadDB(char *s_dbfile)
+void MainWindow::loadDB(QString dbfile)
 {
-	QString dbfile(s_dbfile);
 	QString message;
 
 	if(!dbfile.endsWith(".hdb")) {
 		message =  "Ignoring " + dbfile + ": Not a hdb file";
-		statusBar->showMessage(message,4000);
+		PRINT_STATUS(message, 4000);
 		std::cerr << message.toAscii().data() << std::endl;
 		return;
 	}
 	if(!QFile::exists(dbfile)) {
 		message = "File " + dbfile + ": does not exist";
-		statusBar->showMessage(message, 4000);
+		PRINT_STATUS(message, 4000);
 		std::cerr << message.toAscii().data() << std::endl;
 		return;
 	}
@@ -473,26 +478,24 @@ void MainWindow::loadDB(char *s_dbfile)
 
 
 	if(htdb.existsInDB(dbfile)) {
-		QString str(s_dbfile);
+		QString str(dbfile);
 		str.append(" Already loaded, so skipping it");
-		statusBar->showMessage(str, 2000);
+		PRINT_STATUS(str, 2000);
 		std::cerr << str.toAscii().data() << std::endl;
 		return;
 	}
 	htdb.addToDB(dbfile);
 
-	statusBar->showMessage("Loading DB...", 2000);
 	htdb.LoadDB(dbfile.toAscii().data());
-//	statusBar->showMessage("Done loading DB", 2000);
+	PRINT_STATUS("Done loading DB", 2000);
 
 	if(htdb.is_valid() != true) {
-		statusBar->showMessage("Error! Db not read!");
+		PRINT_STATUS("Error! DB Not read!", 4000);
 		exit(-1);
 	}
 
 	sources.reserve(htdb.length());
 	treeItemList.reserve(htdb.length());
-//	browserTree->hide();
 	for(unsigned int i = at; i < htdb.length(); i++) {
 		QString string(htdb.name(i));
 		Phonon::MediaSource source(string);
@@ -512,7 +515,6 @@ void MainWindow::loadDB(char *s_dbfile)
 		treeItemList.append(item);
 	}
 	browserTree->sortItems(0, Qt::AscendingOrder);
-//	browserTree->show();
 }
 
 void MainWindow::about()
@@ -626,7 +628,7 @@ void MainWindow::treeClicked(QTreeWidgetItem *item, int /* column */)
 		if(playlistCurrentRow == -1) {
 			playlistCurrentRow = 0;
 			playSource(sourcesIndex);
-			playlistTable->item(0, TITLE_COLUMN)->setSelected(true);
+			playlistTable->setCurrentItem(playlistTable->item(0, TITLE_COLUMN));
 
 		}
 	}
@@ -658,8 +660,8 @@ void MainWindow::aboutToFinish()
 		int realRow = playlistTable->item(++playlistCurrentRow, INDEX_COLUMN)->text().toInt();
 		if(sources.size() > realRow) {
 			playlistTable->item(playlistCurrentRow, TITLE_COLUMN)->setSelected(true);
-			if(playlistCurrentRow - 1 >= 0)
-				playlistTable->item(playlistCurrentRow - 1, TITLE_COLUMN)->setSelected(false);
+			playlistTable->setCurrentItem(
+						playlistTable->item(playlistCurrentRow,TITLE_COLUMN));
 			mediaObject->enqueue(sources.at(realRow));
 		}
 		return;
