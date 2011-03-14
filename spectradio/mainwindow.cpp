@@ -157,7 +157,10 @@ void MainWindow::genhistClicked(void)
 	genhistdb_handle_type genhist_handle;
 	QString dir = dialog.getExistingDirectory(this, tr("Select Music Directory"),
 				QDesktopServices::storageLocation(QDesktopServices::MusicLocation),
-				QFileDialog::ShowDirsOnly);
+				QFileDialog::ShowDirsOnly | QFileDialog::ReadOnly);
+	if(dir.isEmpty()) {
+		return;
+	}
 	dbname = dir + "/db.hdb";
 	if(generate_histdb_prepare(&genhist_handle, 
 				dir.toAscii().data(),
