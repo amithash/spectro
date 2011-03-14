@@ -88,11 +88,24 @@ is pipelined and hence is already parallelized.
 
 1. Start up spectradio,
 2. Load DB (the Open icon)
-3. Browse and select your .hdb file.
-4. This will take some time to load the db. 
-5. From here on, you can select a song you want to listen to, then spectradio
+3. Browse and select your Music Directory
+
+If you have already done this before, or used genhistdb to generate
+/path/to/Music/db.hdb, your collection will show up instantly. 
+
+Else, a DB file will be generated for you. This will take quite a while
+depending on the size of your music collection. Just so that you can 
+have a ballpark, it takes a bit more than 4 hours for a collection
+of 8000 music files. 
+
+4. From here on, you can select a song you want to listen to, then spectradio
    will pick songs similar to that on. (Like pandora, with your own collection).
    You can also search for a specific string in title, aritst or album.
+
+There is a button to switch to player mode which will make spectradio 
+to work like a normal music player. I dont know why you would use this,
+there are _much_ better music players out there. In other words, use 
+Amarok. 
 
 You can also start spectradio from the command line with the path of the hist
 db file:
