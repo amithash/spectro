@@ -67,6 +67,7 @@
 
 #define ICON_PAUSE    QIcon::fromTheme("media-playback-pause")
 #define ICON_PLAY     QIcon::fromTheme("media-playback-start")
+#define ICON_SKIP     QIcon::fromTheme("media-skip-forward")
 #define ICON_STOP     QIcon::fromTheme("media-playback-stop")
 #define ICON_NEXT     QIcon::fromTheme("go-next")
 #define ICON_RETRY    QIcon::fromTheme("edit-redo")
@@ -313,6 +314,21 @@ void MainWindow::retry(void)
 
 void MainWindow::next(void)
 {
+	if(playlistHistoryToggle) {
+		mediaObject->stop();
+		if(playlistTable->rowCount() - 1 == (int)playlistCurrentRow)
+		      return;
+		int realRow = playlistTable->item(++playlistCurrentRow, INDEX_COLUMN)->text().toInt();
+		if(sources.size() > realRow) {
+			playlistTable->item(playlistCurrentRow, TITLE_COLUMN)->setSelected(true);
+			playlistTable->setCurrentItem(
+						playlistTable->item(playlistCurrentRow,TITLE_COLUMN));
+			mediaObject->clearQueue();
+			mediaObject->setCurrentSource(sources.at(realRow));
+			mediaObject->play();
+		}
+		return;
+	}
 	int thisInd = historyTable->rowCount() - 1;
 	if(thisInd < 0)
 	      return;
@@ -345,6 +361,9 @@ void MainWindow::toggleHistory()
 		toggleHistoryAction->setToolTip("Set Player Mode (Alt+P)");
 		tableHeader->setText("Radio History");
 		tableHeader->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+		nextAction->setIcon(ICON_NEXT);
+		retryAction->setEnabled(true);
+
 	} else {
 		playlistHistoryToggle = true;
 		historyTable->hide();
@@ -353,6 +372,8 @@ void MainWindow::toggleHistory()
 		toggleHistoryAction->setToolTip("Set Radio Mode (Alt+P)");
 		tableHeader->setText("Playlist");
 		tableHeader->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+		nextAction->setIcon(ICON_SKIP);
+		retryAction->setEnabled(false);
 	}
 }
 
