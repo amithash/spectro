@@ -31,6 +31,7 @@ struct genhistdb_struct {
 
 	int completed;
 	int to_complete;
+	int updated;
 
 	pthread_t *threads;
 	Node **per_thread_list;
@@ -140,6 +141,7 @@ static void *process_thread(void *par)
 		if(!hist) {
 			printf("Hist generation for %s failed\n", node->name);
 		} else {
+			handle->updated++;
 			memcpy(&handle->hist_list[handle->hist_len], hist, sizeof(hist_t));
 			free(hist);
 			handle->hist_len++;
@@ -166,15 +168,20 @@ static int generate_histdb_finalize(genhistdb_handle_type _handle)
 	}
 	free(handle->per_thread_list);
 	free(handle->threads);
+	rc = 0;
 	if(handle->error == 0) {
-	      if(write_histdb(handle->hist_list, handle->hist_len, handle->dbname)) {
-	      } else {
-	      	rc = 0;
-	      }
+		if(handle->updated > 0) {
+			if(write_histdb(handle->hist_list, handle->hist_len, handle->dbname)) {
+				printf("Writing histdb failed\n");
+				rc = -1;
+			}
+		} 
 	} else {
 		printf("There was an error. Not commiting to %s\n", handle->dbname);
+		rc = -1;
 	}
-	free(handle->hist_list);
+	if(handle->hist_list)
+		free(handle->hist_list);
 	pthread_mutex_destroy(&handle->hist_list_lock);
 	pthread_barrier_destroy(&handle->barrier);
 	free(handle);
@@ -244,6 +251,7 @@ int generate_histdb_prepare(genhistdb_handle_type *_handle, char *dirname, char 
 
 	handle->hist_list = NULL;
 	handle->hist_len = 0;
+
 	if(mode == UPDATE_MODE) {
 		if(read_histdb(&handle->hist_list, &handle->hist_len, dbname)) {
 			compute = head;
@@ -253,15 +261,17 @@ int generate_histdb_prepare(genhistdb_handle_type *_handle, char *dirname, char 
 	} else {
 		compute = get_compute(head, handle->hist_list, handle->hist_len);
 	}
-	compute_len = list_len(compute);
-	handle->hist_list = realloc(handle->hist_list, sizeof(hist_t) * (handle->hist_len + compute_len));
-	if(compute_len <= handle->nr_threads)
-	      handle->nr_threads = 1;
 
+	compute_len = list_len(compute);
+	if(compute_len > 0)
+		handle->hist_list = realloc(handle->hist_list, sizeof(hist_t) * (handle->hist_len + compute_len));
 	if(!handle->hist_list) {
 		free(handle);
 		goto realloc_failed;
 	}
+
+	if(compute_len <= handle->nr_threads)
+	      handle->nr_threads = 1;
 
 	handle->threads = (pthread_t *)calloc(handle->nr_threads, sizeof(pthread_t));
 	if(!handle->threads)
@@ -272,6 +282,7 @@ int generate_histdb_prepare(genhistdb_handle_type *_handle, char *dirname, char 
 		goto list_creation_failed;
 
 	handle->completed = 0;
+	handle->updated = 0;
 	handle->to_complete = compute_len;
 	list_split(handle->per_thread_list, handle->nr_threads, compute);
 
