@@ -83,6 +83,7 @@ struct spectgen_struct {
 	unsigned int   window_size;
 	unsigned int   step_size;
 	unsigned int   numfreqs;
+	unsigned int   average_frate;
 };
 void *spectgen_thread(void *_handle);
 
@@ -293,7 +294,7 @@ void *spectgen_thread(void *_handle)
 	if(!handle)
 	      goto bailout;
 
-
+	
 	while(1) {
 		decode_len = 0;
 		decoder_data_pull(handle->d_handle, &decode_buffer, &decode_len, &frate);
@@ -305,6 +306,7 @@ void *spectgen_thread(void *_handle)
 		if(!handle->barkband_table_inited || old_frate != frate) {
 			old_frate = frate;
 			setup_barkband_table(handle, frate);
+			handle->average_frate = frate;
 		}
 
 		buf = decode_buffer;
@@ -338,6 +340,14 @@ bailout:
 failed_in_loop:
 	q_put(&handle->queue, NULL);
 	pthread_exit(NULL);
+}
+
+unsigned int spectgen_frate(spectgen_handle _handle)
+{
+	struct spectgen_struct *handle = (struct spectgen_struct *)_handle;
+	if(!handle)
+	      return 0;
+	return handle->average_frate;
 }
 
 float *spectgen_pull(spectgen_handle _handle)
