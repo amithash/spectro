@@ -60,7 +60,7 @@ env.Append(LIBS = [
 moc_out = env.GenMoc('moc_mainwindow.cpp', 'mainwindow.h')
 
 SOURCES = [
-	'mainwindow.cpp',
+	'spectradio.cpp',
 	'main.cpp',
 	'hist.cpp',
 ]
