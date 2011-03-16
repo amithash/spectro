@@ -57,7 +57,7 @@ env.Append(LIBS = [
 	"histdb"
 ])
 
-moc_out = env.GenMoc('moc_mainwindow.cpp', 'mainwindow.h')
+moc_out = env.GenMoc('moc_spectradio.cpp', 'spectradio.h')
 
 SOURCES = [
 	'spectradio.cpp',

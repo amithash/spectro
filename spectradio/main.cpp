@@ -39,7 +39,7 @@
 ****************************************************************************/
 #include <QtGui>
 
-#include "mainwindow.h"
+#include "spectradio.h"
 #include "hist.h"
 #include <iostream>
 
@@ -48,7 +48,7 @@ int main(int argv, char **args)
 	QApplication app(argv, args);
 	app.setApplicationName("Spectradio");
 	app.setQuitOnLastWindowClosed(true);
-	MainWindow window;
+	SpectRadio window;
 	window.show();
 	for(int i = 1; i < argv; i++) {
 		window.loadDB(args[i]);

@@ -66,12 +66,12 @@ enum SearchOption
 	SEARCH_ALL = 7,
 };
 
-class MainWindow : public QMainWindow
+class SpectRadio : public QMainWindow
 {
 	Q_OBJECT
 
 	public:
-	MainWindow();
+	SpectRadio();
 
 	QSize sizeHint() const {
          	return QSize(800, 600);

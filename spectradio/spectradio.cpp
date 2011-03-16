@@ -41,7 +41,7 @@
  ***************************************************************************/
 #include <iostream>
 
-#include "mainwindow.h"
+#include "spectradio.h"
 
 #define TITLE_COLOR QBrush(QColor(QRgb(qRgb(0xb2, 0xdb, 0xf7))))
 #define ARTIST_COLOR QBrush(QColor(QRgb(qRgb(0xb2, 0xdb, 0xf7))))
@@ -100,7 +100,7 @@ with the source for more information on creating\n\
 the hist DB file.				\n\
 ";
 
-MainWindow::MainWindow()
+SpectRadio::SpectRadio()
 {
 	audioOutput = new Phonon::AudioOutput(Phonon::MusicCategory, this);
 	mediaObject = new Phonon::MediaObject(this);
@@ -121,7 +121,7 @@ MainWindow::MainWindow()
 	setAcceptDrops(true);
 }
 
-void MainWindow::setPerc(int perc)
+void SpectRadio::setPerc(int perc)
 {
 	if(perc == 0) {
 		QMetaObject::invokeMethod(progressBar, 
@@ -141,18 +141,18 @@ void MainWindow::setPerc(int perc)
 	}
 }
 
-void MainWindow::genhistdb_progress(void *priv, int perc)
+void SpectRadio::genhistdb_progress(void *priv, int perc)
 {
-	MainWindow *window = (MainWindow *)priv;
+	SpectRadio *window = (SpectRadio *)priv;
 	window->setPerc(perc);
 }
 
-void MainWindow::genhistFinalize()
+void SpectRadio::genhistFinalize()
 {
 	loadDB(dbname.toAscii().data());
 }
 
-void MainWindow::genhistClicked(void)
+void SpectRadio::genhistClicked(void)
 {
 	QFileDialog dialog(this);
 	genhistdb_handle_type genhist_handle;
@@ -171,12 +171,12 @@ void MainWindow::genhistClicked(void)
 		return;
 	}
 	if(generate_histdb_start(genhist_handle, 
-				MainWindow::genhistdb_progress, (void *)this, 1)) {
+				SpectRadio::genhistdb_progress, (void *)this, 1)) {
 		std::cout << "Start failed" << std::endl;
 	}
 }
 
-void MainWindow::appendTable(QTableWidget *table, QString title, QString artist, QString album, int ind)
+void SpectRadio::appendTable(QTableWidget *table, QString title, QString artist, QString album, int ind)
 {
 	int currentRow = table->rowCount();
 	table->insertRow(currentRow);
@@ -207,17 +207,17 @@ void MainWindow::appendTable(QTableWidget *table, QString title, QString artist,
 	table->setColumnHidden(INDEX_COLUMN, true);
 }
 
-void MainWindow::appendHistory(QString title, QString artist, QString album, int ind)
+void SpectRadio::appendHistory(QString title, QString artist, QString album, int ind)
 {
 	appendTable(historyTable, title, artist, album, ind);
 }
 
-void MainWindow::appendPlaylist(QString title, QString artist, QString album, int ind)
+void SpectRadio::appendPlaylist(QString title, QString artist, QString album, int ind)
 {
 	appendTable(playlistTable, title, artist, album, ind);
 }
 
-QTreeWidgetItem *MainWindow::addEntry(QTreeWidget *tree, QString title, QString artist, QString album, int ind)
+QTreeWidgetItem *SpectRadio::addEntry(QTreeWidget *tree, QString title, QString artist, QString album, int ind)
 {
 	int artistCount = tree->topLevelItemCount();
 	QTreeWidgetItem *artistItem = NULL;
@@ -277,21 +277,21 @@ QTreeWidgetItem *MainWindow::addEntry(QTreeWidget *tree, QString title, QString 
 
 }
 
-void MainWindow::historyTableClicked(int row, int /* column */)
+void SpectRadio::historyTableClicked(int row, int /* column */)
 {
 	int realRow = historyTable->item(row, INDEX_COLUMN)->text().toInt();
 	QTreeWidgetItem *item = treeItemList[realRow];
 	treeClicked(item, 0);
 }
 
-void MainWindow::playlistTableClicked(int row, int /* column */)
+void SpectRadio::playlistTableClicked(int row, int /* column */)
 {
 	playlistCurrentRow = row;
 	int realRow = playlistTable->item(row, INDEX_COLUMN)->text().toInt();
 	playSource(realRow);
 }
 
-void MainWindow::retry(void)
+void SpectRadio::retry(void)
 {
 	int last = historyTable->rowCount() - 2;
 	if(last < 0)
@@ -312,7 +312,7 @@ void MainWindow::retry(void)
 	mediaObject->play();
 }
 
-void MainWindow::next(void)
+void SpectRadio::next(void)
 {
 	if(playlistHistoryToggle) {
 		mediaObject->stop();
@@ -351,7 +351,7 @@ void MainWindow::next(void)
 	mediaObject->play();
 }
 
-void MainWindow::toggleHistory()
+void SpectRadio::toggleHistory()
 {
 	if(playlistHistoryToggle) {
 		playlistHistoryToggle = false;
@@ -377,7 +377,7 @@ void MainWindow::toggleHistory()
 	}
 }
 
-void MainWindow::togglePlay()
+void SpectRadio::togglePlay()
 {
   switch(mediaObject->state())
   {
@@ -395,12 +395,12 @@ void MainWindow::togglePlay()
   }
 }
 
-void MainWindow::clearSearchWindow()
+void SpectRadio::clearSearchWindow()
 {
 	searchTree->clear();
 }
 
-void MainWindow::searchDB()
+void SpectRadio::searchDB()
 {
 	QString search = searchBox->text().toLower();
 	clearSearchWindow();
@@ -438,50 +438,50 @@ void MainWindow::searchDB()
 	searchTree->show();
 }
 
-void MainWindow::searchOptionAll(void)
+void SpectRadio::searchOptionAll(void)
 {
 	searchOptionButton->setText("All");
 	currentSearchOption = SEARCH_ALL;
 	searchDB();
 }
-void MainWindow::searchOptionArtist(void)
+void SpectRadio::searchOptionArtist(void)
 {
 	searchOptionButton->setText("Artist");
 	currentSearchOption = SEARCH_ARTIST;
 	searchDB();
 }
-void MainWindow::searchOptionAlbum(void)
+void SpectRadio::searchOptionAlbum(void)
 {
 	searchOptionButton->setText("Album");
 	currentSearchOption = SEARCH_ALBUM;
 	searchDB();
 }
-void MainWindow::searchOptionTitle(void)
+void SpectRadio::searchOptionTitle(void)
 {
 	searchOptionButton->setText("Title");
 	currentSearchOption = SEARCH_TITLE;
 	searchDB();
 }
 
-void MainWindow::acceptSettings(QAbstractButton * button)
+void SpectRadio::acceptSettings(QAbstractButton * button)
 {
 	if(button->text().compare("Cancel") != 0) {
 		htdb.setDistanceFunction(button->text());
 	}
 	closeSettings();
 }
-void MainWindow::closeSettings()
+void SpectRadio::closeSettings()
 {
 	dialogBox->hide();
 }
 
 
-void MainWindow::settings()
+void SpectRadio::settings()
 {
 	dialogBox->show();
 }
 
-void MainWindow::loadDB(QString dbfile)
+void SpectRadio::loadDB(QString dbfile)
 {
 	QString message;
 
@@ -541,24 +541,24 @@ void MainWindow::loadDB(QString dbfile)
 	browserTree->sortItems(0, Qt::AscendingOrder);
 }
 
-void MainWindow::about()
+void SpectRadio::about()
 {
 	QMessageBox::information(this, tr("Spectradio"), AboutMessage);
 }
 
-void MainWindow::dropEvent(QDropEvent *event)
+void SpectRadio::dropEvent(QDropEvent *event)
 {
 	event->acceptProposedAction();
 	QString file = event->mimeData()->text();
 	file.replace("file://","");
 	loadDB(file.toAscii().data());
 }
-void MainWindow::dragEnterEvent(QDragEnterEvent *event)
+void SpectRadio::dragEnterEvent(QDragEnterEvent *event)
 {
 	event->acceptProposedAction();
 }
 
-void MainWindow::stateChanged(Phonon::State newState, Phonon::State /* oldState */)
+void SpectRadio::stateChanged(Phonon::State newState, Phonon::State /* oldState */)
 {
 	switch (newState) {
 		case Phonon::ErrorState:
@@ -604,13 +604,13 @@ void MainWindow::stateChanged(Phonon::State newState, Phonon::State /* oldState 
 	}
 }
 
-void MainWindow::tick(qint64 time)
+void SpectRadio::tick(qint64 time)
 {
 	QTime displayTime(0, (time / 60000) % 60, (time / 1000) % 60);
 	timeLcd->display(displayTime.toString("mm:ss"));
 }
 
-void MainWindow::searchTreeClicked(QTreeWidgetItem *item, int /* column */)
+void SpectRadio::searchTreeClicked(QTreeWidgetItem *item, int /* column */)
 {
 	/* Start playing */
 	if(item->childCount() > 0) {
@@ -625,7 +625,7 @@ void MainWindow::searchTreeClicked(QTreeWidgetItem *item, int /* column */)
 	treeClicked(browserItem, 0);
 }
 
-void MainWindow::playSource(int sourceIndex)
+void SpectRadio::playSource(int sourceIndex)
 {
 	mediaObject->stop();
 	mediaObject->clearQueue();
@@ -637,7 +637,7 @@ void MainWindow::playSource(int sourceIndex)
 	mediaObject->play();
 }
 
-void MainWindow::treeClicked(QTreeWidgetItem *item, int /* column */)
+void SpectRadio::treeClicked(QTreeWidgetItem *item, int /* column */)
 {
 	if(item->childCount() > 0) {
 		item->setExpanded(!item->isExpanded());
@@ -659,7 +659,7 @@ void MainWindow::treeClicked(QTreeWidgetItem *item, int /* column */)
 
 }
 
-void MainWindow::sourceChanged(const Phonon::MediaSource &source)
+void SpectRadio::sourceChanged(const Phonon::MediaSource &source)
 {
 	int sourcesIndex = sources.indexOf(source);
 	QTreeWidgetItem *titleItem = treeItemList[sourcesIndex];
@@ -676,7 +676,7 @@ void MainWindow::sourceChanged(const Phonon::MediaSource &source)
 	timeLcd->display("00:00");
 }
 
-void MainWindow::aboutToFinish()
+void SpectRadio::aboutToFinish()
 {
 	if(playlistHistoryToggle) {
 		if(playlistTable->rowCount() - 1 == (int)playlistCurrentRow)
@@ -697,7 +697,7 @@ void MainWindow::aboutToFinish()
 	}
 }
 
-void MainWindow::setTitle(QString title, QString artist, QString album)
+void SpectRadio::setTitle(QString title, QString artist, QString album)
 {
 	QString windowTitle;
 	QString message;
@@ -725,7 +725,7 @@ void MainWindow::setTitle(QString title, QString artist, QString album)
 	songLabel->setText(message);
 }
 
-void MainWindow::setupActions()
+void SpectRadio::setupActions()
 {
 	playAction = new QAction(ICON_PLAY, tr("Play/Pause"), this);
 	playAction->setShortcut(tr("space"));
@@ -785,7 +785,7 @@ void MainWindow::setupActions()
 	connect(toggleHistoryAction, SIGNAL(triggered()), this, SLOT(toggleHistory()));
 }
 
-void MainWindow::setupUi()
+void SpectRadio::setupUi()
 {
 	// ----------- Hidden artifacts ---------------
 	dialogBox = new QDialogButtonBox();
