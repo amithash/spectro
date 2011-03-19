@@ -297,6 +297,13 @@ are native to the current CPU. Essentially the compilation is to generate
 the least portable and most performant binaries.
 
 ===============================================================================
+			    Experimentation
+===============================================================================
+I maintain the experiments/ directory for all sorts of experiments I want to
+do. They are mostly not related to the project, but are generally related
+to music analysis. 
+
+===============================================================================
 			Credit where credit is due
 ===============================================================================
 
