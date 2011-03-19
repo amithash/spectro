@@ -27,11 +27,10 @@ PLOT_SOURCES = [
 	"plot.c"
 ]
 
-#PLOTBPM_SOURCES = PLOT_SOURCES + [
-#	"plotbpm.c",
-#	"bpm.c"
-#]
-#env.Program('plotbpm', PLOTBPM_SOURCES)
+PLOTBPM_SOURCES = PLOT_SOURCES + [
+	"bpm.c"
+]
+env.Program('plotbpm', PLOTBPM_SOURCES)
 
 PLOTHIST_SOURCES = PLOT_SOURCES + [
 	"plothist.c"
