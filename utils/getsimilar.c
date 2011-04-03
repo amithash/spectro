@@ -21,57 +21,11 @@
 #include <math.h>
 #include "histdb.h"
 #include <pthread.h>
+#include <dirent.h>
+#include <sys/stat.h>
 #include <float.h>
 
 #define NMAX_DEFAULT 10
-#define INIT_DIST DBL_MAX
-
-typedef struct {
-	int ind;
-	float dist;
-} similar_t;
-
-int get_most_similar(hist_t *list, unsigned int len, int this_i, int n, similar_t **_out)
-{
-	similar_t *out = NULL;
-	int i,j,k;
-	float *dlist;
-	*_out = NULL;
-	if((out = calloc(n, sizeof(similar_t))) == NULL) {
-		return -1;
-	}
-	if((dlist = (float *)calloc(len, sizeof(float))) == NULL)  {
-		free(out);
-		return -1;
-	}
-	for(i = 0; i < len; i ++) {
-		dlist[i] = hist_distance(&list[this_i], &list[i], HELLINGER_DIVERGANCE);
-	}
-
-	for(i = 0; i < n; i++) {
-		out[i].ind = -1;
-		out[i].dist = FLT_MAX;
-	}
-	for(k = 0; k < n; k++) {
-		for(i = 0; i < len; i++) {
-			if(i == this_i)
-				continue;
-			float idist = dlist[i];
-			for(j = 0; j < n; j++) {
-				if(idist <= out[j].dist) {
-					out[j].dist = idist;
-					out[j].ind  = i;
-					break;
-				}
-			}
-		}
-	}
-	free(dlist);
-
-	*_out = out;
-	return 0;
-}
-
 
 int main(int argc, char *argv[])
 {
@@ -80,7 +34,9 @@ int main(int argc, char *argv[])
 	hist_t *hist_list;
 	int ref_ind = -1;
 	int maxes_len = NMAX_DEFAULT;
-	similar_t *similar = NULL;
+	char mp3_path[PATH_MAX] = "";
+	int *ind_p;
+	float *dist_p;
 
 	if(argc < 3) {
 		printf("USAGE: HIST_DB <music file>\n");
@@ -90,12 +46,24 @@ int main(int argc, char *argv[])
 		maxes_len = atoi(argv[3]);
 	}
 
+	ind_p = calloc(maxes_len, sizeof(int));
+	dist_p = calloc(maxes_len, sizeof(float));
+	if(!ind_p || !dist_p) {
+		printf("Malloc failure!\n");
+		exit(-1);
+	}
+
 	if(read_histdb(&hist_list, &len, argv[1])) {
 		printf("Could not read hist db: %s\n", argv[1]);
 		exit(-1);
 	}
+	if(!realpath(argv[2], mp3_path)) {
+		printf("Could not get real path\n");
+		exit(-1);
+	}
+
 	for(i = 0; i < len; i++) {
-		if(strcmp(hist_list[i].fname, argv[2]) == 0) {
+		if(strcmp(hist_list[i].fname, mp3_path) == 0) {
 			ref_ind = i;
 			break;
 		}
@@ -104,7 +72,8 @@ int main(int argc, char *argv[])
 		printf("Cound not find %s in db\n",argv[2]);
 		exit(-1);
 	}
-	if(get_most_similar(hist_list, len, ref_ind, maxes_len, &similar)) {
+	if(hist_get_similar(hist_list, len, ref_ind, maxes_len, 
+			ind_p, dist_p, HELLINGER_DIVERGANCE)) {
 		printf("Malloc failed!\n");
 		exit(-1);
 	}
@@ -112,18 +81,19 @@ int main(int argc, char *argv[])
 	printf("Distance\t%-40s%-30s%-30s\n","Title", "Artist", "Album");
 	printf("---------------------------------------------------------------------------------------------------------------------------------\n");
 	for(i = 0; i < maxes_len; i++) {
-		if(similar[i].ind == -1) {
+		if(ind_p[i] == -1) {
 			printf("WAAAAAAAA\n");
 		      continue;
 		}
 
-		printf("%f\t%-40s%-30s%-30s\n", similar[i].dist, 
-					hist_list[similar[i].ind].title, 
-					hist_list[similar[i].ind].artist, 
-					hist_list[similar[i].ind].album);
+		printf("%f\t%-40s%-30s%-30s\n", dist_p[i], 
+					hist_list[ind_p[i]].title, 
+					hist_list[ind_p[i]].artist, 
+					hist_list[ind_p[i]].album);
 	}
 	free(hist_list);
-	free(similar);
+	free(ind_p);
+	free(dist_p);
 
 	return 0;
 }
