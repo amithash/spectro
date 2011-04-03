@@ -4,6 +4,11 @@
 #include <pthread.h>
 #include "decoder_backend.h"
 
+#define DECODER_MIN_PUSH_LEN (2048 * 8)
+
+/* If enabled, the decder will accumulate the above vals before pushing */
+#define DECODER_ACCUMULATE
+
 struct decoder_backend_struct
 {
 	struct decoder_backend_ops *ops;
@@ -82,18 +87,10 @@ void decoder_backend_register(struct decoder_backend_ops *ops, char *extension)
 	pthread_mutex_unlock(&head_mutex);
 }
 
-int decoder_backend_push(void *_handle, float *data, unsigned int len, unsigned int frate)
+static int decoder_backend_push_internal(struct decoder_handle_struct *handle, 
+			float *data, unsigned int len, long frate)
 {
-	struct decoder_handle_struct *handle;
-	struct decoder_backend_generic_handle *bhandle = 
-	    (struct decoder_backend_generic_handle *)_handle;
-	
 	struct decoder_buffer_type *buf;
-
-	if(!bhandle || !bhandle->client_handle) {
-		return -1;
-	}
-	handle = (struct decoder_handle_struct *)bhandle->client_handle;
 
 	buf = (struct decoder_buffer_type *)malloc(sizeof(struct decoder_buffer_type));
 	if((!buf))
@@ -108,11 +105,90 @@ int decoder_backend_push(void *_handle, float *data, unsigned int len, unsigned 
 	return 0;
 }
 
+static int accumulate_and_push(struct decoder_handle_struct *handle,
+			float *data, unsigned int len, long frate)
+{
+#ifdef DECODER_ACCUMULATE
+	if(handle->last_frate != frate && handle->acc_len > 0) {
+		decoder_backend_push_internal(handle, handle->acc_data, handle->acc_len, handle->last_frate);
+		handle->last_frate = frate;
+		handle->acc_data = NULL;
+		handle->acc_len = 0;
+		return accumulate_and_push(handle, data, len, frate);
+	}
+
+	if(handle->acc_data == NULL && 
+		!(handle->acc_data = (float *)malloc(sizeof(float) * 
+				DECODER_MIN_PUSH_LEN))) {
+		printf("Warning: MEMORY ERROR: ALLOC Failure\n");
+		return -1;
+	}
+
+	handle->last_frate = frate;
+
+	if(data == NULL) {
+		if(handle->acc_len > 0) {
+			if(handle->last_frate > 0) {
+				decoder_backend_push_internal(handle, handle->acc_data, handle->acc_len, frate);
+			} else {
+				/* Cleanup, If we cannot provide a frate, something is definately
+				 * wrong, so let the user not get anything */
+				free(handle->acc_data);
+			}
+			handle->acc_data = NULL;
+			handle->acc_len = 0;
+		}
+		decoder_backend_push_internal(handle, NULL, 0, 0);
+		return 0;
+	} 
+
+	if((handle->acc_len + len) >= DECODER_MIN_PUSH_LEN) {
+		handle->acc_data = (float *)realloc(handle->acc_data,
+					sizeof(float) * (handle->acc_len + len));
+		memcpy(&handle->acc_data[handle->acc_len], data, len * sizeof(float));
+		free(data);
+		/* Push only if last_frate > 0 */
+		if(handle->last_frate > 0) {
+			decoder_backend_push_internal(handle, handle->acc_data, handle->acc_len + len, frate);
+			handle->acc_data = NULL;
+			handle->acc_len = 0;
+		}
+	} else {
+		memcpy(&handle->acc_data[handle->acc_len], data, len * sizeof(float));
+		free(data);
+		handle->acc_len += len;
+	}
+#else
+	if(decoder_backend_push_internal(handle, data, len, frate))
+	      return -1;
+#endif
+	return 0;
+}
+
+
+int decoder_backend_push(void *_handle, float *data, unsigned int len, unsigned int frate)
+{
+	struct decoder_handle_struct *handle;
+	struct decoder_backend_generic_handle *bhandle = 
+	    (struct decoder_backend_generic_handle *)_handle;
+	
+	if(!bhandle || !bhandle->client_handle) {
+		return -1;
+	}
+	handle = (struct decoder_handle_struct *)bhandle->client_handle;
+
+	return accumulate_and_push(handle, data, len, frate);
+}
+
 int decoder_backend_open(struct decoder_handle_struct *handle, char *fname)
 {
 	struct decoder_backend_struct *bhandle;
 	char ext[5];
 	get_file_extension(ext, fname);
+
+	handle->acc_data = NULL;
+	handle->acc_len = 0;
+	handle->last_frate = 0;
 
 	bhandle = lookup(ext);
 	if(!bhandle || !bhandle->ops ||!bhandle->ops->open) {
@@ -122,7 +198,6 @@ int decoder_backend_open(struct decoder_handle_struct *handle, char *fname)
 	return bhandle->ops->open(&handle->backend_handle, handle, fname);
 }
 
-#define PRINT(fmt) printf(fmt "\n"); fflush(stdout)
 int decoder_backend_start(struct decoder_handle_struct *handle)
 {
 	struct decoder_backend_struct *info;

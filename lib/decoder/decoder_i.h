@@ -9,6 +9,9 @@ struct decoder_handle_struct
 	void *backend_handle; /* Populated by backend */
 	void *backend_info;   /* Populated by backend AL */
 	q_type *queue;
+	float *acc_data;
+	unsigned int acc_len;
+	long last_frate;
 };
 
 #endif
