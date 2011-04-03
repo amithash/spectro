@@ -9,10 +9,11 @@
 #include "plot.h"
 
 #define BUFFER_SIZE 1024
-//#define BPM_STEP_SIZE 8192
-#define BPM_STEP_SIZE (8192/2)
-#define BPM_WINDOW_SIZE (BPM_STEP_SIZE * 2)
+#define BPM_STEP_SIZE (2048 * 2)
+#define BPM_WINDOW_SIZE (BPM_STEP_SIZE * 4)
+#define MIN_BPM 30
 
+#define MULTI
 float *get_x(unsigned int samples_per_min, unsigned int len)
 {
 	int i;
@@ -34,7 +35,7 @@ void analyze_freqs(float *freqs, unsigned int samples_per_min, unsigned int len)
 	      return;
 	freqs[0] = 0;
 	for(i = 0; i < 1+(len/2); i++) {
-		if(x[i] >= 30)
+		if(x[i] >= MIN_BPM)
 		      break;
 		freqs[i] = 0;
 	}
@@ -47,19 +48,31 @@ void analyze_freqs2(float *freqs[NBANDS], unsigned int samples_per_min, unsigned
 	float *x = get_x(samples_per_min, len);
 	unsigned int out_len = 1 + (len / 2);
 	float *y = calloc(NBANDS * out_len, sizeof(float));
+	float max = 0;
 	if(!x || !y)
 	      return;
 	for(i = 0; i < out_len; i++) {
-		if(x[i] >= 30)
+		if(x[i] >= MIN_BPM)
 		      break;
 		for(j = 0; j < NBANDS; j++)
 		      freqs[j][i] = 0;
 	}
 	for(i = 0; i < NBANDS; i++) {
 		for(j = 0; j < out_len; j++) {
-			y[(i * out_len) + j] = freqs[i][j];
+			if(freqs[i][j] > max)
+			      max = freqs[i][j];
 		}
 	}
+	max = max / 2;
+	for(i = 0; i < NBANDS; i++) {
+		for(j = 0; j < out_len; j++) {
+			if(freqs[i][j] >= max)
+				y[(i * out_len) + j] = freqs[i][j];
+			else
+				y[(i * out_len) + j] = 0;
+		}
+	}
+	printf("Samples per min = %d\n", samples_per_min);
 	plot(x, y, NBANDS, out_len, PLOT_LINES, 0);
 }
 
@@ -70,6 +83,7 @@ void normalize(float *vec, unsigned int len)
 	int i;
 	float max = 0;
 	float min = FLT_MAX;
+	float average = 0;
 	for(i = 0; i < len; i++) {
 		if(vec[i] > max)
 		      max = vec[i];
@@ -78,6 +92,10 @@ void normalize(float *vec, unsigned int len)
 	}
 	for(i = 0; i < len; i++) {
 		vec[i] = (vec[i] - min) / max;
+		average += vec[i];
+	}
+	for(i = 0; i < len; i++) {
+		vec[i] = vec[i] - average;
 	}
 }
 
@@ -116,8 +134,11 @@ void find_frequencies(float *spect[NBANDS], unsigned int samples_per_min, unsign
 	for(i = 0; i < out_len; i++)
 	      freqs[i] = sqrt(freqs[i] / (float)len);
 
-	//analyze_freqs(freqs, samples_per_min, len);
+#ifdef MULTI
 	analyze_freqs2(spect, samples_per_min, len);
+#else
+	analyze_freqs(freqs, samples_per_min, len);
+#endif
 
 
 	fftwf_destroy_plan(plan);
@@ -207,14 +228,8 @@ int main(int argc, char *argv[])
 		60 * (unsigned int)(0.5 + ((float)frate / (float)BPM_STEP_SIZE)),
 		len);
 
-#if 0
-	printf("Samples: %d\n", len);
-	for(i = 0; i < len; i++) {
-		for(j = 0; j < NBANDS; j++) {
-			printf("%f ", spect[(NBANDS * i) + j]);
-		}
-		printf("\n");
+	for(i = 0; i < NBANDS; i++) {
+		free(spect[i]);
 	}
-#endif
 	return 0;
 }
