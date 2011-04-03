@@ -35,15 +35,6 @@
 #define ARTIST_LEN 64
 #define ALBUM_LEN  64
 
-#if 0
-#define BPM_MIN (0)
-#define BPM_MAX (43 * 30)
-#else
-#define BPM_MIN 30
-#define BPM_MAX 330
-#endif
-#define BPM_LEN (BPM_MAX - BPM_MIN)
-
 /* If PROF is defined, you can use the following to print out the time taken for each block:
  * example:
  * BEGIN(fft_band);
