@@ -41,8 +41,6 @@ bool HistDB::is_valid()
 
 void HistDB::LoadDB(const char *dbname)
 {
-	unsigned int old_len = hist_len;
-
 	valid = 0;
 	if(!dbname) {
 		std::cout << "Invalid (NULL) pointer passed as DB name" << std::endl;
@@ -52,10 +50,6 @@ void HistDB::LoadDB(const char *dbname)
 	if(read_append_histdb(&hist_list, &hist_len, (char *)dbname)) {
 		std::cout << "Reading " << dbname << " failed" << std::endl;
 		return;
-	}
-	list.reserve(hist_len);
-	for(unsigned int i = old_len; i < hist_len; i++) {
-		list.push_back(0);
 	}
 	valid = 1;
 	return;
@@ -69,54 +63,47 @@ HistDB::HistDB(const char *dbname)
 
 HistDB::~HistDB()
 {
-	free(hist_list);
-
-	if(list.size() > 0) {
-		list.clear();
-	}
+	if(hist_list)
+		free(hist_list);
 }
 
 unsigned int HistDB::length()
 {
-	return list.size();
+	return hist_len;
 }
 
 float HistDB::distance(unsigned int e1, unsigned int e2)
 {
-	float dist;
-
-	if(e1 >= list.size() || e1 >= list.size())
+	if(e1 >= hist_len || e2 >= hist_len)
 	      return 0;
 
-	dist = hist_distance(&hist_list[e1], &hist_list[e2], curDistance);
-
-	return dist;
+	return hist_distance(&hist_list[e1], &hist_list[e2], curDistance);
 }
 
 QString HistDB::name(unsigned int ind)
 {
-	if(ind >= list.size())
+	if(ind >= hist_len)
 	      return NULL;
 	return QString(hist_list[ind].fname);
 }
 
 QString HistDB::title(unsigned int ind)
 {
-	if(ind >= list.size())
+	if(ind >= hist_len)
 	      return NULL;
 	return QString(hist_list[ind].title);
 }
 
 QString HistDB::artist(unsigned int ind)
 {
-	if(ind >= list.size())
+	if(ind >= hist_len)
 	      return NULL;
 	return QString(hist_list[ind].artist);
 }
 
 QString HistDB::track(unsigned int ind)
 {
-	if(ind >= list.size())
+	if(ind >= hist_len)
 	      return NULL;
 	unsigned int track = hist_list[ind].track;
 	QString ret;
@@ -130,16 +117,16 @@ QString HistDB::track(unsigned int ind)
 
 QString HistDB::album(unsigned int ind)
 {
-	if(ind >= list.size())
+	if(ind >= hist_len)
 	      return NULL;
 	return QString(hist_list[ind].album);
 }
 
 void HistDB::set_playing(unsigned int current)
 {
-	if(current >= list.size())
+	if(current >= hist_len)
 	      return;
-	list[current] = 1;
+	hist_list[current].exclude = 1;
 }
 
 int HistDB::get_next(int _ind)
@@ -149,40 +136,35 @@ int HistDB::get_next(int _ind)
 	QString i_title;
 	QString i_artist;
 
+	int next_ind;
+	float next_dist;
+	int rc;
+
 	unsigned int ind = _ind;
-	if((unsigned int)ind >= list.size())
+	if((unsigned int)ind >= hist_len)
 	      return 0;
 
-	float dist = DBL_MAX;
-	unsigned int ret = ind + 1 >= list.size() ? 0 : ind + 1;
+	unsigned int ret = ind + 1 >= hist_len ? 0 : ind + 1;
 
 	ind_title = title(ind);
 	ind_artist = artist(ind);
 
-	list[ind] = 1;
-	for(unsigned int i = 0; i < list.size(); i++) {
-		i_title = title(i);
-		i_artist = artist(i);
-
-		// Find out what you can do with ind_length and i_length.
-
-		if(list[i] == 1 || i == (unsigned int)ind) {
-			continue;
+	while(1) {
+		rc = hist_get_similar(hist_list, hist_len, ind, 
+			1, &next_ind, &next_dist, curDistance);
+		if(rc) {
+			std::cout << "Getting similar failed" << std::endl;
+			return ret;
 		}
-
-		if(ind_title.toLower().compare(i_title.toLower()) == 0 && ind_artist.toLower().compare(i_artist.toLower()) == 0) {
-			list[i] = 1;
-			continue;
-		}
-
-		float t_dist = distance(ind, i);
-		if(t_dist < dist) {
-			ret = i;
-			dist = t_dist;
-		}
+		hist_list[next_ind].exclude = 1;
+		i_title  = title(next_ind);
+		i_artist = artist(next_ind);
+		if(i_title.toLower().compare(ind_title.toLower()) != 0)
+		      break;
+		if(i_artist.toLower().compare(ind_artist.toLower()) != 0)
+		      break;
 	}
-	list[ret] = 1;
-	return (int)ret;
+	return next_ind;
 }
 
 QList<QString> HistDB::getSupportedDistanceFunctions()

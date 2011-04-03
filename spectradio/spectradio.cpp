@@ -152,20 +152,18 @@ void SpectRadio::genhistFinalize()
 	loadDB(dbname.toAscii().data());
 }
 
-void SpectRadio::genhistClicked(void)
+void SpectRadio::loadMusicDir(char *dir)
 {
-	QFileDialog dialog(this);
+	char dbname[256];
 	genhistdb_handle_type genhist_handle;
-	QString dir = dialog.getExistingDirectory(this, tr("Select Music Directory"),
-				QDesktopServices::storageLocation(QDesktopServices::MusicLocation),
-				QFileDialog::ShowDirsOnly | QFileDialog::ReadOnly);
-	if(dir.isEmpty()) {
-		return;
-	}
-	dbname = dir + "/db.hdb";
+
+	strcpy(dbname, dir);
+	strcat(dbname, "/db.hdb");
+
+	std::cout << "Generating " << dbname << " From " << dir << std::endl;
+
 	if(generate_histdb_prepare(&genhist_handle, 
-				dir.toAscii().data(),
-				dbname.toAscii().data(),
+				dir, dbname,
 				4, UPDATE_MODE)) {
 		std::cout << "Preparation failed!" << std::endl;
 		return;
@@ -174,6 +172,19 @@ void SpectRadio::genhistClicked(void)
 				SpectRadio::genhistdb_progress, (void *)this, 1)) {
 		std::cout << "Start failed" << std::endl;
 	}
+}
+
+void SpectRadio::genhistClicked(void)
+{
+	QFileDialog dialog(this);
+	QString dir = dialog.getExistingDirectory(this, tr("Select Music Directory"),
+				QDesktopServices::storageLocation(QDesktopServices::MusicLocation),
+				QFileDialog::ShowDirsOnly | QFileDialog::ReadOnly);
+	if(dir.isEmpty()) {
+		return;
+	}
+	dbname = dir + "/db.hdb";
+	loadMusicDir(dir.toAscii().data());
 }
 
 void SpectRadio::appendTable(QTableWidget *table, QString title, QString artist, QString album, int ind)

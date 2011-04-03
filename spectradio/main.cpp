@@ -50,10 +50,11 @@ int main(int argv, char **args)
 	app.setQuitOnLastWindowClosed(true);
 	SpectRadio window;
 	window.show();
+#if 0
 	for(int i = 1; i < argv; i++) {
-		window.loadDB(args[i]);
+		window.loadMusicDir(args[i]);
 	}
-
+#endif
 	return app.exec();
 }
 

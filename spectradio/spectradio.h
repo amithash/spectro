@@ -79,6 +79,7 @@ class SpectRadio : public QMainWindow
 	void loadDB(QString dbfile);
 	void setPerc(int perc);
 	void genhistFinalize();
+	void loadMusicDir(char *dir);
 	static void genhistdb_progress(void *priv, int perc);
 
 	private slots:

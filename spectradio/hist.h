@@ -30,7 +30,6 @@
 // Aux list which has a 1:1 equivalance to hist_list
 class HistDB
 {
-	std::vector<int> list;
 	hist_t *hist_list;
 	unsigned int hist_len;
 	unsigned int valid;
