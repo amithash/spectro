@@ -6,8 +6,6 @@
 #include <sys/types.h>
 #include <string.h>
 
-#define MAX_LEN(bytes) ((float)(1L << (bytes * 8 - 1)))
-
 #define CONVERT_INT_SIGNED(data, in, nsamples, nchannels, halfval) do {	\
 	int _i,_j;							\
 	for(_i = 0; _i < nsamples; _i++) {				\
@@ -58,10 +56,10 @@ static int pcm2float_mono_8(float **_data, unsigned int *out_len, unsigned char 
 	      return -1;
 	switch(enc) {
 		case MPG123_ENC_8:
-			CONVERT_INT_UNSIGNED(data, in, nsamples, nchannels, (int8_t)((1<<7)));
+			CONVERT_INT_UNSIGNED(data, in, nsamples, nchannels, (1L<<7));
 			break;
 		case MPG123_ENC_SIGNED_8:
-			CONVERT_INT_SIGNED(data, in, nsamples, nchannels, ((int8_t)(1<<7)));
+			CONVERT_INT_SIGNED(data, in, nsamples, nchannels, (1L<<7));
 			break;
 		default:
 			return -1;
@@ -83,10 +81,10 @@ static int pcm2float_mono_16(float **_data, unsigned int *out_len, unsigned char
 	switch(enc) {
 		case MPG123_ENC_16:
 		case MPG123_ENC_UNSIGNED_16:
-			CONVERT_INT_UNSIGNED(data, in, nsamples, nchannels, (int16_t)((1<<15)));
+			CONVERT_INT_UNSIGNED(data, in, nsamples, nchannels, (1L<<15));
 			break;
 		case MPG123_ENC_SIGNED_16:
-			CONVERT_INT_SIGNED(data, in, nsamples, nchannels, ((int16_t)(1<<15)));
+			CONVERT_INT_SIGNED(data, in, nsamples, nchannels, (1L<<15));
 			break;
 		default:
 			return -1;
@@ -107,10 +105,10 @@ static int pcm2float_mono_32(float **_data, unsigned int *out_len, unsigned char
 	      return -1;
 	switch(enc) {
 		case MPG123_ENC_UNSIGNED_32:
-			CONVERT_INT_UNSIGNED(data, in, nsamples, nchannels, (int32_t)((1<<31)));
+			CONVERT_INT_UNSIGNED(data, in, nsamples, nchannels, (1L<<31));
 			break;
 		case MPG123_ENC_SIGNED_16:
-			CONVERT_INT_SIGNED(data, in, nsamples, nchannels, ((int32_t)(1<<31)));
+			CONVERT_INT_SIGNED(data, in, nsamples, nchannels, (1L<<31));
 			break;
 		default:
 			return -1;
@@ -286,6 +284,9 @@ static int decoder_backend_mpg123_decode(void *_handle)
 			decoder_backend_push(handle, data, len, frate);
 		}
 	}
+
+	/* Send null packet signalling the client that the stream is done */
+	decoder_backend_push(handle, NULL, 0, frate);
 	return 0;
 }
 
@@ -294,8 +295,6 @@ void *decoder_backend_mpg123_thread(void *handle)
 	if(decoder_backend_mpg123_decode(handle)) {
 		printf("Decoding failed\n");
 	}
-	/* Send null packet signalling the client that the stream is done */
-	decoder_backend_push(handle, NULL, 0, 0);
 	pthread_exit(NULL);
 }
 
