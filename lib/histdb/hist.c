@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <string.h>
 #include "histdb.h"
+#include <float.h>
 #include "spectgen.h"
 #include "spect-config.h"
 #include <tag_c.h>
@@ -17,8 +18,12 @@
 #define HIST_MAGIC_START 0xdeadbeef
 #define HIST_MAGIC_END   0xbeefcafe
 
+/* Increment this every time the DB format changes */
+#define HIST_VERSION 0x00010001
+
 typedef struct {
 	unsigned int hist_magic_start;	/* Always the first */
+	unsigned int hist_version;
 	unsigned int len; /* db len */
 	/* Spect configuration */
 	unsigned int fname_len;
@@ -36,6 +41,7 @@ typedef struct {
 
 static hist_info_t current_config_info = {
 	HIST_MAGIC_START,
+	HIST_VERSION,
 	0,
 	FNAME_LEN,
 	TITLE_LEN,
@@ -171,6 +177,7 @@ hist_t *gen_hist(char *fname)
 		}
 	}
 	set_tags(hist);
+	hist->exclude = 0;
 bailout:
 	spectgen_close(spect_handle);
 
@@ -181,6 +188,7 @@ static int write_hist(int fd, hist_t *hist)
 {
 	if(!hist)
 		return -1;
+	hist->exclude = 0;
 	if(write(fd, hist, sizeof(hist_t)) != sizeof(hist_t))
 		return -1;
 	return 0;
@@ -190,6 +198,7 @@ static int read_hist(int fd, hist_t *hist)
 {
 	if(read(fd, hist, sizeof(hist_t)) != sizeof(hist_t))
 		return -1;
+	hist->exclude = 0;
 	return 0;
 }
 
@@ -199,6 +208,8 @@ int read_hist_info(int fd, unsigned int *_len)
 	if(read(fd, &info, sizeof(hist_info_t)) != sizeof(hist_info_t))
 		return -1;
 	if(info.hist_magic_start != HIST_MAGIC_START)
+	      return -1;
+	if(info.hist_version != HIST_VERSION)
 	      return -1;
 	if(info.hist_magic_end != HIST_MAGIC_END)
 	      return -1;

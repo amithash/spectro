@@ -184,3 +184,41 @@ static float hellinger_distance(float *a, float *b, unsigned int len)
 	return sqrt(1 - dist);
 }
 
+int hist_get_similar(
+	hist_t *list, unsigned int len, int this_i, /* Input */
+	int n, int *ind, float *dist,              /* Output */
+	hist_dist_func_t dist_type
+)
+{
+	int i,j,k;
+	float *dlist;
+	for(i = 0; i < n; i++) {
+		ind[i] = -1;
+		dist[i] = FLT_MAX;
+	}
+	dlist = (float *)calloc(len, sizeof(float));
+	if(!dist)
+	      return -1;
+	for(i = 0; i < len; i++) {
+		dlist[i] = hist_distance(&list[this_i], &list[i], dist_type);
+	}
+	for(k = 0; k < n; k++) {
+		for(i = 0; i < len; i++) {
+			float idist = dlist[i];
+			if(i == this_i)
+				continue;
+			if(list[i].exclude != 0)
+			      continue;
+			for(j = 0; j < n; j++) {
+				if(idist <= dist[j]) {
+					ind[j] = i;
+					dist[j] = idist;
+					break;
+				}
+			}
+		}
+	}
+	free(dlist);
+	return 0;
+}
+

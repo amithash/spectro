@@ -39,6 +39,7 @@ typedef struct {
 	char album[ALBUM_LEN];
 	unsigned int track;
 	unsigned int length;
+	int exclude;
 	float spect_hist[NBANDS][SPECT_HIST_LEN];
 } hist_t;
 
@@ -59,6 +60,11 @@ int generate_histdb_prepare(genhistdb_handle_type *handle, char *dirname, char *
 
 int generate_histdb_start(genhistdb_handle_type _handle, 
 			genhistdb_notification_type cb, void *priv, int perc);
+
+int hist_get_similar(
+	hist_t *list, unsigned int len, int this_i, /* Input */
+	int n, int *ind, float *dist,              /* Output */
+	hist_dist_func_t dist_type);
 
 #ifdef __cplusplus
 	}
