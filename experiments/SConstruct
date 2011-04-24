@@ -42,5 +42,7 @@ HIST2PGM_SOURCES = PLOT_SOURCES + [
 ]
 env.Program('hist2pgm', HIST2PGM_SOURCES)
 
+SPECT_RANGE_SOURCES = ['spect_range.c'];
+env.Program('spect_range', SPECT_RANGE_SOURCES)
 
 
