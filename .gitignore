@@ -9,10 +9,11 @@ experiments/gabor
 experiments/hist2pgm
 experiments/plothist
 experiments/spect2csv
+experiments/plotbpm
+experiments/spect_range
 spectradio/spectradio
 utils/decoder
 utils/genhistdb
 utils/getsimilar
 utils/spectgen
-
 
