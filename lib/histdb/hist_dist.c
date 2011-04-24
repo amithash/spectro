@@ -50,20 +50,30 @@ void get_supported_distances(dist_t **dist)
 	*dist = (dist_t *)supported_distances;
 }
 
-float hist_distance(hist_t *hist1, hist_t *hist2, hist_dist_func_t dist_type)
+float hist_distance_ext(hist_t *hist1, hist_t *hist2, distance_func_t func)
 {
 	int i;
 	float dist = 0;
-	if(dist_type < DISTANCE_START || dist_type >= DISTANCE_END)
+
+	if(!func)
 	      return 0;
+
 	for(i = 0; i < NBANDS; i++) {
-		dist += supported_distances[dist_type].func(
+		dist += func(
 				hist1->spect_hist[i],
 				hist2->spect_hist[i],
 				SPECT_HIST_LEN
 			);
 	}
 	return dist;
+}
+
+float hist_distance(hist_t *hist1, hist_t *hist2, hist_dist_func_t dist_type)
+{
+	if(dist_type < DISTANCE_START || dist_type >= DISTANCE_END)
+	      return 0;
+
+	return hist_distance_ext(hist1, hist2, supported_distances[dist_type].func);
 }
 
 #define ALMOST_ZERO 0.0001
@@ -181,7 +191,7 @@ static float hellinger_distance(float *a, float *b, unsigned int len)
 	for(i = 0; i < len; i++) {
 		dist += sqrt(a[i] * b[i]);
 	}
-	return sqrt(1 - dist);
+	return dist >= 1.0 ? 0 : sqrt(1.0 - dist);
 }
 
 int hist_get_similar(

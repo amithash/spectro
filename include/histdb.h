@@ -44,6 +44,9 @@ typedef struct {
 } hist_t;
 
 float hist_distance(hist_t *hist1, hist_t *hist2, hist_dist_func_t distance);
+
+float hist_distance_ext(hist_t *hist1, hist_t *hist2, distance_func_t func);
+
 void get_supported_distances(dist_t **dist);
 
 hist_t *gen_hist(char *fname);
