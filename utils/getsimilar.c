@@ -37,14 +37,34 @@ int main(int argc, char *argv[])
 	char mp3_path[PATH_MAX] = "";
 	int *ind_p;
 	float *dist_p;
+	dist_t *sup_dist = NULL;
+	hist_dist_func_t dist_func = DISTANCE_START;
+
+	get_supported_distances(&sup_dist);
 
 	if(argc < 3) {
 		printf("USAGE: HIST_DB <music file>\n");
 		exit(-1);
 	}
-	if(argc == 4) {
+	if(argc >= 4) {
 		maxes_len = atoi(argv[3]);
 	}
+
+	printf("Supported distances: \n");
+	for(i = DISTANCE_START; i < DISTANCE_END; i++) {
+		printf("[%d] %s\n", i, sup_dist[i].name);
+	}
+	printf("Enter the distance: ");
+	if(scanf("%d", &i) != 1) {
+		printf("Invalid user input\n");
+		exit(-1);
+	}
+	dist_func = (hist_dist_func_t)i;
+	if(dist_func < DISTANCE_START || dist_func >= DISTANCE_END) {
+		printf("You entered an unsupported distance.. Exiting\n");
+		exit(-1);
+	}
+	printf("Getting similar tracks using \"%s\" as the distance function\n", sup_dist[dist_func].name);
 
 	ind_p = calloc(maxes_len, sizeof(int));
 	dist_p = calloc(maxes_len, sizeof(float));
@@ -73,7 +93,7 @@ int main(int argc, char *argv[])
 		exit(-1);
 	}
 	if(hist_get_similar(hist_list, len, ref_ind, maxes_len, 
-			ind_p, dist_p, HELLINGER_DIVERGANCE)) {
+			ind_p, dist_p, dist_func)) {
 		printf("Malloc failed!\n");
 		exit(-1);
 	}
