@@ -9,7 +9,8 @@ pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 
 void print_perc(void *unused, int perc)
 {
-	progress(perc);
+	double my_perc = (double)perc;
+	progress(my_perc, stdout);
 	if(perc == 100) {
 		pthread_mutex_lock(&mutex);
 		pthread_cond_broadcast(&cond);

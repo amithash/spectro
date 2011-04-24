@@ -24,7 +24,7 @@
 /* Assumption: normspectdb is performed which normalizes all spect
  * files to the range [0,1]. */
 #define SPECT_MIN_VAL (0.0)
-#define SPECT_MAX_VAL (10.0)
+#define SPECT_MAX_VAL (1.0)
 #define SPECT_HIST_LEN      256
 
 #define SPECT_WINDOW_SIZE 2048
@@ -69,24 +69,24 @@
 #define END(fmt)
 #endif
 
-#define progress(perc)						\
+#define progress(perc,fp)					\
 do {								\
 	int ____i;						\
 	int ____perc = perc;					\
-	printf("[");						\
+	fprintf(fp, "[");					\
 	for(____i = 0; ____i < ____perc; ____i++) {		\
-		printf("#");					\
+		fprintf(fp, "#");				\
 	}							\
 	for(____i = ____perc; ____i < 100; ____i++) {		\
-		printf("-");					\
+		fprintf(fp, "-");				\
 	}							\
-	printf("] %d%% Done", perc);				\
+	fprintf(fp, "] %3.3f%% Done", perc);			\
 	if(____perc == 100) {					\
-		printf("\n");					\
+		fprintf(fp, "\n");				\
 	} else {						\
-		printf("\r");					\
+		fprintf(fp, "\r");				\
 	}							\
-	fflush(stdout);						\
+	fflush(fp);						\
 } while(0)
 
 #endif
