@@ -7,7 +7,6 @@
 #define DECODER_MIN_PUSH_LEN (2048 * 8)
 
 /* If enabled, the decder will accumulate the above vals before pushing */
-#define DECODER_ACCUMULATE
 
 struct decoder_backend_struct
 {
@@ -108,7 +107,7 @@ static int decoder_backend_push_internal(struct decoder_handle_struct *handle,
 static int accumulate_and_push(struct decoder_handle_struct *handle,
 			float *data, unsigned int len, long frate)
 {
-#ifdef DECODER_ACCUMULATE
+#if DECODER_MIN_PUSH_LEN > 0
 	if(handle->last_frate != frate && handle->acc_len > 0) {
 		decoder_backend_push_internal(handle, handle->acc_data, handle->acc_len, handle->last_frate);
 		handle->last_frate = frate;
