@@ -11,6 +11,8 @@
 
 #include "decoder.h"
 
+#define SCALING_FACTOR (8.0)
+
 #define SPECTRUM_BAND_FREQ(band, size, rate) \
       (unsigned int)(((float)(band))*((float)(rate))/((float)(size)))
 
@@ -83,7 +85,8 @@ struct spectgen_struct {
 	unsigned int   window_size;
 	unsigned int   step_size;
 	unsigned int   numfreqs;
-	unsigned int   average_frate;
+	double         average_frate;
+	double         total_samples;
 };
 void *spectgen_thread(void *_handle);
 
@@ -146,10 +149,10 @@ static int do_band(struct spectgen_struct *handle, float *buf)
 	for(i = 1; i < handle->numfreqs; i++) {
 		float real = buf[2 * i];
 		float imag = buf[2 * i + 1];
-		band[handle->barkband_table[i]] += ((real * real) + (imag * imag)) / (float)handle->window_size;
+		band[handle->barkband_table[i]] += ((real * real) + (imag * imag));
 	}
 	for(i = 0; i < NBANDS; i++) {
-		band[i] = sqrt(band[i]) * normalization_coef[i];
+		band[i] = SCALING_FACTOR * normalization_coef[i] * sqrt(band[i]) / (float)handle->window_size;
 	}
 	q_put(&handle->queue, band);
 
@@ -183,6 +186,8 @@ int spectgen_open(spectgen_handle *_handle, char *fname, unsigned int window_siz
 	handle->window_size = window_size;
 	handle->step_size = step_size;
 	handle->numfreqs = (window_size / 2) + 1;
+	handle->average_frate = 0;
+	handle->total_samples = 0;
 
 	strncpy(handle->filename, fname, 256);
 	handle->filename[255] = '\0';
@@ -306,8 +311,11 @@ void *spectgen_thread(void *_handle)
 		if(!handle->barkband_table_inited || old_frate != frate) {
 			old_frate = frate;
 			setup_barkband_table(handle, frate);
-			handle->average_frate = frate;
 		}
+		/* Compute the weighted sum, this is done in order to 
+		 * calculate the average frame rate */
+		handle->average_frate += (double)(frate * decode_len);
+		handle->total_samples += (double)(decode_len);
 
 		buf = decode_buffer;
 		if(leftover_len > 0) {
@@ -347,7 +355,7 @@ unsigned int spectgen_frate(spectgen_handle _handle)
 	struct spectgen_struct *handle = (struct spectgen_struct *)_handle;
 	if(!handle)
 	      return 0;
-	return handle->average_frate;
+	return (unsigned int)(handle->average_frate / handle->total_samples);
 }
 
 float *spectgen_pull(spectgen_handle _handle)
