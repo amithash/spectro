@@ -221,6 +221,11 @@ void SpectRadio::appendTable(QTableWidget *table, QString title, QString artist,
 void SpectRadio::appendHistory(QString title, QString artist, QString album, int ind)
 {
 	appendTable(historyTable, title, artist, album, ind);
+	int latest = historyTable->rowCount() - 1;
+	QTableWidgetItem *latestItem = historyTable->item(latest, TITLE_COLUMN);
+
+	historyTable->clearSelection();
+	historyTable->setCurrentItem(latestItem);
 }
 
 void SpectRadio::appendPlaylist(QString title, QString artist, QString album, int ind)
