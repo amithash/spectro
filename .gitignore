@@ -11,6 +11,7 @@ experiments/plothist
 experiments/spect2csv
 experiments/plotbpm
 experiments/spect_range
+experiments/exp_distance
 spectradio/spectradio
 utils/decoder
 utils/genhistdb
