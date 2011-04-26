@@ -197,7 +197,20 @@ static float hellinger_distance(float *a, float *b, unsigned int len)
 int hist_get_similar(
 	hist_t *list, unsigned int len, int this_i, /* Input */
 	int n, int *ind, float *dist,              /* Output */
-	hist_dist_func_t dist_type
+	hist_dist_func_t dist_type)
+{
+	if(dist_type < DISTANCE_START || dist_type >= DISTANCE_END)
+	      return -1;
+	return hist_get_similar_ext(list, len, this_i, n, ind, dist, 
+				supported_distances[dist_type].func);
+
+}
+
+
+int hist_get_similar_ext(
+	hist_t *list, unsigned int len, int this_i, /* Input */
+	int n, int *ind, float *dist,              /* Output */
+	distance_func_t func
 )
 {
 	int i,j,k;
@@ -210,7 +223,7 @@ int hist_get_similar(
 	if(!dist)
 	      return -1;
 	for(i = 0; i < len; i++) {
-		dlist[i] = hist_distance(&list[this_i], &list[i], dist_type);
+		dlist[i] = hist_distance_ext(&list[this_i], &list[i], func);
 	}
 	for(k = 0; k < n; k++) {
 		for(i = 0; i < len; i++) {

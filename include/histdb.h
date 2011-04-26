@@ -69,6 +69,12 @@ int hist_get_similar(
 	int n, int *ind, float *dist,              /* Output */
 	hist_dist_func_t dist_type);
 
+int hist_get_similar_ext(
+	hist_t *list, unsigned int len, int this_i, /* Input */
+	int n, int *ind, float *dist,              /* Output */
+	distance_func_t func);
+
+
 #ifdef __cplusplus
 	}
 #endif 
