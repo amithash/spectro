@@ -25,7 +25,7 @@
  * files to the range [0,1]. */
 #define SPECT_MIN_VAL (0.0)
 #define SPECT_MAX_VAL (1.0)
-#define SPECT_HIST_LEN      256
+#define SPECT_HIST_LEN      128
 
 #define SPECT_WINDOW_SIZE 2048
 #define SPECT_STEP_SIZE   1024
