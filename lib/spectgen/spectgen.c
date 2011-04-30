@@ -7,6 +7,7 @@
 #include <fftw3.h>
 #include "queue.h"
 #include "spectgen.h"
+#include "spectgen_session.h"
 #include "spect-config.h"
 
 #include "decoder.h"
@@ -65,30 +66,20 @@ static const unsigned int bark_bands[NBANDS]
 
 static float normalization_coef[NBANDS];
 
-/* fftwf create plan is not thread safe */
-pthread_mutex_t planner_lock = PTHREAD_MUTEX_INITIALIZER;
-
-/* TODO: Consider creating wisdom files fft might get a lot faster */
-
 struct spectgen_struct {
-	pthread_t      thread;
-	char           filename[256];
-	q_type         queue;
-	unsigned int   *barkband_table;
-	int            barkband_table_inited;
-	decoder_handle d_handle;
-	float          *fft_in;
-	fftwf_complex  *fft_out;
-	fftwf_plan     plan;
-	int            started;
-	float          *leftover;
-	unsigned int   window_size;
-	unsigned int   step_size;
-	unsigned int   numfreqs;
-	double         average_frate;
-	double         total_samples;
+	char               filename[256];
+	q_type             queue;
+	unsigned int       *barkband_table;
+	int                barkband_table_inited;
+	decoder_handle     d_handle;
+	spectgen_session_t *session;
+	float              *leftover;
+	unsigned int       step_size;
+	double             average_frate;
+	double             total_samples;
 };
-void *spectgen_thread(void *_handle);
+
+static void spectgen_worker(void *_handle);
 
 __attribute__((constructor))
 static void spectgen_init(void)
@@ -123,10 +114,10 @@ static void setup_barkband_table(struct spectgen_struct *handle, unsigned int sa
 {
 	int i;
 	unsigned int barkband = 0;
-	memset(handle->barkband_table, 0, sizeof(unsigned int) * handle->numfreqs);
-	for(i = 0; i < handle->numfreqs; i++) {
+	memset(handle->barkband_table, 0, sizeof(unsigned int) * handle->session->numfreqs);
+	for(i = 0; i < handle->session->numfreqs; i++) {
 		if(barkband < 23 &&
-			SPECTRUM_BAND_FREQ(i, handle->window_size, sampling_rate) >= 
+			SPECTRUM_BAND_FREQ(i, handle->session->window_size, sampling_rate) >= 
 			bark_bands[barkband])
 		      barkband++;
 		handle->barkband_table[i] = barkband;
@@ -146,13 +137,14 @@ static int do_band(struct spectgen_struct *handle, float *buf)
 	if(!band)
 	      return -1;
 
-	for(i = 1; i < handle->numfreqs; i++) {
+	for(i = 1; i < handle->session->numfreqs; i++) {
 		float real = buf[2 * i];
 		float imag = buf[2 * i + 1];
 		band[handle->barkband_table[i]] += ((real * real) + (imag * imag));
 	}
 	for(i = 0; i < NBANDS; i++) {
-		band[i] = SCALING_FACTOR * normalization_coef[i] * sqrt(band[i]) / (float)handle->window_size;
+		band[i] = SCALING_FACTOR * normalization_coef[i] * sqrt(band[i]) / 
+		    (float)handle->session->window_size;
 	}
 	q_put(&handle->queue, band);
 
@@ -163,9 +155,9 @@ static int do_fft(struct spectgen_struct *handle, float *in)
 {
 	/* Copy is bad, but in might be unaligned, and fft computaion
 	 * might eat more than the time saved by not copying */
-	memcpy(handle->fft_in, in, sizeof(float) * handle->window_size);
-	fftwf_execute(handle->plan);
-	return do_band(handle, (float *)handle->fft_out);
+	memcpy(handle->session->fft_in, in, sizeof(float) * handle->session->window_size);
+	fftwf_execute(handle->session->plan);
+	return do_band(handle, (float *)handle->session->fft_out);
 }
 
 int spectgen_open(spectgen_handle *_handle, char *fname, unsigned int window_size, unsigned int step_size)
@@ -183,50 +175,37 @@ int spectgen_open(spectgen_handle *_handle, char *fname, unsigned int window_siz
 	if(!handle)
 	      return -1;
 
-	handle->window_size = window_size;
+	handle->session = spectgen_session_get(window_size, handle, spectgen_worker);
+	if(!handle->session)
+	      goto session_creation_failed;
+
 	handle->step_size = step_size;
-	handle->numfreqs = (window_size / 2) + 1;
 	handle->average_frate = 0;
 	handle->total_samples = 0;
 
 	strncpy(handle->filename, fname, 256);
 	handle->filename[255] = '\0';
-	handle->fft_in = (float *)fftwf_malloc(sizeof(float) * handle->window_size);
-	if(!handle->fft_in)
-	      goto fft_in_failed;
-	handle->fft_out = (fftwf_complex *)
-	    fftwf_malloc(handle->numfreqs * sizeof(fftwf_complex));
-	if(!handle->fft_out)
-	      goto fft_out_failed;
-	
-	/* Even though we are thread safe, the planner is not. so 
-	 * serialize the calls to fftwf plan create */
-	pthread_mutex_lock(&planner_lock);
-	handle->plan = fftwf_plan_dft_r2c_1d(handle->window_size, handle->fft_in, 
-				handle->fft_out, FFTW_MEASURE | FFTW_DESTROY_INPUT);
-
-	pthread_mutex_unlock(&planner_lock);
 
 	if(q_init(&handle->queue))
 	      goto q_init_failed;
 
-	handle->leftover = (float *)malloc(sizeof(float) * handle->window_size);
+	handle->leftover = (float *)malloc(sizeof(float) * handle->session->window_size);
 	if(!handle->leftover)
 	      goto leftover_failed;
 
 
-	handle->barkband_table = (unsigned int *)malloc(sizeof(unsigned int) * handle->numfreqs);
+	handle->barkband_table = (unsigned int *)malloc(sizeof(unsigned int) * 
+				handle->session->numfreqs);
 	if(!handle->barkband_table)
 	      goto barkband_table_failed;
 
 	if(decoder_init(&handle->d_handle))
 	      goto decoder_init_failed;
-	if(decoder_open(handle->d_handle, handle->filename)) {
-		goto open_failed;
-	}
-	handle->barkband_table_inited = 0;
-	handle->started = 0;
 
+	if(decoder_open(handle->d_handle, handle->filename))
+		goto open_failed;
+
+	handle->barkband_table_inited = 0;
 	*_handle = handle;
 	return 0;
 
@@ -239,11 +218,8 @@ barkband_table_failed:
 leftover_failed:
 	q_destroy(&handle->queue);
 q_init_failed:
-	fftwf_destroy_plan(handle->plan);
-	fftwf_free(handle->fft_out);
-fft_out_failed:
-	fftwf_free(handle->fft_in);
-fft_in_failed:
+	spectgen_session_put(handle->session);
+session_creation_failed:
 	free(handle);
 	return -1;
 }
@@ -251,19 +227,15 @@ fft_in_failed:
 int spectgen_close(spectgen_handle _handle)
 {
 	struct spectgen_struct *handle = (struct spectgen_struct *)_handle;
-	void *pars;
 
 	if(!handle)
 	      return -1;
-	if(handle->started) {
-		pthread_join(handle->thread, &pars);
-	}
+	/* Will block if the session is still in working state */
+	spectgen_session_put(handle->session);
+
 	decoder_close(handle->d_handle);
 	decoder_exit(handle->d_handle);
 	q_destroy(&handle->queue);
-	fftwf_destroy_plan(handle->plan);
-	fftwf_free(handle->fft_out);
-	fftwf_free(handle->fft_in);
 	free(handle->leftover);
 	free(handle->barkband_table);
 
@@ -280,13 +252,12 @@ int spectgen_start(spectgen_handle _handle)
 	if(decoder_start(handle->d_handle))
 		return -1;
 
-	handle->started = 1;
-	if(pthread_create(&handle->thread, 0, spectgen_thread, handle))
-		return -1;
+	spectgen_session_start(handle->session);
+
 	return 0;
 }
 
-void *spectgen_thread(void *_handle)
+static void spectgen_worker(void *_handle)
 {
 	float *decode_buffer;
 	unsigned int decode_len;
@@ -329,8 +300,9 @@ void *spectgen_thread(void *_handle)
 			leftover_len = 0;
 			free(decode_buffer);
 		}
-		if(decode_len >= handle->window_size) {
-			for(i = 0; i < decode_len - handle->window_size; i+=handle->step_size) {
+		if(decode_len >= handle->session->window_size) {
+			for(i = 0; i < decode_len - handle->session->window_size; 
+						i+=handle->step_size) {
 				do_fft(handle, &buf[i]);
 			}
 			if(i < decode_len) {
@@ -347,7 +319,6 @@ void *spectgen_thread(void *_handle)
 bailout:
 failed_in_loop:
 	q_put(&handle->queue, NULL);
-	pthread_exit(NULL);
 }
 
 unsigned int spectgen_frate(spectgen_handle _handle)

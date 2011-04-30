@@ -10,7 +10,8 @@ prefix = '/usr'
 lib_path = prefix + "/lib"
 
 SPECTGEN_SOURCES = [
-	"spectgen.c"
+	"spectgen.c",
+	"spectgen_session.c"
 ]
 
 install_libs += env.SharedLibrary('spectgen', SPECTGEN_SOURCES)
