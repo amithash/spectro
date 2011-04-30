@@ -71,7 +71,6 @@ struct spectgen_struct {
 	q_type             queue;
 	unsigned int       *barkband_table;
 	int                barkband_table_inited;
-	decoder_handle     d_handle;
 	spectgen_session_t *session;
 	float              *leftover;
 	unsigned int       step_size;
@@ -199,10 +198,7 @@ int spectgen_open(spectgen_handle *_handle, char *fname, unsigned int window_siz
 	if(!handle->barkband_table)
 	      goto barkband_table_failed;
 
-	if(decoder_init(&handle->d_handle))
-	      goto decoder_init_failed;
-
-	if(decoder_open(handle->d_handle, handle->filename))
+	if(decoder_open(handle->session->d_handle, handle->filename))
 		goto open_failed;
 
 	handle->barkband_table_inited = 0;
@@ -210,8 +206,6 @@ int spectgen_open(spectgen_handle *_handle, char *fname, unsigned int window_siz
 	return 0;
 
 open_failed:
-	decoder_exit(handle->d_handle);
-decoder_init_failed:
 	free(handle->barkband_table);
 barkband_table_failed:
 	free(handle->leftover);
@@ -233,8 +227,7 @@ int spectgen_close(spectgen_handle _handle)
 	/* Will block if the session is still in working state */
 	spectgen_session_put(handle->session);
 
-	decoder_close(handle->d_handle);
-	decoder_exit(handle->d_handle);
+	decoder_close(handle->session->d_handle);
 	q_destroy(&handle->queue);
 	free(handle->leftover);
 	free(handle->barkband_table);
@@ -249,7 +242,7 @@ int spectgen_start(spectgen_handle _handle)
 	if(!handle)
 	      return -1;
 
-	if(decoder_start(handle->d_handle))
+	if(decoder_start(handle->session->d_handle))
 		return -1;
 
 	spectgen_session_start(handle->session);
@@ -273,7 +266,8 @@ static void spectgen_worker(void *_handle)
 	
 	while(1) {
 		decode_len = 0;
-		decoder_data_pull(handle->d_handle, &decode_buffer, &decode_len, &frate);
+		decoder_data_pull(handle->session->d_handle, 
+					&decode_buffer, &decode_len, &frate);
 		if(decode_len == 0)
 		      break;
 

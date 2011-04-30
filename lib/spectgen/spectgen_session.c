@@ -96,6 +96,9 @@ static inline spectgen_session_t *spectgen_session_create(unsigned int window_si
 	pthread_cond_init(&session->wait_cond, NULL);
 	session->active = 1;
 
+	if(decoder_init(&session->d_handle))
+	      goto decoder_init_failed;
+
 	/* The thread will wait on the start signal */
 	pthread_create(&session->thread, 0, spectgen_session_thread, session);
 	if(!session->thread)
@@ -104,6 +107,10 @@ static inline spectgen_session_t *spectgen_session_create(unsigned int window_si
 	return session;
 
 thread_creation_failed:
+	decoder_exit(session->d_handle);
+decoder_init_failed:
+	pthread_mutex_destroy(&session->wait_lock);
+	pthread_cond_destroy(&session->wait_cond);
 	pthread_mutex_destroy(&session->lock);
 	pthread_cond_destroy(&session->cond);
 plan_creation_failed:
@@ -215,6 +222,9 @@ void static inline spectgen_session_destroy(spectgen_session_t *session)
 	}
 	pthread_mutex_destroy(&session->lock);
 	pthread_cond_destroy(&session->cond);
+	pthread_mutex_destroy(&session->wait_lock);
+	pthread_cond_destroy(&session->wait_cond);
+	decoder_exit(session->d_handle);
 	free(session);
 }
 

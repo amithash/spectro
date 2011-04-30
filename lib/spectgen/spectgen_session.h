@@ -3,6 +3,7 @@
 
 #include <pthread.h>
 #include <fftw3.h>
+#include "decoder.h"
 
 typedef void (*user_session_cb_t)(void *);
 
@@ -12,6 +13,7 @@ typedef struct spectgen_session_struct {
 	pthread_mutex_t                lock;
 	pthread_cond_t                 cond;
 	pthread_t                      thread;
+	decoder_handle                 d_handle;
 	volatile void                  *user_handle;
 	volatile user_session_cb_t     user_cb;
 	int                            working;
