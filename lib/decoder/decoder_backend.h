@@ -16,11 +16,6 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *******************************************************************************/
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <pthread.h>
-#include "decoder_backend.h"
 #ifndef _DECODER_BACKEND_H_
 #define _DECODER_BACKEND_H_
 
