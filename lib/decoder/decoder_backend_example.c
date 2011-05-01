@@ -53,6 +53,7 @@ void decoder_backend_example_init(void)
 __attribute__((destructor))
 void decoder_backend_example_exit(void)
 {
+	decoder_backend_deregister(&backend_ops);
 	/* All global deinit function */
 }
 

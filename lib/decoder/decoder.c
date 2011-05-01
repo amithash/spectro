@@ -139,6 +139,7 @@ void decoder_exit(decoder_handle _handle)
 		decoder_backend_close(handle);
 	handle->backend_handle = NULL;
 	q_destroy(handle->queue);
+	free(handle->queue);
 	SIGNAL_DEINIT(&handle->start_signal);
 	SIGNAL_DEINIT(&handle->finished_signal);
 	free(handle);

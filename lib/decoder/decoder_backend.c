@@ -86,6 +86,33 @@ void decoder_backend_register(struct decoder_backend_ops *ops, char *extension)
 	pthread_mutex_unlock(&head_mutex);
 }
 
+
+void decoder_backend_deregister(struct decoder_backend_ops *ops)
+{
+	struct decoder_backend_struct *link;
+	struct decoder_backend_struct *prev = NULL;
+	pthread_mutex_lock(&head_mutex);
+	link = head;
+	while(link) {
+		if(link->ops == ops) {
+			struct decoder_backend_struct *to_free;
+			if(prev) {
+				head = link->next;
+			} else {
+				prev->next = link->next;
+			}
+			to_free = link;
+			link = link->next;
+			free(to_free);
+			continue;
+		}
+		prev = link;
+		link = link->next;
+	}
+
+	pthread_mutex_unlock(&head_mutex);
+}
+
 static int decoder_backend_push_internal(struct decoder_handle_struct *handle, 
 			float *data, unsigned int len, long frate)
 {
