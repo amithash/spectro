@@ -96,7 +96,7 @@ void decoder_backend_exit(void)
 	while(link) {
 		to_free = link;
 		link = link->next;
-		free(link);
+		free(to_free);
 	}
 	head = NULL;
 	pthread_mutex_unlock(&head_mutex);
