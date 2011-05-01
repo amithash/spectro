@@ -1,6 +1,6 @@
 /*******************************************************************************
     This file is part of spectro
-    Copyright (C) 2010  Amithash Prasad <amithash@gmail.com>
+    Copyright (C) 2011  Amithash Prasad <amithash@gmail.com>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -26,19 +26,15 @@
 #include <float.h>
 
 #define NMAX_DEFAULT 10
+#define SMALL_VAL 0.00001
 
+#define ABS(a) ((a) > 0 ? (a) : (-1 * (a)))
 float experimental_distance(float *a, float *b, unsigned int len)
 {
-	float dist_a = 0;
-	float dist_b = 0;
-	float dist_ab = 0;
+	float dist = 0;
 	int i;
-	for(i = 0; i < len; i++) {
-		dist_a  += a[i] * a[i];
-		dist_b  += b[i] * b[i];
-		dist_ab += a[i] * b[i];
-	}
-	return sqrt(1.0 + dist_a + dist_b - (3 * dist_ab));
+
+	return dist;
 }
 
 int main(int argc, char *argv[])
