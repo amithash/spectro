@@ -1,7 +1,6 @@
 #include "decoder_backend.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <pthread.h>
 #include <mpg123.h>
 #include <sys/types.h>
 #include <string.h>
@@ -30,18 +29,17 @@
 
 struct decoder_mpg123_handle {
 	void *client_handle;	/* This should always be first */
-	pthread_t thread;	/* Backend specific ops */
 	mpg123_handle *mpg123_handle_private;
 };
 
-static int decoder_backend_mpg123_start(void *_handle);
+static void decoder_backend_mpg123_decode(void *_handle);
 static int decoder_backend_mpg123_close(void *_handle);
 static int decoder_backend_mpg123_open(void **_handle, void *client_handle, char *file);
 
 static struct decoder_backend_ops backend_ops = {
 	decoder_backend_mpg123_open,
 	decoder_backend_mpg123_close,
-	decoder_backend_mpg123_start
+	decoder_backend_mpg123_decode
 };
 
 static int pcm2float_mono_8(float **_data, unsigned int *out_len, unsigned char *_in, size_t in_size, 
@@ -226,18 +224,16 @@ static int decoder_backend_mpg123_open(void **_handle, void *client_handle, char
 static int decoder_backend_mpg123_close(void *_handle)
 {
 	struct decoder_mpg123_handle *handle = (struct decoder_mpg123_handle *)_handle;
-	void *pars;
-	if(!handle) {
+	if(!handle)
 		return -1;
-	}
-	pthread_join(handle->thread, &pars);
+
 	mpg123_close(handle->mpg123_handle_private);
 	mpg123_delete(handle->mpg123_handle_private);
 	free(handle);
 	return 0;
 }
 
-static int decoder_backend_mpg123_decode(void *_handle)
+static void decoder_backend_mpg123_decode(void *_handle)
 {
 	int rc;
 	int in_progress = 1;
@@ -251,9 +247,9 @@ static int decoder_backend_mpg123_decode(void *_handle)
 	size_t size;
 	unsigned char *pcm;
 	if(!handle)
-	      return -1;
+	      return;
 	if(!handle->mpg123_handle_private)
-	      return -1;
+	      return;
 
 	while(in_progress) {
 		rc = mpg123_decode_frame(handle->mpg123_handle_private,
@@ -287,24 +283,6 @@ static int decoder_backend_mpg123_decode(void *_handle)
 
 	/* Send null packet signalling the client that the stream is done */
 	decoder_backend_push(handle, NULL, 0, frate);
-	return 0;
-}
-
-void *decoder_backend_mpg123_thread(void *handle)
-{
-	if(decoder_backend_mpg123_decode(handle)) {
-		printf("Decoding failed\n");
-	}
-	pthread_exit(NULL);
-}
-
-static int decoder_backend_mpg123_start(void *_handle)
-{
-	struct decoder_mpg123_handle *handle = (struct decoder_mpg123_handle *)_handle;
-	if(pthread_create(&handle->thread, 0, decoder_backend_mpg123_thread, handle)) {
-		return -1;
-	}
-	return 0;
 }
 
 __attribute__((constructor))

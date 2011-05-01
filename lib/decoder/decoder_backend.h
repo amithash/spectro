@@ -13,7 +13,7 @@ struct decoder_buffer_type {
 struct decoder_backend_ops {
 	int (*open)(void **handle, void *client_handle, char *fname);
 	int (*close)(void *handle);
-	int (*start)(void *handle);
+	void (*decode)(void *handle);
 };
 
 struct decoder_backend_generic_handle
@@ -23,7 +23,7 @@ struct decoder_backend_generic_handle
 
 /* Decoder visible interface */
 int decoder_backend_open(struct decoder_handle_struct *handle, char *fname);
-int decoder_backend_start(struct decoder_handle_struct *handle);
+void decoder_backend_decode(struct decoder_handle_struct *handle);
 int decoder_backend_close(struct decoder_handle_struct *handle);
 void decoder_backend_supported_extensions(char **extensions, unsigned int *out_len);
 

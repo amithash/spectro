@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <pthread.h>
 #include <stdlib.h>
 #include "decoder_i.h"
 #include "decoder_backend.h"
@@ -7,6 +8,19 @@
 /*********************************************************
  * 		Private Functions
  ********************************************************/
+
+static void *decoder_thread(void *data)
+{
+	struct decoder_handle_struct *handle = (struct decoder_handle_struct *)data;
+	while(handle->active) {
+		SIGNAL_WAIT(&handle->start_signal);
+		if(handle->active == 0)
+		      break;
+		decoder_backend_decode(handle);
+		SIGNAL_SET(&handle->finished_signal);
+	}
+	pthread_exit(NULL);
+}
 
 /*********************************************************
  * 		Public Functions
@@ -38,10 +52,18 @@ int decoder_init(decoder_handle *_handle)
 
 	if(q_init(handle->queue))
 	      goto queue_init_failed;
+	handle->active = 1;
+	SIGNAL_INIT(&handle->start_signal);
+	SIGNAL_INIT(&handle->finished_signal);
+
+	if(pthread_create(&handle->thread, 0, decoder_thread, handle))
+	      goto thread_creation_failed;
 
 	*_handle = handle;
 	return 0;
-
+thread_creation_failed:
+	SIGNAL_DEINIT(&handle->start_signal);
+	SIGNAL_DEINIT(&handle->finished_signal);
 queue_init_failed:
 	free(handle->queue);
 queue_malloc_failed:
@@ -85,7 +107,8 @@ int decoder_start(decoder_handle _handle)
 	if(!handle && !handle->backend_handle) {
 		return -1;
 	}
-	return decoder_backend_start(handle);
+	SIGNAL_SET(&handle->start_signal);
+	return 0;
 }
 
 int decoder_close(decoder_handle _handle)
@@ -95,6 +118,7 @@ int decoder_close(decoder_handle _handle)
 	if(!handle && !handle->backend_handle) {
 		return -1;
 	}
+	SIGNAL_WAIT(&handle->finished_signal);
 	rc = decoder_backend_close(handle);
 	handle->backend_handle = NULL;
 	return rc;
@@ -103,12 +127,21 @@ int decoder_close(decoder_handle _handle)
 void decoder_exit(decoder_handle _handle)
 {
 	struct decoder_handle_struct *handle = (struct decoder_handle_struct *)_handle;
+	void *par;
 	if(!handle)
 		return;
+	handle->active = 0;
+	/* So that the active flag is tested */
+	SIGNAL_SET(&handle->start_signal);
+	pthread_join(handle->thread, &par);
+
 	if(handle->backend_handle)
 		decoder_backend_close(handle);
 	handle->backend_handle = NULL;
 	q_destroy(handle->queue);
+	SIGNAL_DEINIT(&handle->start_signal);
+	SIGNAL_DEINIT(&handle->finished_signal);
+	free(handle);
 }
 
 void decoder_data_pull(decoder_handle _handle, float **_buffer, 

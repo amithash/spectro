@@ -224,10 +224,13 @@ int spectgen_close(spectgen_handle _handle)
 
 	if(!handle)
 	      return -1;
+
+	/* Will block till decoder is still active */
+	decoder_close(handle->session->d_handle);
+
 	/* Will block if the session is still in working state */
 	spectgen_session_put(handle->session);
 
-	decoder_close(handle->session->d_handle);
 	q_destroy(&handle->queue);
 	free(handle->leftover);
 	free(handle->barkband_table);

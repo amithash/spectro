@@ -193,20 +193,20 @@ int decoder_backend_open(struct decoder_handle_struct *handle, char *fname)
 	if(!bhandle || !bhandle->ops ||!bhandle->ops->open) {
 		return -1;
 	}
+	
 	handle->backend_info = bhandle;
-	return bhandle->ops->open(&handle->backend_handle, handle, fname);
+	return bhandle->ops->open((void **)&handle->backend_handle, handle, fname);
 }
 
-int decoder_backend_start(struct decoder_handle_struct *handle)
+void decoder_backend_decode(struct decoder_handle_struct *handle)
 {
 	struct decoder_backend_struct *info;
 	if(!handle)
-	      return -1;
+	      return;
 	info = (struct decoder_backend_struct *)handle->backend_info;
-	if(!info || !info->ops || !info->ops->start) {
-		return -1;
-	}
-	return info->ops->start(handle->backend_handle);
+	if(!info || !info->ops || !info->ops->decode)
+	      return;
+	info->ops->decode((void *)handle->backend_handle);
 }
 
 int decoder_backend_close(struct decoder_handle_struct *handle)
@@ -217,7 +217,8 @@ int decoder_backend_close(struct decoder_handle_struct *handle)
 	info = (struct decoder_backend_struct *)handle->backend_info;
 	if(!info || !info->ops || !info->ops->close)
 	      return -1;
-	info->ops->close(handle->backend_handle);
+	/* TODO: Wait for the thread to signal that its work is done */
+	info->ops->close((void *)handle->backend_handle);
 	handle->backend_handle = NULL;
 	handle->backend_info = NULL;
 	return 0;

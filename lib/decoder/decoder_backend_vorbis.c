@@ -1,20 +1,18 @@
 #include "decoder_backend.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <pthread.h>
 #include <sys/types.h>
 #include <string.h>
 #include <vorbis/vorbisfile.h>
 
 struct decoder_example_handle {
 	void *client_handle; /* Always the first element */
-	pthread_t thread;
 	OggVorbis_File file;
 	/* Other handles required on a per-file/per-instance basis */
 };
 
 /* Required operation functions */
-static int decoder_backend_vorbis_start(void *_handle);
+static void decoder_backend_vorbis_decode(void *_handle);
 static int decoder_backend_vorbis_close(void *_handle);
 static int decoder_backend_vorbis_open(void **_handle, void *client_handle, char *file);
 
@@ -22,7 +20,7 @@ static int decoder_backend_vorbis_open(void **_handle, void *client_handle, char
 static struct decoder_backend_ops backend_ops = {
 	decoder_backend_vorbis_open,
 	decoder_backend_vorbis_close,
-	decoder_backend_vorbis_start
+	decoder_backend_vorbis_decode
 };
 
 __attribute__((constructor))
@@ -38,7 +36,7 @@ void decoder_backend_vorbis_exit(void)
 
 }
 
-static void *decoder_backend_vorbis_thread(void *_handle)
+static void decoder_backend_vorbis_decode(void *_handle)
 {
 	float **buffer;
 	unsigned int len;
@@ -75,8 +73,6 @@ static void *decoder_backend_vorbis_thread(void *_handle)
 	}
 
 	decoder_backend_push(handle, NULL, 0, 0);
-
-	pthread_exit(NULL);
 }
 
 static int decoder_backend_vorbis_open(void **_handle, void *client_handle, char *file)
@@ -100,37 +96,13 @@ static int decoder_backend_vorbis_open(void **_handle, void *client_handle, char
 	return 0;
 }
 
-static int decoder_backend_vorbis_start(void *_handle)
-{
-	struct decoder_example_handle *handle = 
-	    (struct decoder_example_handle *)_handle;
-	int rc;
-
-	if(!handle)
-	      return -1;
-
-	rc = pthread_create(&handle->thread, 
-			    0,               
-			    decoder_backend_vorbis_thread, 
-			    handle 
-			    );
-	if(!rc) {
-		return -1;
-	}
-
-	return 0;
-}
-
 static int decoder_backend_vorbis_close(void *_handle)
 {
 	struct decoder_example_handle *handle = 
 	    (struct decoder_example_handle *)_handle;
-	void *pars;
 
 	if(!handle)
 	      return -1;
-
-	pthread_join(handle->thread, &pars);
 
 	ov_clear(&handle->file);
 

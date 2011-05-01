@@ -1,7 +1,6 @@
 #include "decoder_backend.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <pthread.h>
 #include <sys/types.h>
 #include <string.h>
 /*
@@ -10,12 +9,11 @@
 
 struct decoder_example_handle {
 	void *client_handle; /* Always the first element */
-	pthread_t thread;
 	/* Other handles required on a per-file/per-instance basis */
 };
 
 /* Required operation functions */
-static int decoder_backend_example_start(void *_handle);
+static int decoder_backend_example_decode(void *_handle);
 static int decoder_backend_example_close(void *_handle);
 static int decoder_backend_example_open(void **_handle, void *client_handle, char *file);
 
@@ -23,7 +21,7 @@ static int decoder_backend_example_open(void **_handle, void *client_handle, cha
 static struct decoder_backend_ops backend_ops = {
 	decoder_backend_example_open,
 	decoder_backend_example_close,
-	decoder_backend_example_start
+	decoder_backend_example_decode
 };
 
 /* backend init/constructor
@@ -85,7 +83,7 @@ void decoder_backend_example_exit(void)
  * to buffer the entire file and push it to the front
  * once the frate is got.
  */
-static void *decoder_backend_example_thread(void *_handle)
+static void decoder_backend_example_decode(void *_handle)
 {
 	struct decoder_example_handle *handle = 
 	    (struct decoder_example_handle *)_handle;
@@ -164,43 +162,6 @@ static int decoder_backend_example_open(void **_handle, void *client_handle, cha
 	 * in the decoder_*_handle struct
 	 */
 
-	return 0;
-}
-
-/* start decoding
- *
- * This function creates a thread to do the decoding.
- * This function may also perform all start related operations.
- *
- * handle	in	The handle allocated and got
- * 			from the open call.
- *
- * Return: 0 on success, Negative error code on failure
- */
-static int decoder_backend_example_start(void *_handle)
-{
-	struct decoder_example_handle *handle = 
-	    (struct decoder_example_handle *)_handle;
-	int rc;
-
-	if(!handle)
-	      return -1;
-
-	rc = pthread_create(&handle->thread, /* Pthread id */
-			    0,               /* Any thread attributes */
-			    /* Decoder thread to do the meat of the
-			     * decoding */
-			    decoder_backend_example_thread, 
-			    handle /* Handle we pass to the thread to
-				      associate itself to the instance */
-			    );
-	if(!rc) {
-		return -1;
-	}
-
-	/* Note DO NOT wait for the thread. as the function says, this
-	 * just kicks off the decoding.
-	 */
 	return 0;
 }
 

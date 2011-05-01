@@ -30,21 +30,17 @@ static void *spectgen_session_thread(void *data)
 {
 	spectgen_session_t *session = (spectgen_session_t *)data;
 	while(session->active) {
-		pthread_mutex_lock(&session->lock);
-		pthread_cond_wait(&session->cond, &session->lock);
-		pthread_mutex_unlock(&session->lock);
+		SIGNAL_WAIT(&session->start_signal);
 		if(session->active == 0)
 		      break;
+
 		/* To be safe... */
 		if(session->user_cb && session->user_handle)
 			session->user_cb((void *)session->user_handle);
 		else
 			printf("WARING: Session improperly setup.\n");
 
-		pthread_mutex_lock(&session->wait_lock);
-		session->working = 0;
-		pthread_cond_broadcast(&session->wait_cond);
-		pthread_mutex_unlock(&session->wait_lock);
+		SIGNAL_SET(&session->finished_signal);
 	}
 	pthread_exit(NULL);
 }
@@ -91,9 +87,8 @@ static inline spectgen_session_t *spectgen_session_create(unsigned int window_si
 	session->busy = 1;
 	session->next = NULL;
 	pthread_mutex_init(&session->lock, NULL);
-	pthread_cond_init(&session->cond, NULL);
-	pthread_mutex_init(&session->wait_lock, NULL);
-	pthread_cond_init(&session->wait_cond, NULL);
+	SIGNAL_INIT(&session->start_signal);
+	SIGNAL_INIT(&session->finished_signal);
 	session->active = 1;
 
 	if(decoder_init(&session->d_handle))
@@ -109,10 +104,9 @@ static inline spectgen_session_t *spectgen_session_create(unsigned int window_si
 thread_creation_failed:
 	decoder_exit(session->d_handle);
 decoder_init_failed:
-	pthread_mutex_destroy(&session->wait_lock);
-	pthread_cond_destroy(&session->wait_cond);
 	pthread_mutex_destroy(&session->lock);
-	pthread_cond_destroy(&session->cond);
+	SIGNAL_DEINIT(&session->start_signal);
+	SIGNAL_DEINIT(&session->finished_signal);
 plan_creation_failed:
 	fftwf_free(session->fft_out);
 fft_out_failed:
@@ -154,8 +148,6 @@ spectgen_session_t *spectgen_session_get(unsigned int window_size,
 	}
 	session->user_cb = user_cb;
 	session->user_handle = user_handle;
-	session->working = 0;
-
 malloc_fail:
 	pthread_mutex_unlock(&session_hash_table_lock);
 	return session;
@@ -165,23 +157,9 @@ void spectgen_session_start(spectgen_session_t *session)
 {
 	if(!session)
 	      return;
-	pthread_mutex_lock(&session->lock);
-	if(session->busy == 0 || session->active == 0) {
-		pthread_mutex_unlock(&session->lock);
-		return;
-	}
-	session->working = 1;
-	pthread_cond_broadcast(&session->cond);
-	pthread_mutex_unlock(&session->lock);
-}
-
-static void spectgen_session_wait(spectgen_session_t *session)
-{
-	while(session->working == 1) {
-		pthread_mutex_lock(&session->wait_lock);
-		pthread_cond_wait(&session->wait_cond, &session->wait_lock);
-		pthread_mutex_unlock(&session->wait_lock);
-	}
+	if(session->busy == 0 || session->active == 0)
+	      return;
+	SIGNAL_SET(&session->start_signal);
 }
 
 void spectgen_session_put(spectgen_session_t *session)
@@ -189,7 +167,7 @@ void spectgen_session_put(spectgen_session_t *session)
 	if(!session)
 	      return;
 
-	spectgen_session_wait(session);
+	SIGNAL_WAIT(&session->finished_signal);
 
 	pthread_mutex_lock(&session->lock);
 	session->busy = 0;
@@ -205,10 +183,7 @@ void static inline spectgen_session_destroy(spectgen_session_t *session)
 	      return;
 
 	session->active = 0;
-	spectgen_session_wait(session);
-	pthread_mutex_lock(&session->lock);
-	pthread_cond_broadcast(&session->cond);
-	pthread_mutex_unlock(&session->lock);
+	SIGNAL_SET(&session->start_signal);
 	pthread_join(session->thread, &par);
 
 	if(session->fft_in)
@@ -221,9 +196,8 @@ void static inline spectgen_session_destroy(spectgen_session_t *session)
 		pthread_mutex_unlock(&planner_lock);
 	}
 	pthread_mutex_destroy(&session->lock);
-	pthread_cond_destroy(&session->cond);
-	pthread_mutex_destroy(&session->wait_lock);
-	pthread_cond_destroy(&session->wait_cond);
+	SIGNAL_DEINIT(&session->start_signal);
+	SIGNAL_DEINIT(&session->finished_signal);
 	decoder_exit(session->d_handle);
 	free(session);
 }
