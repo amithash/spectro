@@ -297,6 +297,5 @@ void decoder_backend_mpg123_init(void)
 __attribute__((destructor))
 void decoder_backend_mpg123_exit(void)
 {
-	decoder_backend_deregister(&backend_ops);
 	mpg123_exit();
 }

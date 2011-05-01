@@ -33,7 +33,6 @@ void decoder_backend_vorbis_init(void)
 __attribute__((destructor))
 void decoder_backend_vorbis_exit(void)
 {
-	decoder_backend_deregister(&backend_ops);
 }
 
 static void decoder_backend_vorbis_decode(void *_handle)

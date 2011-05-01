@@ -31,6 +31,5 @@ void decoder_backend_supported_extensions(char **extensions, unsigned int *out_l
 /* Backend visible interface */
 int decoder_backend_push(void *handle, float *data, unsigned int len, unsigned int frate);
 void decoder_backend_register(struct decoder_backend_ops *ops, char *extension);
-void decoder_backend_deregister(struct decoder_backend_ops *ops);
 
 #endif
