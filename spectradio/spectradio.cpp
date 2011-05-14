@@ -100,6 +100,8 @@ with the source for more information on creating\n\
 the hist DB file.				\n\
 ";
 
+
+
 SpectRadio::SpectRadio()
 {
 	audioOutput = new Phonon::AudioOutput(Phonon::MusicCategory, this);
@@ -137,6 +139,7 @@ void SpectRadio::setPerc(int perc)
 		QMetaObject::invokeMethod(progressBar, 
 				"hide",
 				Qt::QueuedConnection);
+		std::cout << "End time: " << QTime::currentTime().toString().toAscii().data() << std::endl;
 		loadDB(dbname.toAscii().data());
 	}
 }
@@ -161,6 +164,8 @@ void SpectRadio::loadMusicDir(char *dir)
 	strcat(dbname, "/db.hdb");
 
 	std::cout << "Generating " << dbname << " From " << dir << std::endl;
+	std::cout << "Start time: " << QTime::currentTime().toString().toAscii().data() << std::endl;
+
 
 	if(generate_histdb_prepare(&genhist_handle, 
 				dir, dbname,
