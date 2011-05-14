@@ -20,7 +20,7 @@ import re
 env = Environment()
 pwd = os.getcwd()
 env.Append(CCFLAGS = ['-Wall'])
-env.Append(CCFLAGS = ['-mtune=native', '-march=native', '-mfpmath=sse', '-msse4'])
+env.Append(CCFLAGS = ['-mtune=native', '-march=native', '-mfpmath=sse', '-msse4', '-msse3'])
 env.Append(CPPPATH = [pwd + '/include'])
 env.Append(LIBPATH = [pwd + '/lib/decoder', pwd + '/lib/spectgen', pwd + '/lib/histdb'])
 
