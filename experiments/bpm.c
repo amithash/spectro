@@ -27,8 +27,8 @@
 
 #define BUFFER_SIZE 1024
 #define BPM_STEP_SIZE (2048 * 2)
-#define BPM_WINDOW_SIZE (BPM_STEP_SIZE * 4)
-#define MIN_BPM 30
+#define BPM_WINDOW_SIZE (BPM_STEP_SIZE * 2)
+#define MIN_BPM 5
 
 #define MULTI
 float *get_x(unsigned int samples_per_min, unsigned int len)
@@ -74,19 +74,25 @@ void analyze_freqs2(float *freqs[NBANDS], unsigned int samples_per_min, unsigned
 		for(j = 0; j < NBANDS; j++)
 		      freqs[j][i] = 0;
 	}
+#if 0
 	for(i = 0; i < NBANDS; i++) {
 		for(j = 0; j < out_len; j++) {
 			if(freqs[i][j] > max)
 			      max = freqs[i][j];
 		}
 	}
+#endif
 	max = max / 2;
 	for(i = 0; i < NBANDS; i++) {
 		for(j = 0; j < out_len; j++) {
+#if 0
 			if(freqs[i][j] >= max)
+#endif
 				y[(i * out_len) + j] = freqs[i][j];
+#if 0
 			else
 				y[(i * out_len) + j] = 0;
+#endif
 		}
 	}
 	printf("Samples per min = %d\n", samples_per_min);
