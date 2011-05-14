@@ -167,12 +167,14 @@ static int do_band(struct spectgen_struct *handle, float *buf)
 
 	return 0;
 }
-
 static int do_fft(struct spectgen_struct *handle, float *in)
 {
+	int i;
 	/* Copy is bad, but in might be unaligned, and fft computaion
 	 * might eat more than the time saved by not copying */
 	memcpy(handle->session->fft_in, in, sizeof(float) * handle->session->window_size);
+	for(i = 0; i < handle->session->window_size; i++)
+	      handle->session->fft_in[i] *= handle->session->window[i];
 	fftwf_execute(handle->session->plan);
 	return do_band(handle, (float *)handle->session->fft_out);
 }

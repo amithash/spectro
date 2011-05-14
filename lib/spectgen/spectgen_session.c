@@ -76,12 +76,22 @@ static inline int session_index(unsigned int w)
 static inline spectgen_session_t *spectgen_session_create(unsigned int window_size)
 {
 	spectgen_session_t *session;
+	int i;
+
 	session = (spectgen_session_t *)malloc(sizeof(spectgen_session_t));
 	if(!session)
 	      return NULL;
 
 	session->window_size = window_size;
 	session->numfreqs = (window_size / 2) + 1;
+
+	session->window = (float *)malloc(sizeof(float) * window_size);
+	if(!session->window)
+	      goto window_creation_failed;
+	for(i = 0; i < window_size; i++) {
+		session->window[i] = 0.5 * (1 - cos(2 * M_PI * (float)i / (float)(window_size - 1)));
+	}
+
 
 	session->fft_in = (float *)fftwf_malloc(sizeof(float) * window_size);
 	if(!session->fft_in)
@@ -130,6 +140,8 @@ plan_creation_failed:
 fft_out_failed:
 	fftwf_free(session->fft_in);
 fft_in_failed:
+	free(session->window);
+window_creation_failed:
 	free(session);
 	return NULL;
 }
@@ -213,6 +225,8 @@ void static inline spectgen_session_destroy(spectgen_session_t *session)
 		fftwf_destroy_plan(session->plan);
 		pthread_mutex_unlock(&planner_lock);
 	}
+	if(session->window)
+	      free(session->window);
 	pthread_mutex_destroy(&session->lock);
 	SIGNAL_DEINIT(&session->start_signal);
 	SIGNAL_DEINIT(&session->finished_signal);

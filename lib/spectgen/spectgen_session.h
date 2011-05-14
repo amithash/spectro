@@ -75,6 +75,7 @@ typedef struct spectgen_session_struct {
 	float                          *fft_in;
 	fftwf_complex                  *fft_out;
 	fftwf_plan                     plan;
+	float                          *window;
 	struct spectgen_session_struct *next;
 } spectgen_session_t;
 
