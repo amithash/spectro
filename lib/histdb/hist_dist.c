@@ -80,9 +80,20 @@ float hist_distance(hist_t *hist1, hist_t *hist2, hist_dist_func_t dist_type)
 static void hist_raise(float *a, unsigned int len)
 {
 	int i;
+	float div_by = 1.0;
+	int touched = 0;
 	for(i = 0; i < len; i++) {
-		a[i] += ALMOST_ZERO;
-		a[i] = a[i] / (1.0 + ((float)len * ALMOST_ZERO));
+		if(a[i] < ALMOST_ZERO) {
+			div_by += (ALMOST_ZERO - a[i]);
+			a[i] = ALMOST_ZERO;
+			touched = 1;
+		}
+	}
+	if(!touched)
+	      return;
+
+	for(i = 0; i < len; i++) {
+		a[i] = a[i] / div_by;
 	}
 }
 
