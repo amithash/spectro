@@ -64,6 +64,11 @@ EXP_DISTANCE_SOURCES = [
 ]
 env.Program('exp_distance', EXP_DISTANCE_SOURCES)
 
+PLOTSPECT_SOURCES = PLOT_SOURCES + [
+	"plotspect.c"
+]
+env.Program('plotspect', PLOTSPECT_SOURCES)
+
 SPECT_RANGE_SOURCES = ['spect_range.c'];
 env.Program('spect_range', SPECT_RANGE_SOURCES)
 
