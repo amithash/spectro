@@ -78,12 +78,13 @@ static void decoder_backend_vorbis_decode(void *_handle)
 		channels = info->channels;
 
 		out_buf = (float *)malloc(sizeof(float) * len);
+		memset(out_buf, 0, sizeof(float) * len);
 		if(!out_buf)
 		      break;
-		for(i = 0; i < len; i++) {
-			out_buf[i] = 0;
-			for(j = 0; j < channels; j++)
-			      out_buf[i] += buffer[i][j];
+		for(j = 0; j < channels; j++) {
+			for(i = 0; i < len; i++) {
+			      out_buf[i] += buffer[j][i];
+			}
 		}
 
 		decoder_backend_push(handle, out_buf, len, frate);
