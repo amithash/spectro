@@ -80,6 +80,32 @@ void int_strncpy(char *out, char *in, int len)
 	out[len - 1] = '\0';
 }
 
+static void extract_filename(char *title, char *file)
+{
+	int len = strlen(file);
+	int i;
+	char *tmp = NULL;
+
+	len = len < TITLE_LEN ? len : TITLE_LEN;
+
+	for(i = len; i >= 0; i--) {
+		tmp = &file[i];
+
+		if(*tmp == '/') {
+			tmp = &file[i + 1];
+			break;
+		}
+	}
+	int_strncpy(title, tmp, TITLE_LEN);
+	len = strlen(title);
+	for(i = len; i >= 0; i--) {
+		if(title[i] == '.') {
+			title[i] = '\0';
+			break;
+		}
+	}
+}
+
 static int set_tags(hist_t *hist)
 {
 	char *p_title;
@@ -95,7 +121,11 @@ static int set_tags(hist_t *hist)
         tag = taglib_file_tag(f);
 
         p_title = taglib_tag_title(tag);
-	int_strncpy(hist->title, p_title, TITLE_LEN);
+	if(strcmp(p_title, "") == 0) {
+		extract_filename(hist->title, hist->fname);
+	} else {
+		int_strncpy(hist->title, p_title, TITLE_LEN);
+	}
 
         p_artist = taglib_tag_artist(tag);
 	int_strncpy(hist->artist, p_artist, ARTIST_LEN);
@@ -104,6 +134,7 @@ static int set_tags(hist_t *hist)
 	int_strncpy(hist->album, p_album, ALBUM_LEN);
 
         hist->track = taglib_tag_track(tag);
+
 
         taglib_tag_free_strings();
 
