@@ -22,6 +22,7 @@
 #include <math.h>
 #include <float.h>
 #include <string.h>
+#include <stdbool.h>
 #include "plot.h"
 
 #define error(fmt) fprintf(stderr, fmt)
@@ -171,19 +172,78 @@ static void col_normalize(float *data, unsigned int len_y, unsigned int len_x, f
 	}
 
 }
-static void all_normalize(float *data, unsigned int len_y, unsigned int len_x, float to)
+
+static void range(float *data, unsigned int len, float *_max, float *_min)
 {
 	int i;
 	float max = 0, min = FLT_MAX;
-	for(i = 0; i < len_x * len_y; i++) {
+	for(i = 0; i < len; i++) {
 		if(data[i] > max)
 		      max = data[i];
 		if(data[i] < min)
 		      min = data[i];
 	}
+	*_max = max;
+	*_min = min;
+}
+#define STEPS 100
+static float quantile(float *data, unsigned int len, float req_perc, bool greater_than, float max, float min)
+{
+	unsigned int nr_in_range = 0;
+	int i;
+	float perc = 0;
+	float step;
+	float quant;
+
+	quant = greater_than ? max : min;
+	step = (max - min) / STEPS;
+	if(greater_than) {
+		for(quant = max; quant >= min; quant -= step) {
+			nr_in_range = 0;
+			for(i = 0; i < len; i++) {
+				if(data[i] > quant)
+				      nr_in_range++;
+			}
+			perc = 100 * (float)nr_in_range / (float)len;
+			if(perc > req_perc)
+			      break;
+		}
+		printf("%f quantile greater than: %f range=[%f,%f] settling perc=%f\n", req_perc, quant, min, max, perc);
+	} else {
+		for(quant = min; quant <= max; quant += step) {
+			nr_in_range = 0;
+			for(i = 0; i < len; i++) {
+				if(data[i] < quant)
+				      nr_in_range++;
+			}
+			perc = 100 * (float)nr_in_range / (float)len;
+			if(perc > req_perc)
+			      break;
+		}
+		printf("%f quantile lesser than: %f range=[%f,%f] settling perc=%f\n", req_perc, quant, min, max, perc);
+	}
+
+	return quant;
+}
+
+static void all_normalize(float *data, unsigned int len_y, unsigned int len_x, float to)
+{
+	float max, min;
+	float r_max, r_min;
+	int i;
+
+	range(data, len_x * len_y, &r_max, &r_min);
+
+	min = quantile(data, len_x * len_y, 95.0, true, r_max, r_min);
+	max = quantile(data, len_x * len_y, 95.0, false, r_max, r_min);
+
 	if(max == min)
 	      return;
 	for(i = 0; i < len_x * len_y; i++) {
+		if(data[i] > max)
+		      data[i] = max;
+		if(data[i] < min)
+		      data[i] = min;
 		data[i] = to * (data[i] - min) / (max - min);
 	}
 }
