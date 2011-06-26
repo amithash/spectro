@@ -12,10 +12,10 @@ experiments/spect2csv
 experiments/plotbpm
 experiments/spect_range
 experiments/exp_distance
+experiments/plotspect3d
 experiments/plotspect
 spectradio/spectradio
 utils/decoder
 utils/genhistdb
 utils/getsimilar
 utils/spectgen
-
