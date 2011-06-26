@@ -3,8 +3,13 @@
 #include <math.h>
 #include "scale.h"
 
+/* 
+ * Reference:
+ * http://www2.ling.su.se/staff/hartmut/bark.htm
+ */
+
 #define MAX_FREQ (20000)
-#define MIN_FREQ (100)
+#define MIN_FREQ (20)
 
 typedef float (*forward_t)(float);
 typedef float (*reverse_t)(float);
@@ -146,7 +151,7 @@ unsigned int *generate_scale_table(unsigned int nbands, scale_t scale)
 	sc_min = func_r(MIN_FREQ);
 	sc_step = (sc_max - sc_min) / (float)(nbands);
 
-	for(i = sc_min, j = 0; i <= sc_max; i += sc_step, j++) {
+	for(i = sc_min + sc_step, j = 0; i <= sc_max + sc_step && j < nbands; i += sc_step, j++) {
 		out[j] = func_f(i);
 	}
 

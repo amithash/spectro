@@ -76,11 +76,17 @@ typedef struct spectgen_session_struct {
 	fftwf_complex                  *fft_out;
 	fftwf_plan                     plan;
 	float                          *window;
+	float                          *norm_table;
+	unsigned int                   *scale_table;
+	scale_t                        scale;
+	unsigned int                   nbands;
 	struct spectgen_session_struct *next;
 } spectgen_session_t;
 
 
 spectgen_session_t *spectgen_session_get(unsigned int window_size,
+					 scale_t scale,
+					 unsigned int nbands,
 					 void *user_handle,
 					 user_session_cb_t user_cb
 			);

@@ -26,6 +26,7 @@
 #include "queue.h"
 #include "spectgen.h"
 #include "spect-config.h"
+#include "scale.h"
 
 #include "spectgen_session.h"
 
@@ -73,10 +74,15 @@ static inline int session_index(unsigned int w)
 	return w % SPECTGEN_SESSION_TABLE_SIZE;
 }
 
-static inline spectgen_session_t *spectgen_session_create(unsigned int window_size)
+static inline spectgen_session_t *spectgen_session_create(unsigned int window_size,
+							 scale_t scale,
+							 unsigned int nbands)
 {
 	spectgen_session_t *session;
 	int i;
+
+	if(nbands > (window_size / 2))
+	      return NULL;
 
 	session = (spectgen_session_t *)malloc(sizeof(spectgen_session_t));
 	if(!session)
@@ -84,6 +90,8 @@ static inline spectgen_session_t *spectgen_session_create(unsigned int window_si
 
 	session->window_size = window_size;
 	session->numfreqs = (window_size / 2) + 1;
+	session->nbands = nbands;
+	session->scale = scale;
 
 	session->window = (float *)malloc(sizeof(float) * window_size);
 	if(!session->window)
@@ -92,6 +100,13 @@ static inline spectgen_session_t *spectgen_session_create(unsigned int window_si
 		session->window[i] = 0.5 * (1 - cos(2 * M_PI * (float)i / (float)(window_size - 1)));
 	}
 
+	session->scale_table = generate_scale_table(nbands, scale);
+	if(!session->scale_table)
+	      goto scale_generation_failed;
+
+	session->norm_table = generate_scale_norm_table(session->scale_table, nbands);
+	if(!session->norm_table)
+	      goto norm_generation_failed;
 
 	session->fft_in = (float *)fftwf_malloc(sizeof(float) * window_size);
 	if(!session->fft_in)
@@ -140,6 +155,10 @@ plan_creation_failed:
 fft_out_failed:
 	fftwf_free(session->fft_in);
 fft_in_failed:
+	free(session->norm_table);
+norm_generation_failed:
+	free(session->scale_table);
+scale_generation_failed:
 	free(session->window);
 window_creation_failed:
 	free(session);
@@ -147,6 +166,8 @@ window_creation_failed:
 }
 
 spectgen_session_t *spectgen_session_get(unsigned int window_size,
+					 scale_t scale,
+					 unsigned int nbands,
 					 void *user_handle,
 					 user_session_cb_t user_cb
 			)
@@ -157,7 +178,9 @@ spectgen_session_t *spectgen_session_get(unsigned int window_size,
 	pthread_mutex_lock(&session_hash_table_lock);
 	i = session_hash_table[ind];
 	while(i) {
-		if(i->window_size == window_size) {
+		if(i->window_size == window_size &&
+	           i->nbands == nbands &&
+		   i->scale == scale) {
 			pthread_mutex_lock(&i->lock);
 			if(i->busy == 0) {
 				i->busy = 1;
@@ -170,7 +193,7 @@ spectgen_session_t *spectgen_session_get(unsigned int window_size,
 		i = i->next;
 	}
 	if(!session) {
-		session = spectgen_session_create(window_size);
+		session = spectgen_session_create(window_size, scale, nbands);
 		if(!session)
 		      goto malloc_fail;
 		session->next = session_hash_table[ind];
@@ -227,6 +250,11 @@ void static inline spectgen_session_destroy(spectgen_session_t *session)
 	}
 	if(session->window)
 	      free(session->window);
+	if(session->scale_table)
+	      free(session->scale_table);
+	if(session->norm_table)
+	      free(session->norm_table);
+
 	pthread_mutex_destroy(&session->lock);
 	SIGNAL_DEINIT(&session->start_signal);
 	SIGNAL_DEINIT(&session->finished_signal);
