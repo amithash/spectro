@@ -23,6 +23,14 @@
 	extern "C" {
 #endif
 
+typedef enum {
+	MEL_SCALE = 0,
+	BARK_SCALE,
+	SEMITONE_SCALE,
+	MAX_SCALE
+} scale_t;
+
+
 typedef void *spectgen_handle;
 
 int spectgen_open(spectgen_handle *handle, char *fname, unsigned int window_size, unsigned int step_size);

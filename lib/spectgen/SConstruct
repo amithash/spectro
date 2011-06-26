@@ -29,7 +29,8 @@ lib_path = prefix + "/lib"
 
 SPECTGEN_SOURCES = [
 	"spectgen.c",
-	"spectgen_session.c"
+	"spectgen_session.c",
+	"scale.c"
 ]
 
 install_libs += env.SharedLibrary('spectgen', SPECTGEN_SOURCES)
