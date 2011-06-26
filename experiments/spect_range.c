@@ -138,7 +138,7 @@ int main(int argc, char *argv[])
 			break;
 		}
 		chomp_name(file_name);
-		if(spectgen_open(&handle, file_name, SPECT_WINDOW_SIZE, SPECT_STEP_SIZE)) {
+		if(spectgen_open(&handle, file_name, SPECT_WINDOW_SIZE, SPECT_STEP_SIZE, BARK_SCALE, NBANDS)) {
 			continue;
 		}
 		if(spectgen_start(handle)) {

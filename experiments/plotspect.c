@@ -24,32 +24,84 @@
 #include <unistd.h>
 #include "plot.h"
 
-#define WINDOW_SIZE (16384 * 4)
-#define STEP_SIZE   (WINDOW_SIZE/2)
-
-typedef struct {
-	float band[NBANDS];
-} spect_band_t;
-
+#define STEP_SIZE(w) (w / 2)
 
 #define PROCESSING_WINDOW_SIZE 1024
+
+static inline scale_t validate_scale(unsigned int inp)
+{
+	if(inp >= MAX_SCALE)
+	      return BARK_SCALE;
+	return (scale_t)inp;
+}
 
 int main(int argc, char *argv[])
 {
 	spectgen_handle handle;
 	float *band;
-	spect_band_t *band_array = NULL;
+	float *band_array = NULL;
 	unsigned int band_max_len = 0;
 	unsigned int band_len = 0;
+	unsigned int nbands = 24;
+	scale_t scale = BARK_SCALE;
+	char *outfile = NULL;
+	char *infile = NULL;
+	int opt;
+	char default_outfile[100] = "a.pgm";
+	unsigned int window_size = (1024 * 16 * 2);
 
-	if(argc < 3) {
-		printf("Usage: %s <Input MP3 File> <Output Spect File>\n", argv[0]);
+	while((opt = getopt(argc, argv, "o:n:s:hw:")) != -1) {
+		switch(opt) {
+			case 'o':
+				outfile = optarg;
+				break;
+			case 'n':
+				nbands = atoi(optarg);
+				if(nbands < 1 || nbands > 20000) {
+					printf("Nbands option (-n) has an invalid value:%d\n", nbands);
+					exit(-1);
+				}
+				break;
+			case 's':
+				scale = validate_scale(atoi(optarg));
+				break;
+			case 'w':
+				window_size = atoi(optarg);
+				break;
+			case 'h':
+				printf("USAGE: %s [OPTIONS] InMusicFile\n", argv[0]);
+				printf("OPTIONS: \n");
+				printf("-o OUTFILE specify out file name. default: a.pgm\n");
+				printf("-n nbands  specify number of bands. default: 24\n");
+				printf("-s scale specify scale to use to band the music. Options:0 - BARK_SCALE, 1 - MEL_SCALE, 2 - SEMITONE_SCALE, default: BARK_SCALE\n");
+				printf("-w window size while performing the fft. default: %d\n", window_size);
+				printf("-h - Print this message\n");
+				exit(0);
+			case '?':
+				fprintf(stderr, "Option: %c requires an argument\n", optopt);
+				exit(-1);
+			default:
+				printf("Unknown option: %c\n", opt);
+				exit(-1);
+		}
+	}
+	if(argc == optind) {
+		printf("Required argument File name. Try %s -h for help\n", argv[0]);
 		exit(-1);
 	}
-	if(spectgen_open(&handle, argv[1], WINDOW_SIZE, STEP_SIZE)) {
-		printf("Spectgen open on %s failed\n", argv[1]);
-		exit(-1);
+	infile = argv[optind];
 
+	if(outfile == NULL) {
+		outfile = default_outfile;
+	}
+	if(nbands > (window_size / 4)) {
+		printf("Window size should be at lease: %d (4 times that of -n argument)\n", nbands * 4);
+		exit(-1);
+	}
+
+	if(spectgen_open(&handle, infile, window_size, STEP_SIZE(window_size), scale, nbands)) {
+		printf("Spectgen open on %s failed\n", infile);
+		exit(-1);
 	}
 	if(spectgen_start(handle)) {
 		printf("Start failed\n");
@@ -60,19 +112,20 @@ int main(int argc, char *argv[])
 	while((band = spectgen_pull(handle)) != NULL) {
 		band_len++;
 		if(band_len > band_max_len) {
-			band_array = realloc(band_array, sizeof(spect_band_t) * (band_max_len + PROCESSING_WINDOW_SIZE));
+			band_array = realloc(band_array, sizeof(float) * nbands * (band_max_len + PROCESSING_WINDOW_SIZE));
 			if(!band_array) {
 				printf("Malloc failed!\n");
 				exit(-1);
 			}
 			band_max_len += PROCESSING_WINDOW_SIZE;
 		}
-		memcpy(&band_array[band_len - 1], band, sizeof(spect_band_t));
+		memcpy(&band_array[band_len * nbands], band, sizeof(float) * nbands);
 		free(band);
 	}
-	band_array = realloc(band_array, sizeof(spect_band_t) * band_len);
+	printf("Length = %d width=%d\n", band_len, nbands);
+	band_array = realloc(band_array, sizeof(float) * nbands * band_len);
 	spectgen_close(handle);
-	pgm(argv[2], (float *)band_array, NBANDS, band_len, BACKGROUND_BLACK, GREYSCALE, ALL_NORMALIZATION);
+	pgm(outfile, (float *)band_array, nbands, band_len, BACKGROUND_BLACK, GREYSCALE, ALL_NORMALIZATION);
 
 	return 0;
 }

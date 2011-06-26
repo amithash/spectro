@@ -159,7 +159,7 @@ hist_t *gen_hist(char *fname)
 	if(!hist)
 	      return NULL;
 
-	if(spectgen_open(&spect_handle, fname, SPECT_WINDOW_SIZE, SPECT_STEP_SIZE)) {
+	if(spectgen_open(&spect_handle, fname, SPECT_WINDOW_SIZE, SPECT_STEP_SIZE, BARK_SCALE, NBANDS)) {
 		printf("Spectgen open failed\n");
 		free(hist);
 		return NULL;

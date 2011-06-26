@@ -28,7 +28,7 @@
 #define STEP_SIZE   WINDOW_SIZE
 
 typedef struct {
-	float band[NBANDS];
+	float band[3];
 } spect_band_t;
 
 #define POSITIVE_SMALL_VAL (0.00001)
@@ -65,10 +65,9 @@ int main(int argc, char *argv[])
 		printf("Usage: %s <Input MP3 File>\n", argv[0]);
 		exit(-1);
 	}
-	if(spectgen_open(&handle, argv[1], WINDOW_SIZE, STEP_SIZE)) {
+	if(spectgen_open(&handle, argv[1], WINDOW_SIZE, STEP_SIZE, BARK_SCALE, 3)) {
 		printf("Spectgen open on %s failed\n", argv[1]);
 		exit(-1);
-
 	}
 	if(spectgen_start(handle)) {
 		printf("Start failed\n");
@@ -86,32 +85,12 @@ int main(int argc, char *argv[])
 			}
 			band_max_len += PROCESSING_WINDOW_SIZE;
 		}
-		memcpy(&band_array[band_len - 1], band, sizeof(spect_band_t));
+		memcpy(band_array[band_len - 1].band, band, sizeof(float) * 3);
 		free(band);
 	}
-	band_array = realloc(band_array, sizeof(spect_band_t) * band_len);
 	spectgen_close(handle);
-
-	data = (float *)malloc(band_len * 3 * sizeof(float));
-	if(!data)
-	      return -1;
-	memset(centroid, 0, sizeof(float) * NBANDS);
-	memset(data, 0, sizeof(float) * 3 * band_len);
-	for(i = 0; i < band_len; i++) {
-		if(is_zero(band_array[i].band, NBANDS)) {
-			continue;
-		}
-		for(j = 0; j < NBANDS; j++) {
-			int ind = j / (NBANDS / 3);
-			data[real_len*3+ind] += band_array[i].band[j];
-			centroid[j] += band_array[i].band[j];
-		}
-		real_len++;
-	}
-	plot3d(data, real_len, 0);
-	for(i = 0; i < NBANDS; i++) {
-		printf("%.4f\n", centroid[i] / (float)real_len);
-	}
+	band_array = realloc(band_array, sizeof(spect_band_t) * band_len);
+	plot3d((float *)band_array, band_len, 0);
 
 	return 0;
 }

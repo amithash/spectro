@@ -192,7 +192,7 @@ int main(int argc, char *argv[])
 	}
 	mp3 = argv[1];
 
-	if(spectgen_open(&handle, mp3, BPM_WINDOW_SIZE, BPM_STEP_SIZE)) {
+	if(spectgen_open(&handle, mp3, BPM_WINDOW_SIZE, BPM_STEP_SIZE, BARK_SCALE, NBANDS)) {
 		printf("SPECT OPEN of %s failed\n", mp3);
 		exit(-1);
 	}

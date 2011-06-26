@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "spectgen.h"
+#include "spect-config.h"
 #include <unistd.h>
 
 #define WINDOW_SIZE 4096
@@ -40,7 +41,7 @@ int main(int argc, char *argv[])
 		exit(-1);
 	}
 
-	if(spectgen_open(&handle, argv[1], WINDOW_SIZE, STEP_SIZE)) {
+	if(spectgen_open(&handle, argv[1], WINDOW_SIZE, STEP_SIZE, BARK_SCALE, NBANDS)) {
 		printf("Spectgen open on %s failed\n", argv[1]);
 		fclose(f);
 		exit(-1);
