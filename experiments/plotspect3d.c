@@ -24,12 +24,27 @@
 #include <unistd.h>
 #include "plot.h"
 
-#define WINDOW_SIZE (16384 * 4)
-#define STEP_SIZE   (WINDOW_SIZE/2)
+#define WINDOW_SIZE 2048
+#define STEP_SIZE   WINDOW_SIZE
 
 typedef struct {
 	float band[NBANDS];
 } spect_band_t;
+
+#define POSITIVE_SMALL_VAL (0.00001)
+#define NEGATIVE_SMALL_VAL (-0.00001)
+
+int is_zero(float *data, unsigned int len)
+{
+	int i;
+	for(i = 0; i < len; i++) {
+		if(data[i] > POSITIVE_SMALL_VAL)
+		      return 0;
+		if(data[i] < NEGATIVE_SMALL_VAL)
+		      return 0;
+	}
+	return 1;
+}
 
 
 #define PROCESSING_WINDOW_SIZE 1024
@@ -38,12 +53,16 @@ int main(int argc, char *argv[])
 {
 	spectgen_handle handle;
 	float *band;
+	float *data;
+	float centroid[NBANDS];
 	spect_band_t *band_array = NULL;
 	unsigned int band_max_len = 0;
 	unsigned int band_len = 0;
+	int i,j;
+	unsigned int real_len = 0;
 
-	if(argc < 3) {
-		printf("Usage: %s <Input MP3 File> <Output Spect File>\n", argv[0]);
+	if(argc < 2) {
+		printf("Usage: %s <Input MP3 File>\n", argv[0]);
 		exit(-1);
 	}
 	if(spectgen_open(&handle, argv[1], WINDOW_SIZE, STEP_SIZE)) {
@@ -72,7 +91,27 @@ int main(int argc, char *argv[])
 	}
 	band_array = realloc(band_array, sizeof(spect_band_t) * band_len);
 	spectgen_close(handle);
-	pgm(argv[2], (float *)band_array, NBANDS, band_len, BACKGROUND_BLACK, GREYSCALE, ALL_NORMALIZATION);
+
+	data = (float *)malloc(band_len * 3 * sizeof(float));
+	if(!data)
+	      return -1;
+	memset(centroid, 0, sizeof(float) * NBANDS);
+	memset(data, 0, sizeof(float) * 3 * band_len);
+	for(i = 0; i < band_len; i++) {
+		if(is_zero(band_array[i].band, NBANDS)) {
+			continue;
+		}
+		for(j = 0; j < NBANDS; j++) {
+			int ind = j / (NBANDS / 3);
+			data[real_len*3+ind] += band_array[i].band[j];
+			centroid[j] += band_array[i].band[j];
+		}
+		real_len++;
+	}
+	plot3d(data, real_len, 0);
+	for(i = 0; i < NBANDS; i++) {
+		printf("%.4f\n", centroid[i] / (float)real_len);
+	}
 
 	return 0;
 }

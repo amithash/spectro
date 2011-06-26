@@ -26,6 +26,8 @@
 
 #define error(fmt) fprintf(stderr, fmt)
 
+#define PM3D_EXP
+
 const char *standard_types[PLOT_MAX] = {
 	"points",
 	"lines"
@@ -74,6 +76,47 @@ int plot(float *x, float *y, unsigned int ncol, unsigned int len, plot_type_t ty
 		fprintf(f, "\n");
 	}
 	fprintf(f, " pause -1\n");
+	fclose(f);
+	if(system("gnuplot __out.gp"))
+	      printf("call to gnuplot failed\n");
+	if(!debug) {
+		if(system("rm -f __out.gp __data.txt"))
+		      printf("removing outs failed\n");
+	}
+	return 0;
+}
+
+int plot3d(float *data, unsigned int len, int debug)
+{
+	FILE *f;
+	int i,j;
+
+	if(!(f = fopen("__data.txt", "w"))) {
+		error("Failed to create temp file\n");
+		return -1;
+	}
+	for(i = 0; i < len; i++) {
+		for(j = 0; j < 3; j++) {
+			fprintf(f, "%.4f ", data[i * 3 + j]);
+		}
+		fprintf(f, "\n");
+#ifdef PM3D_EXP
+		if(i % 32 == 0)
+		      fprintf(f, "\n");
+#endif
+	}
+	fclose(f);
+
+	if(!(f = fopen("__out.gp", "w"))) {
+		error("Failed to create gp script\n");
+		return -1;
+	}
+	fprintf(f, "set hidden3d\n");
+#ifdef PM3D_EXP
+	fprintf(f, "set pm3d at b\n");
+#endif
+	fprintf(f, "splot \"__data.txt\" using 1:2:3 with points title \"\"\n");
+	fprintf(f, "pause -1\n");
 	fclose(f);
 	if(system("gnuplot __out.gp"))
 	      printf("call to gnuplot failed\n");
