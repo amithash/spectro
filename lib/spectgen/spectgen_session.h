@@ -72,14 +72,18 @@ typedef struct spectgen_session_struct {
 	signal_type                    finished_signal;
 	volatile int                   active;
 	int                            busy;
-	float                          *fft_in;
-	fftwf_complex                  *fft_out;
-	fftwf_plan                     plan;
+	float                          *fft_in_pre;
+	fftwf_complex                  *fft_out_pre;
+	float                          *fft_in_post;
+	fftwf_complex                  *fft_out_post;
+	fftwf_plan                     plan_pre;
+	fftwf_plan                     plan_post;
 	float                          *window;
 	float                          *norm_table;
 	unsigned int                   *scale_table;
 	scale_t                        scale;
 	unsigned int                   nbands;
+	spect_method_t                 method;
 	struct spectgen_session_struct *next;
 } spectgen_session_t;
 
@@ -87,11 +91,11 @@ typedef struct spectgen_session_struct {
 spectgen_session_t *spectgen_session_get(unsigned int window_size,
 					 scale_t scale,
 					 unsigned int nbands,
+					 spect_method_t method,
 					 void *user_handle,
 					 user_session_cb_t user_cb
 			);
 void spectgen_session_start(spectgen_session_t *session);
 void spectgen_session_put(spectgen_session_t *session);
-
 
 #endif

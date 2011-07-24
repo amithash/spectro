@@ -28,22 +28,16 @@
 
 int main(int argc, char *argv[])
 {
-	FILE *f;
 	spectgen_handle handle;
+	unsigned int nbands = NBANDS;
 	float *band;
-	if(argc < 3) {
-		printf("Usage: %s <Input MP3 File> <Output Spect File>\n", argv[0]);
+	int i;
+	if(argc < 2) {
+		printf("Usage: %s <Input MP3 File>\n", argv[0]);
 		exit(-1);
 	}
-	f = fopen(argv[2], "w");
-	if(!f) {
-		printf("Failed to create %s\n", argv[2]);
-		exit(-1);
-	}
-
-	if(spectgen_open(&handle, argv[1], WINDOW_SIZE, STEP_SIZE, BARK_SCALE, NBANDS)) {
+	if(spectgen_open(&handle, argv[1], WINDOW_SIZE, STEP_SIZE, BARK_SCALE, SPECTOGRAM, &nbands)) {
 		printf("Spectgen open on %s failed\n", argv[1]);
-		fclose(f);
 		exit(-1);
 
 	}
@@ -52,13 +46,13 @@ int main(int argc, char *argv[])
 		goto start_failed;
 	}
 	while((band = spectgen_pull(handle)) != NULL) {
-		if(write(fileno(f), band, sizeof(float) * 24) != (sizeof(float) * 24)) {
-			printf("Write failed\n");
+		for(i = 0; i < NBANDS; i++) {
+			printf("%f ", band[i]);
 		}
+		printf("\n");
 		free(band);
 	}
 start_failed:
 	spectgen_close(handle);
-	fclose(f);
 	return 0;
 }

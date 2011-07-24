@@ -185,6 +185,7 @@ int main(int argc, char *argv[])
 	unsigned int max_len = 0;
 	int i,j;
 	float *spect[NBANDS];
+	unsigned int nbands = NBANDS;
 	
 	if(argc < 2) {
 		printf("USAGE: %s <MP3>\n", argv[0]);
@@ -192,7 +193,7 @@ int main(int argc, char *argv[])
 	}
 	mp3 = argv[1];
 
-	if(spectgen_open(&handle, mp3, BPM_WINDOW_SIZE, BPM_STEP_SIZE, BARK_SCALE, NBANDS)) {
+	if(spectgen_open(&handle, mp3, BPM_WINDOW_SIZE, BPM_STEP_SIZE, BARK_SCALE, SPECTOGRAM, &nbands)) {
 		printf("SPECT OPEN of %s failed\n", mp3);
 		exit(-1);
 	}

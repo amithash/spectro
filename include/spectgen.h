@@ -30,10 +30,15 @@ typedef enum {
 	MAX_SCALE
 } scale_t;
 
+typedef enum {
+	SPECTOGRAM,
+	CEPSTOGRAM
+} spect_method_t;
+
 
 typedef void *spectgen_handle;
 
-int spectgen_open(spectgen_handle *handle, char *fname, unsigned int window_size, unsigned int step_size, scale_t scale, unsigned int nbands);
+int spectgen_open(spectgen_handle *handle, char *fname, unsigned int window_size, unsigned int step_size, scale_t scale, spect_method_t method, unsigned int *nbands);
 int spectgen_close(spectgen_handle handle);
 int spectgen_start(spectgen_handle handle);
 float *spectgen_pull(spectgen_handle handle);

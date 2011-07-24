@@ -99,7 +99,7 @@ int main(int argc, char *argv[])
 		exit(-1);
 	}
 
-	if(spectgen_open(&handle, infile, window_size, STEP_SIZE(window_size), scale, nbands)) {
+	if(spectgen_open(&handle, infile, window_size, STEP_SIZE(window_size), scale, SPECTOGRAM, &nbands)) {
 		printf("Spectgen open on %s failed\n", infile);
 		exit(-1);
 	}

@@ -191,9 +191,8 @@ float *generate_scale_norm_table(unsigned *bark_bands, unsigned int nbands)
 			}
 		}
 		if(found == 0) {
-			printf("Could not find X!\n");
-			free(out);
-			return NULL;
+			out[i] = 1;
+			continue;
 		}
 		/* Linear interpolation */
 		out[i] = ((x - x1) * (y2 - y1) / (x2 - x1)) + y1;

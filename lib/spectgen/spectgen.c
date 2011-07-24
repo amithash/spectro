@@ -26,7 +26,6 @@
 #include "queue.h"
 #include "spectgen.h"
 #include "spectgen_session.h"
-#include "spect-config.h"
 
 #include "decoder.h"
 
@@ -53,9 +52,13 @@ static void setup_barkband_table(struct spectgen_struct *handle, unsigned int sa
 {
 	int i;
 	unsigned int barkband = 0;
+	unsigned int nbands = handle->session->nbands;
+	if(handle->session->method == CEPSTOGRAM)
+	      nbands = 2 * (nbands - 1);
+
 	memset(handle->barkband_table, 0, sizeof(unsigned int) * handle->session->numfreqs);
 	for(i = 0; i < handle->session->numfreqs; i++) {
-		if(barkband < (handle->session->nbands - 1) &&
+		if(barkband < (nbands - 1) &&
 			SPECTRUM_BAND_FREQ(i, handle->session->window_size, sampling_rate) >= 
 			handle->session->scale_table[barkband])
 		      barkband++;
@@ -68,55 +71,92 @@ static int do_band(struct spectgen_struct *handle, float *buf)
 {
 	int i;
 	float *band;
+	float *out;
+	int out_num = handle->session->nbands;
+	float * norm_table = handle->session->norm_table;
+	float window_size = (float)handle->session->window_size;
+	unsigned int *barkband_table = handle->barkband_table;
 
 	if(!handle->barkband_table_inited)
 	      return -1;
 
-	band = (float *)calloc(handle->session->nbands, sizeof(float));
-	if(!band)
+	out = band = (float *)calloc(out_num, sizeof(float));
+	if(!out)
 	      return -1;
+
+	if(handle->session->method == CEPSTOGRAM) {
+		band = handle->session->fft_in_post;
+		out_num = (out_num - 1) * 2;
+		memset(band, 0, sizeof(float) * out_num);
+	}
 
 	for(i = 1; i < handle->session->numfreqs; i++) {
 		float real = buf[2 * i];
 		float imag = buf[2 * i + 1];
-		band[handle->barkband_table[i]] += ((real * real) + (imag * imag));
+		band[barkband_table[i]] += ((real * real) + (imag * imag));
 	}
-	for(i = 0; i < handle->session->nbands; i++) {
-		band[i] = SCALING_FACTOR * handle->session->norm_table[i] * sqrt(band[i]) / 
-		    (float)handle->session->window_size;
+
+	for(i = 0; i < out_num; i++) {
+		band[i] = SCALING_FACTOR * norm_table[i] * sqrt(band[i]) / window_size;
 	}
-	q_put(&handle->queue, band);
+
+	if(handle->session->method == CEPSTOGRAM) {
+		for(i = 0; i < out_num; i++) {
+			band[i] = log(band[i]);
+		}
+		fftwf_execute(handle->session->plan_post);
+		buf = (float *)handle->session->fft_out_post;
+		for(i = 0; i < handle->session->nbands; i++) {
+			float real = buf[2 * i];
+			float imag = buf[2 * i + 1];
+			out[i] = SCALING_FACTOR * sqrt((real * real) + (imag * imag)) / (float)(out_num);
+		}
+	}
+
+	q_put(&handle->queue, out);
 
 	return 0;
 }
-static int do_fft(struct spectgen_struct *handle, float *in)
+
+static int process_window(struct spectgen_struct *handle, float *in)
 {
+	unsigned int window_size = handle->session->window_size;
+	float *fft_in = handle->session->fft_in_pre;
+	float *window = handle->session->window;
 	int i;
-	/* Copy is bad, but in might be unaligned, and fft computaion
-	 * might eat more than the time saved by not copying */
-	memcpy(handle->session->fft_in, in, sizeof(float) * handle->session->window_size);
-	for(i = 0; i < handle->session->window_size; i++)
-	      handle->session->fft_in[i] *= handle->session->window[i];
-	fftwf_execute(handle->session->plan);
-	return do_band(handle, (float *)handle->session->fft_out);
+
+	memcpy(fft_in, in, sizeof(float) * window_size);
+	for(i = 0; i < window_size; i++)
+		fft_in[i] *= window[i];
+	fftwf_execute(handle->session->plan_pre);
+	return do_band(handle, (float *)handle->session->fft_out_pre);
 }
 
-int spectgen_open(spectgen_handle *_handle, char *fname, unsigned int window_size, unsigned int step_size, scale_t scale, unsigned int nbands)
+int spectgen_open(spectgen_handle *_handle, char *fname, unsigned int window_size, unsigned int step_size, scale_t scale, spect_method_t method, unsigned int *_nbands)
 {
 	struct spectgen_struct *handle;
+	int nbands;
 
 	*_handle = NULL;
+
+	if(!_nbands)
+	      return -1;
+
 	if(!window_size || !step_size)
 	      return -1;
 	if(step_size > window_size)
 	      return -1;
+
+	nbands = *_nbands;
+	if(nbands == 0)
+		*_nbands = nbands = (window_size / 2) + 1;
 
 	handle = (struct spectgen_struct *)
 	    malloc(sizeof(struct spectgen_struct));
 	if(!handle)
 	      return -1;
 
-	handle->session = spectgen_session_get(window_size, scale, nbands, handle, spectgen_worker);
+	handle->session = spectgen_session_get(window_size, scale, nbands, method, handle, spectgen_worker);
 	if(!handle->session)
 	      goto session_creation_failed;
 
@@ -148,14 +188,19 @@ int spectgen_open(spectgen_handle *_handle, char *fname, unsigned int window_siz
 	return 0;
 
 open_failed:
+	printf("Open failed\n");
 	free(handle->barkband_table);
 barkband_table_failed:
+	printf("barkband table failed\n");
 	free(handle->leftover);
 leftover_failed:
+	printf("leftover failed\n");
 	q_destroy(&handle->queue);
 q_init_failed:
+	printf("qinit failed\n");
 	spectgen_session_put(handle->session);
 session_creation_failed:
+	printf("session failed\n");
 	free(handle);
 	return -1;
 }
@@ -242,7 +287,7 @@ static void spectgen_worker(void *_handle)
 		if(decode_len >= handle->session->window_size) {
 			for(i = 0; i < decode_len - handle->session->window_size; 
 						i+=handle->step_size) {
-				do_fft(handle, &buf[i]);
+				process_window(handle, &buf[i]);
 			}
 			if(i < decode_len) {
 				memcpy(handle->leftover, &buf[i], 

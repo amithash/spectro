@@ -87,7 +87,7 @@ int plot(float *x, float *y, unsigned int ncol, unsigned int len, plot_type_t ty
 	return 0;
 }
 
-int plot3d(float *data, unsigned int len, int debug)
+int plot3d(float *data, unsigned int len, int debug, plot_type_t type)
 {
 	FILE *f;
 	int i,j;
@@ -116,7 +116,12 @@ int plot3d(float *data, unsigned int len, int debug)
 #ifdef PM3D_EXP
 	fprintf(f, "set pm3d at b\n");
 #endif
-	fprintf(f, "splot \"__data.txt\" using 1:2:3 with points title \"\"\n");
+	fprintf(f, "splot \"__data.txt\" using 1:2:3 with ");
+	if(type == PLOT_POINTS)
+	      fprintf(f, "points ");
+	else
+	      fprintf(f, "lines ");
+	fprintf(f, "title \"\"\n");
 	fprintf(f, "pause -1\n");
 	fclose(f);
 	if(system("gnuplot __out.gp"))

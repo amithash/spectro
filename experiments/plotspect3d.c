@@ -24,7 +24,7 @@
 #include <unistd.h>
 #include "plot.h"
 
-#define WINDOW_SIZE 2048
+#define WINDOW_SIZE (2048*64)
 #define STEP_SIZE   WINDOW_SIZE
 
 typedef struct {
@@ -53,19 +53,16 @@ int main(int argc, char *argv[])
 {
 	spectgen_handle handle;
 	float *band;
-	float *data;
-	float centroid[NBANDS];
 	spect_band_t *band_array = NULL;
 	unsigned int band_max_len = 0;
 	unsigned int band_len = 0;
-	int i,j;
-	unsigned int real_len = 0;
+	unsigned int nbands = 3;
 
 	if(argc < 2) {
 		printf("Usage: %s <Input MP3 File>\n", argv[0]);
 		exit(-1);
 	}
-	if(spectgen_open(&handle, argv[1], WINDOW_SIZE, STEP_SIZE, BARK_SCALE, 3)) {
+	if(spectgen_open(&handle, argv[1], WINDOW_SIZE, STEP_SIZE, BARK_SCALE, SPECTOGRAM, &nbands)) {
 		printf("Spectgen open on %s failed\n", argv[1]);
 		exit(-1);
 	}
@@ -90,7 +87,7 @@ int main(int argc, char *argv[])
 	}
 	spectgen_close(handle);
 	band_array = realloc(band_array, sizeof(spect_band_t) * band_len);
-	plot3d((float *)band_array, band_len, 0);
+	plot3d((float *)band_array, band_len, 0, PLOT_POINTS);
 
 	return 0;
 }

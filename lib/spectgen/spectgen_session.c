@@ -25,7 +25,6 @@
 #include <fftw3.h>
 #include "queue.h"
 #include "spectgen.h"
-#include "spect-config.h"
 #include "scale.h"
 
 #include "spectgen_session.h"
@@ -76,12 +75,17 @@ static inline int session_index(unsigned int w)
 
 static inline spectgen_session_t *spectgen_session_create(unsigned int window_size,
 							 scale_t scale,
+							 spect_method_t method,
 							 unsigned int nbands)
 {
 	spectgen_session_t *session;
 	int i;
+	unsigned int num_bands = nbands;
 
-	if(nbands > (window_size / 2))
+	if(method == CEPSTOGRAM)
+		num_bands = (nbands - 1) * 2;
+
+	if(num_bands > (1 + (window_size / 2)))
 	      return NULL;
 
 	session = (spectgen_session_t *)malloc(sizeof(spectgen_session_t));
@@ -92,6 +96,7 @@ static inline spectgen_session_t *spectgen_session_create(unsigned int window_si
 	session->numfreqs = (window_size / 2) + 1;
 	session->nbands = nbands;
 	session->scale = scale;
+	session->method = method;
 
 	session->window = (float *)malloc(sizeof(float) * window_size);
 	if(!session->window)
@@ -100,31 +105,56 @@ static inline spectgen_session_t *spectgen_session_create(unsigned int window_si
 		session->window[i] = 0.5 * (1 - cos(2 * M_PI * (float)i / (float)(window_size - 1)));
 	}
 
-	session->scale_table = generate_scale_table(nbands, scale);
+
+	session->scale_table = generate_scale_table(num_bands, scale);
 	if(!session->scale_table)
 	      goto scale_generation_failed;
 
-	session->norm_table = generate_scale_norm_table(session->scale_table, nbands);
+	session->norm_table = generate_scale_norm_table(session->scale_table, num_bands);
 	if(!session->norm_table)
 	      goto norm_generation_failed;
 
-	session->fft_in = (float *)fftwf_malloc(sizeof(float) * window_size);
-	if(!session->fft_in)
-	      goto fft_in_failed;
+	session->fft_in_pre = (float *)fftwf_malloc(sizeof(float) * window_size);
+	if(!session->fft_in_pre)
+	      goto fft_in_pre_failed;
 
-	session->fft_out = (fftwf_complex *)
+	session->fft_out_pre = (fftwf_complex *)
 	    fftwf_malloc(sizeof(fftwf_complex) * session->numfreqs);
-	if(!session->fft_out)
-	      goto fft_out_failed;
+	if(!session->fft_out_pre)
+	      goto fft_out_pre_failed;
 
 	/* Even though we are thread safe, the planner is not. so 
 	 * serialize the calls to fftwf plan create */
 	pthread_mutex_lock(&planner_lock);
-	session->plan = fftwf_plan_dft_r2c_1d(window_size, session->fft_in,
-				session->fft_out, FFTW_MEASURE | FFTW_DESTROY_INPUT);
+	session->plan_pre  = fftwf_plan_dft_r2c_1d(window_size, session->fft_in_pre,
+				session->fft_out_pre, FFTW_MEASURE | FFTW_DESTROY_INPUT);
 	pthread_mutex_unlock(&planner_lock);
-	if(!session->plan)
-	      goto plan_creation_failed;
+	if(!session->plan_pre)
+	      goto plan_pre_creation_failed;
+
+	session->fft_in_post = NULL;
+	session->fft_out_post = NULL;
+	session->plan_post = 0;
+
+	if(method == CEPSTOGRAM) {
+		unsigned int len_out_post = nbands;
+		unsigned int len_in_post = num_bands;
+		session->fft_in_post = (float *)fftwf_malloc(sizeof(float) * len_in_post);
+		if(!session->fft_in_post)
+			goto fft_in_post_failed;
+
+		session->fft_out_post = (fftwf_complex *)
+		    fftwf_malloc(sizeof(fftwf_complex) * len_out_post);
+		if(!session->fft_out_post)
+			goto fft_out_post_failed;
+
+		pthread_mutex_lock(&planner_lock);
+		session->plan_post = fftwf_plan_dft_r2c_1d(len_in_post, session->fft_in_post,
+				session->fft_out_post, FFTW_MEASURE | FFTW_DESTROY_INPUT);
+		pthread_mutex_unlock(&planner_lock);
+		if(!session->plan_post)
+			goto plan_post_creation_failed;
+	}
 
 	/* The reason we create is for it to be taken! */
 	session->busy = 1;
@@ -150,11 +180,21 @@ decoder_init_failed:
 	pthread_mutex_destroy(&session->lock);
 	SIGNAL_DEINIT(&session->start_signal);
 	SIGNAL_DEINIT(&session->finished_signal);
-plan_creation_failed:
-	fftwf_free(session->fft_out);
-fft_out_failed:
-	fftwf_free(session->fft_in);
-fft_in_failed:
+	if(session->plan_post)
+		fftwf_destroy_plan(session->plan_post);
+plan_post_creation_failed:
+	if(session->fft_out_post)
+	      fftwf_free(session->fft_out_post);
+fft_out_post_failed:
+	if(session->fft_in_post)
+	      fftwf_free(session->fft_in_post);
+fft_in_post_failed:
+	fftwf_destroy_plan(session->plan_pre);
+plan_pre_creation_failed:
+	fftwf_free(session->fft_out_pre);
+fft_out_pre_failed:
+	fftwf_free(session->fft_in_pre);
+fft_in_pre_failed:
 	free(session->norm_table);
 norm_generation_failed:
 	free(session->scale_table);
@@ -168,6 +208,7 @@ window_creation_failed:
 spectgen_session_t *spectgen_session_get(unsigned int window_size,
 					 scale_t scale,
 					 unsigned int nbands,
+					 spect_method_t method,
 					 void *user_handle,
 					 user_session_cb_t user_cb
 			)
@@ -180,7 +221,8 @@ spectgen_session_t *spectgen_session_get(unsigned int window_size,
 	while(i) {
 		if(i->window_size == window_size &&
 	           i->nbands == nbands &&
-		   i->scale == scale) {
+		   i->scale == scale &&
+		   i->method == method) {
 			pthread_mutex_lock(&i->lock);
 			if(i->busy == 0) {
 				i->busy = 1;
@@ -193,7 +235,7 @@ spectgen_session_t *spectgen_session_get(unsigned int window_size,
 		i = i->next;
 	}
 	if(!session) {
-		session = spectgen_session_create(window_size, scale, nbands);
+		session = spectgen_session_create(window_size, scale, method, nbands);
 		if(!session)
 		      goto malloc_fail;
 		session->next = session_hash_table[ind];
@@ -239,13 +281,22 @@ void static inline spectgen_session_destroy(spectgen_session_t *session)
 	SIGNAL_SET(&session->start_signal);
 	pthread_join(session->thread, &par);
 
-	if(session->fft_in)
-	      fftwf_free(session->fft_in);
-	if(session->fft_out)
-	      fftwf_free(session->fft_out);
-	if(session->plan) {
+	if(session->fft_in_pre)
+	      fftwf_free(session->fft_in_pre);
+	if(session->fft_out_pre)
+	      fftwf_free(session->fft_out_pre);
+	if(session->fft_in_post)
+	      fftwf_free(session->fft_in_post);
+	if(session->fft_out_post)
+	      fftwf_free(session->fft_out_post);
+	if(session->plan_pre) {
 		pthread_mutex_lock(&planner_lock);
-		fftwf_destroy_plan(session->plan);
+		fftwf_destroy_plan(session->plan_pre);
+		pthread_mutex_unlock(&planner_lock);
+	}
+	if(session->plan_post) {
+		pthread_mutex_lock(&planner_lock);
+		fftwf_destroy_plan(session->plan_post);
 		pthread_mutex_unlock(&planner_lock);
 	}
 	if(session->window)

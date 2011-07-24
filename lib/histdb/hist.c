@@ -152,6 +152,7 @@ hist_t *gen_hist(char *fname)
 	hist_t *hist = NULL;
 	spectgen_handle spect_handle;
 	float *spect;
+	unsigned int nbands = NBANDS;
 	unsigned int num_samples = 0;
 	int i,j;
 	
@@ -159,7 +160,7 @@ hist_t *gen_hist(char *fname)
 	if(!hist)
 	      return NULL;
 
-	if(spectgen_open(&spect_handle, fname, SPECT_WINDOW_SIZE, SPECT_STEP_SIZE, BARK_SCALE, NBANDS)) {
+	if(spectgen_open(&spect_handle, fname, SPECT_WINDOW_SIZE, SPECT_STEP_SIZE, BARK_SCALE, SPECTOGRAM, &nbands)) {
 		printf("Spectgen open failed\n");
 		free(hist);
 		return NULL;

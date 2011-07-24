@@ -131,6 +131,7 @@ int main(int argc, char *argv[])
 
 	while(1) {
 		float perc = 100.0 * (float)done_files / (float)nr_files;
+		unsigned int nbands = NBANDS;
 		done_files++;
 		progress(perc, stderr);
 
@@ -138,7 +139,7 @@ int main(int argc, char *argv[])
 			break;
 		}
 		chomp_name(file_name);
-		if(spectgen_open(&handle, file_name, SPECT_WINDOW_SIZE, SPECT_STEP_SIZE, BARK_SCALE, NBANDS)) {
+		if(spectgen_open(&handle, file_name, SPECT_WINDOW_SIZE, SPECT_STEP_SIZE, BARK_SCALE, CEPSTOGRAM, &nbands)) {
 			continue;
 		}
 		if(spectgen_start(handle)) {
