@@ -30,8 +30,9 @@ int main(int argc, char *argv[])
 {
 	spectgen_handle handle;
 	unsigned int nbands = NBANDS;
-	float *band;
-	int i;
+	float *band = NULL;
+	int len;
+	int i,j;
 	if(argc < 2) {
 		printf("Usage: %s <Input MP3 File>\n", argv[0]);
 		exit(-1);
@@ -41,18 +42,20 @@ int main(int argc, char *argv[])
 		exit(-1);
 
 	}
-	if(spectgen_start(handle)) {
-		printf("Start failed\n");
-		goto start_failed;
+	if((len = spectgen_read(handle, &band, nbands)) <= 0) {
+		printf("Spectgen read failed!\n");
+		spectgen_close(handle);
+		exit(-1);
 	}
-	while((band = spectgen_pull(handle)) != NULL) {
-		for(i = 0; i < NBANDS; i++) {
-			printf("%f ", band[i]);
+	spectgen_close(handle);
+
+	for(i = 0; i < len; i++) {
+		for(j = 0; j < nbands; j++) {
+			printf("%.4f ", band[(i * nbands) + j]);
 		}
 		printf("\n");
-		free(band);
 	}
-start_failed:
-	spectgen_close(handle);
+	free(band);
+
 	return 0;
 }

@@ -318,3 +318,36 @@ float *spectgen_pull(spectgen_handle _handle)
 	struct spectgen_struct *handle = (struct spectgen_struct *)_handle;
 	return q_get(&handle->queue);
 }
+
+int spectgen_read(spectgen_handle handle, float **_band_array, unsigned int nbands)
+{
+	float *band_array;
+	float *band;
+	int band_len = 0;
+	int max_band_len = 0;
+	if(!handle || !_band_array || !nbands)
+	      return -1;
+	band_array = *_band_array = NULL;
+	if(spectgen_start(handle)) {
+		return -1;
+	}
+
+	while((band = spectgen_pull(handle)) != NULL) {
+		band_len++;
+		if(band_len > max_band_len) {
+			max_band_len += 1024;
+			band_array = realloc(band_array, sizeof(float) * nbands * max_band_len);
+			if(!band_array) {
+				do {
+					free(band);
+				} while((band = spectgen_pull(handle)) != NULL);
+				return -1;
+			}
+		}
+		memcpy(&band_array[(band_len-1) * nbands], band, sizeof(float) * nbands);
+		free(band);
+	}
+	band_array = realloc(band_array, sizeof(float) * nbands * band_len);
+	*_band_array = band_array;
+	return band_len;
+}

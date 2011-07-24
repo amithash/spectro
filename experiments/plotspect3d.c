@@ -27,10 +27,6 @@
 #define WINDOW_SIZE (2048*64)
 #define STEP_SIZE   WINDOW_SIZE
 
-typedef struct {
-	float band[3];
-} spect_band_t;
-
 #define POSITIVE_SMALL_VAL (0.00001)
 #define NEGATIVE_SMALL_VAL (-0.00001)
 
@@ -52,10 +48,8 @@ int is_zero(float *data, unsigned int len)
 int main(int argc, char *argv[])
 {
 	spectgen_handle handle;
-	float *band;
-	spect_band_t *band_array = NULL;
-	unsigned int band_max_len = 0;
-	unsigned int band_len = 0;
+	float *band_array = NULL;
+	int band_len = 0;
 	unsigned int nbands = 3;
 
 	if(argc < 2) {
@@ -66,28 +60,14 @@ int main(int argc, char *argv[])
 		printf("Spectgen open on %s failed\n", argv[1]);
 		exit(-1);
 	}
-	if(spectgen_start(handle)) {
-		printf("Start failed\n");
+
+	if((band_len = spectgen_read(handle, &band_array, nbands)) <= 0) {
+		printf("Spectgen Read failed!\n");
 		spectgen_close(handle);
 		exit(-1);
 	}
-
-	while((band = spectgen_pull(handle)) != NULL) {
-		band_len++;
-		if(band_len > band_max_len) {
-			band_array = realloc(band_array, sizeof(spect_band_t) * (band_max_len + PROCESSING_WINDOW_SIZE));
-			if(!band_array) {
-				printf("Malloc failed!\n");
-				exit(-1);
-			}
-			band_max_len += PROCESSING_WINDOW_SIZE;
-		}
-		memcpy(band_array[band_len - 1].band, band, sizeof(float) * 3);
-		free(band);
-	}
 	spectgen_close(handle);
-	band_array = realloc(band_array, sizeof(spect_band_t) * band_len);
-	plot3d((float *)band_array, band_len, 0, PLOT_POINTS);
+	plot3d(band_array, band_len, 0, PLOT_POINTS);
 
 	return 0;
 }

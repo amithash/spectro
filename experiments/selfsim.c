@@ -144,8 +144,7 @@ int main(int argc, char *argv[])
 	spectgen_handle handle;
 	float *band;
 	float *band_array = NULL;
-	unsigned int band_max_len = 0;
-	unsigned int band_len = 0;
+	int band_len = 0;
 	unsigned int nbands = 24;
 	scale_t scale = BARK_SCALE;
 	char *outfile = NULL;
@@ -208,28 +207,12 @@ int main(int argc, char *argv[])
 		printf("Spectgen open on %s failed\n", infile);
 		exit(-1);
 	}
-	if(spectgen_start(handle)) {
-		printf("Start failed\n");
+
+	if((band_len = spectgen_read(handle, &band_array, nbands)) <= 0) {
+		printf("Spectgen read failed!\n");
 		spectgen_close(handle);
 		exit(-1);
 	}
-
-	while((band = spectgen_pull(handle)) != NULL) {
-		band_len++;
-		if(band_len > band_max_len) {
-			band_array = realloc(band_array, sizeof(float) * nbands * (band_max_len + PROCESSING_WINDOW_SIZE));
-			if(!band_array) {
-				printf("Malloc failed!\n");
-				exit(-1);
-			}
-			band_max_len += PROCESSING_WINDOW_SIZE;
-		}
-		memcpy(&band_array[(band_len - 1) * nbands], band, sizeof(float) * nbands);
-		free(band);
-	}
-	printf("Length = %d width=%d\n", band_len, nbands);
-	band_array = realloc(band_array, sizeof(float) * nbands * band_len);
-
 	spectgen_close(handle);
 
 	selfsim = (float *)malloc(sizeof(float) * band_len * band_len);
