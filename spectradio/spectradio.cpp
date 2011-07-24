@@ -335,8 +335,8 @@ void SpectRadio::retry(void)
 
 void SpectRadio::next(void)
 {
+	mediaObject->stop();
 	if(playlistHistoryToggle) {
-		mediaObject->stop();
 		if(playlistTable->rowCount() - 1 == (int)playlistCurrentRow)
 		      return;
 		int realRow = playlistTable->item(++playlistCurrentRow, INDEX_COLUMN)->text().toInt();
@@ -358,12 +358,10 @@ void SpectRadio::next(void)
 		std::cerr << "sourcesIndex invalid: " << sourcesIndex << std::endl;
 		return;
 	}
-	mediaObject->stop();
 
 	int nextSourcesIndex = htdb.get_next(sourcesIndex);
 	if(nextSourcesIndex >= sources.size()) {
 		std::cerr << "Bad index: " << nextSourcesIndex << std::endl;
-		mediaObject->play();
 		return;
 	}
 
