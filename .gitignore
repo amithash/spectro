@@ -5,6 +5,7 @@ moc*.cpp
 *.so
 *~
 experiments/cluster
+experiments/selfsim
 experiments/gabor
 experiments/hist2pgm
 experiments/plothist
