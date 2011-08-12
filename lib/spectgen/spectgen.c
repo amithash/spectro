@@ -102,7 +102,8 @@ static int do_band(struct spectgen_struct *handle, float *buf)
 
 	if(handle->session->method == CEPSTOGRAM) {
 		for(i = 0; i < out_num; i++) {
-			band[i] = log(band[i]);
+			if(band[i] != 0)
+				band[i] = log(band[i]);
 		}
 		fftwf_execute(handle->session->plan_post);
 		buf = (float *)handle->session->fft_out_post;
