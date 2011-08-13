@@ -23,6 +23,7 @@
 #include "spectgen.h"
 #include <unistd.h>
 #include "plot.h"
+#include "getopt_easy.h"
 #include <math.h>
 
 #define STEP_SIZE(w) (w / 2)
@@ -146,54 +147,48 @@ int main(int argc, char *argv[])
 	float *band_array = NULL;
 	int band_len = 0;
 	unsigned int nbands = 24;
-	scale_t scale = BARK_SCALE;
+	scale_t scale;
+	int opt_scale = (int)BARK_SCALE;
 	char *outfile = NULL;
 	char *infile = NULL;
-	int opt;
 	char default_outfile[100] = "a.pgm";
+	int help = 0;
 	unsigned int window_size = DEFAULT_WINDOW_SIZE;
 	float *selfsim;
+	getopt_easy_opt_t opt[] = {
+		{"o:", STRING, (void *)&outfile},
+		{"n:", UNSIGNED_INT, &nbands},
+		{"s:", INT, &opt_scale},
+		{"w:", UNSIGNED_INT, &window_size},
 
-	while((opt = getopt(argc, argv, "o:n:s:hw:")) != -1) {
-		switch(opt) {
-			case 'o':
-				outfile = optarg;
-				break;
-			case 'n':
-				nbands = atoi(optarg);
-				if(nbands < 1 || nbands > 20000) {
-					printf("Nbands option (-n) has an invalid value:%d\n", nbands);
-					exit(-1);
-				}
-				break;
-			case 's':
-				scale = validate_scale(atoi(optarg));
-				break;
-			case 'w':
-				window_size = atoi(optarg);
-				break;
-			case 'h':
-				printf("USAGE: %s [OPTIONS] InMusicFile\n", argv[0]);
-				printf("OPTIONS: \n");
-				printf("-o OUTFILE specify out file name. default: a.pgm\n");
-				printf("-n nbands  specify number of bands. default: 24\n");
-				printf("-s scale specify scale to use to band the music. Options:0 - BARK_SCALE, 1 - MEL_SCALE, 2 - SEMITONE_SCALE, default: BARK_SCALE\n");
-				printf("-w window size while performing the fft. default: %d\n", window_size);
-				printf("-h - Print this message\n");
-				exit(0);
-			case '?':
-				fprintf(stderr, "Option: %c requires an argument\n", optopt);
-				exit(-1);
-			default:
-				printf("Unknown option: %c\n", opt);
-				exit(-1);
-		}
+	};
+	
+	if(getopt_easy(&argc, &argv, opt, 4)) {
+		printf("Options parsing failed\n");
+		exit(-1);
 	}
-	if(argc == optind) {
+
+	if(nbands < 1 || nbands > 20000) {
+		printf("Nbands option (-n) has an invalid value:%d\n", nbands);
+		exit(-1);
+	}
+	scale = validate_scale(opt_scale);
+	if(help) {
+		printf("USAGE: %s [OPTIONS] InMusicFile\n", argv[0]);
+		printf("OPTIONS: \n");
+		printf("-o OUTFILE specify out file name. default: a.pgm\n");
+		printf("-n nbands  specify number of bands. default: 24\n");
+		printf("-s scale specify scale to use to band the music. Options:0 - BARK_SCALE, 1 - MEL_SCALE, 2 - SEMITONE_SCALE, default: BARK_SCALE\n");
+		printf("-w window size while performing the fft. default: %d\n", window_size);
+		printf("-h - Print this message\n");
+		exit(0);
+	}
+
+	if(argc <= 1) {
 		printf("Required argument File name. Try %s -h for help\n", argv[0]);
 		exit(-1);
 	}
-	infile = argv[optind];
+	infile = argv[1];
 
 	if(outfile == NULL) {
 		outfile = default_outfile;
