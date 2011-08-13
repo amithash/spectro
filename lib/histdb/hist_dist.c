@@ -206,26 +206,39 @@ static float hellinger_distance(float *a, float *b, unsigned int len)
 }
 
 int hist_get_similar(
-	hist_t *list, unsigned int len, int this_i, /* Input */
-	int n, int *ind, float *dist,              /* Output */
+	hist_t *list, unsigned int list_len, 
+	unsigned int *this_i, unsigned int this_i_len,
+	int n, int *ind, float *dist,
 	hist_dist_func_t dist_type)
 {
+
 	if(dist_type < DISTANCE_START || dist_type >= DISTANCE_END)
 	      return -1;
-	return hist_get_similar_ext(list, len, this_i, n, ind, dist, 
-				supported_distances[dist_type].func);
-
+	return hist_get_similar_ext(list, list_len, this_i, this_i_len,
+				n, ind, dist, supported_distances[dist_type].func);
 }
 
-
 int hist_get_similar_ext(
-	hist_t *list, unsigned int len, int this_i, /* Input */
-	int n, int *ind, float *dist,              /* Output */
+	hist_t *list, unsigned int len, 
+	unsigned int *this_i, unsigned int this_i_len, /* Input */
+	int n, int *ind, float *_dist,                 /* Output */
 	distance_func_t func
 )
 {
 	int i,j,k;
 	float *dlist;
+	float *dist = NULL;
+	if(!list || !len || !this_i || !this_i_len || !n || !ind)
+	      return -1;
+
+	if(!_dist) {
+		dist = (float *)malloc(sizeof(float) * n);
+		if(!dist)
+		      return -1;
+	} else {
+		dist = _dist;
+	}
+
 	for(i = 0; i < n; i++) {
 		ind[i] = -1;
 		dist[i] = FLT_MAX;
@@ -233,14 +246,33 @@ int hist_get_similar_ext(
 	dlist = (float *)calloc(len, sizeof(float));
 	if(!dist)
 	      return -1;
+
 	for(i = 0; i < len; i++) {
-		dlist[i] = hist_distance_ext(&list[this_i], &list[i], func);
+		dlist[i] = 0;
+		for(j = 0; j < this_i_len; j++) {
+			float dist = hist_distance_ext(&list[this_i[j]], &list[i], func);
+			if(dist == 0)
+			      continue;
+			dlist[i] += 1.0 / dist;
+		}
+		if(dlist[i] == 0)
+		      dlist[i] = 0;
+		else
+		      dlist[i] = 1.0 / dlist[i];
 	}
+
 	for(k = 0; k < n; k++) {
 		for(i = 0; i < len; i++) {
 			float idist = dlist[i];
-			if(i == this_i)
-				continue;
+			int is_this = 0;
+			for(j = 0; j < this_i_len; j++) {
+				if(this_i[j] == i) {
+					is_this = 1;
+					break;
+				}
+			}
+			if(is_this == 1)
+			      continue;
 			if(list[i].exclude != 0)
 			      continue;
 			for(j = 0; j < n; j++) {
@@ -253,6 +285,10 @@ int hist_get_similar_ext(
 		}
 	}
 	free(dlist);
+
+	if(!_dist)
+		free(dist);
+
 	return 0;
 }
 

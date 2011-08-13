@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
 		printf("Cound not find %s in db\n",argv[2]);
 		exit(-1);
 	}
-	if(hist_get_similar_ext(hist_list, len, ref_ind, maxes_len, 
+	if(hist_get_similar_ext(hist_list, len, &ref_ind, 1, maxes_len, 
 			ind_p, dist_p, experimental_distance)) {
 		printf("Malloc failed!\n");
 		exit(-1);

@@ -150,7 +150,7 @@ int HistDB::get_next(int _ind)
 	ind_artist = artist(ind);
 
 	while(1) {
-		rc = hist_get_similar(hist_list, hist_len, ind, 
+		rc = hist_get_similar(hist_list, hist_len, &ind, 1, 
 			1, &next_ind, &next_dist, curDistance);
 		if(rc) {
 			std::cout << "Getting similar failed" << std::endl;

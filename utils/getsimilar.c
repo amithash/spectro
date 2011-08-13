@@ -24,46 +24,84 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <float.h>
+#include "getopt_easy.h"
 
 #define NMAX_DEFAULT 10
+
+int get_music_file_index(hist_t *list, unsigned int list_len, char *mp3)
+{
+	int i;
+	char mp3_path[PATH_MAX] = "";
+	int ret = -1;
+
+
+	if(!list || !list_len || !mp3)
+	      return -1;
+
+	if(!realpath(mp3, mp3_path)) {
+		printf("Could not get real path\n");
+		return -1;
+	}
+	for(i = 0; i < list_len; i++) {
+		if(strcmp(list[i].fname, mp3_path) == 0) {
+			ret = i;
+			break;
+		}
+	}
+	return ret;
+}
 
 int main(int argc, char *argv[])
 {
 	unsigned int len;
 	int i;
 	hist_t *hist_list;
-	int ref_ind = -1;
+	unsigned int *ref_ind = NULL;
 	int maxes_len = NMAX_DEFAULT;
-	char mp3_path[PATH_MAX] = "";
 	int *ind_p;
 	float *dist_p;
 	dist_t *sup_dist = NULL;
 	hist_dist_func_t dist_func = DISTANCE_START;
+	char *hist_db_name = NULL;
+	unsigned int num_music_files = 0;
+	int opt_get_dist = 0;
+	int opt_dist_type = (int)HELLINGER_DIVERGANCE;
+	getopt_easy_opt_t opt[] = {
+		{"p", FLAG, &opt_get_dist},
+		{"d:", INT, &opt_dist_type},
+		{"n:", INT, &maxes_len},
+		{"h:", STRING, (void *)&hist_db_name}
+	};
+
+	if(getopt_easy(&argc, &argv, opt, 4)) {
+		printf("Option parsing failed!\n");
+		exit(-1);
+	}
 
 	get_supported_distances(&sup_dist);
+	if(opt_get_dist) {
+		for(i = DISTANCE_START; i < DISTANCE_END; i++) {
+			printf("[%d] %s\n", i, sup_dist[i].name);
+		}
+		exit(0);
+	}
+	if(!hist_db_name) {
+		printf("Mandatory option: -h which specifies the db name\n");
+		exit(-1);
+	}
+	if(opt_dist_type < (int)DISTANCE_START || opt_dist_type >= DISTANCE_END) {
+		printf("Invalid distance: Try %s -p\n", argv[0]);
+		exit(-1);
+	}
+	dist_func = (hist_dist_func_t)opt_dist_type;
 
-	if(argc < 3) {
-		printf("USAGE: HIST_DB <music file>\n");
+	if(argc <= 1) {
+		printf("USAGE: HIST_DB OPTIONS -h DB_PATH <music file> [<music file> <music file> ...]\n");
+		printf("OPTIONS: -n - number of files, -d distance type, -p print supported distances\n");
 		exit(-1);
 	}
-	if(argc >= 4) {
-		maxes_len = atoi(argv[3]);
-	}
+	num_music_files = argc - 1;
 
-	printf("Supported distances: \n");
-	for(i = DISTANCE_START; i < DISTANCE_END; i++) {
-		printf("[%d] %s\n", i, sup_dist[i].name);
-	}
-	printf("Enter the distance: ");
-	if(scanf("%d", &i) != 1) {
-		printf("Invalid user input\n");
-		exit(-1);
-	}
-	dist_func = (hist_dist_func_t)i;
-	if(dist_func < DISTANCE_START || dist_func >= DISTANCE_END) {
-		printf("You entered an unsupported distance.. Exiting\n");
-		exit(-1);
-	}
 	printf("Getting similar tracks using \"%s\" as the distance function\n", sup_dist[dist_func].name);
 
 	ind_p = calloc(maxes_len, sizeof(int));
@@ -73,26 +111,27 @@ int main(int argc, char *argv[])
 		exit(-1);
 	}
 
-	if(read_histdb(&hist_list, &len, argv[1])) {
-		printf("Could not read hist db: %s\n", argv[1]);
-		exit(-1);
-	}
-	if(!realpath(argv[2], mp3_path)) {
-		printf("Could not get real path\n");
+	if(read_histdb(&hist_list, &len, hist_db_name)) {
+		printf("Could not read hist db: %s\n", hist_db_name);
 		exit(-1);
 	}
 
-	for(i = 0; i < len; i++) {
-		if(strcmp(hist_list[i].fname, mp3_path) == 0) {
-			ref_ind = i;
-			break;
-		}
-	}
-	if(ref_ind == -1) {
-		printf("Cound not find %s in db\n",argv[2]);
+	ref_ind = (unsigned int *)calloc(num_music_files, sizeof(unsigned int));
+	if(!ref_ind) {
+		printf("Malloc failure\n");
 		exit(-1);
 	}
-	if(hist_get_similar(hist_list, len, ref_ind, maxes_len, 
+
+	for(i = 0; i < num_music_files; i++) {
+		int ind = get_music_file_index(hist_list, len, argv[1 + i]);
+		if(ind < 0) {
+			printf("Could not find %s in the db\n", argv[1 + i]);
+			exit(-1);
+		}
+		ref_ind[i] = (unsigned int)ind;
+	}
+
+	if(hist_get_similar(hist_list, len, ref_ind, num_music_files, maxes_len, 
 			ind_p, dist_p, dist_func)) {
 		printf("Malloc failed!\n");
 		exit(-1);

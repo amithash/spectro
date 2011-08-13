@@ -148,9 +148,10 @@ void get_supported_distances(dist_t **dist);
  *
  * list		in	The hist list to look for.
  * len		in	The length of the hist list.
- * this_i	in	The index of the hist entry for 
+ * this_i	in	The array index of the hist entry for 
  * 			which the most similar entries are
  * 			required.
+ * this_i_len   in      The length of the above array.
  * n		in	The n most similar entries.
  * ind		out	The list to populate the index values
  * 			of the n most entries.
@@ -164,8 +165,9 @@ void get_supported_distances(dist_t **dist);
  * 0 on success, Negative error value on failure.
  ***************************************************************/
 int hist_get_similar(
-	hist_t *list, unsigned int len, int this_i, /* Input */
-	int n, int *ind, float *dist,              /* Output */
+	hist_t *list, unsigned int list_len, 
+	unsigned int *this_i, unsigned int this_i_len,
+	int n, int *ind, float *dist,
 	hist_dist_func_t dist_type);
 
 /****************************************************************
@@ -178,9 +180,10 @@ int hist_get_similar(
  *
  * list		in	The hist list to look for.
  * len		in	The length of the hist list.
- * this_i	in	The index of the hist entry for 
+ * this_i	in	The array of index of the hist entry for 
  * 			which the most similar entries are
  * 			required.
+ * this_i_len   in      The length of the above array
  * n		in	The n most similar entries.
  * ind		out	The list to populate the index values
  * 			of the n most entries.
@@ -194,10 +197,10 @@ int hist_get_similar(
  * 0 on success, Negative error value on failure.
  ***************************************************************/
 int hist_get_similar_ext(
-	hist_t *list, unsigned int len, int this_i, /* Input */
+	hist_t *list, unsigned int len,
+	unsigned int *this_i, unsigned int this_i_len, /* Input */
 	int n, int *ind, float *dist,              /* Output */
 	distance_func_t func);
-
 
 /****************************************************************
  * FUNCTIONS RELATING TO HISTDB READING AND WRITING
