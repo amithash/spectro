@@ -105,6 +105,9 @@ class SpectRadio : public QMainWindow
 		void treeClicked(QTreeWidgetItem *item, int column);
 		void playSource(int index);
 		void genhistClicked(void);
+		void likeClicked(void);
+		void dislikeClicked(void);
+		int getLast(void);
 
 	private:
 		void setupActions();
@@ -127,9 +130,11 @@ class SpectRadio : public QMainWindow
 		bool playlistHistoryToggle; /* True playlist, false history */
 		int playlistCurrentRow;
 		enum SearchOption currentSearchOption;
-		HistDB htdb;
+		HistDB *htdb;
 		bool radioMode;
 
+		QAction *goodAction;
+		QAction *badAction;
 		QAction *playAction;
 		QAction *stopAction;
 		QAction *nextAction;

@@ -24,6 +24,144 @@
 #include <sys/stat.h>
 #include "hist.h"
 
+
+OrderedList::OrderedList(void)
+{
+	unsigned int i;
+	like_list_length = LIKE_LIST_LENGTH;
+	recent_list_length = RECENT_LIST_LENGTH;
+
+	like_list = new unsigned int[like_list_length];
+	recent_list = new unsigned int[recent_list_length];
+	list = new unsigned int [like_list_length + recent_list_length];
+
+	for(i = 0; i < like_list_length; i++)
+	      like_list[i] = LIST_INFINITY;
+	for(i = 0; i < recent_list_length; i++)
+	      recent_list[i] = LIST_INFINITY;
+	for(i = 0; i < like_list_length + recent_list_length; i++)
+	      list[i] = LIST_INFINITY;
+}
+
+OrderedList::OrderedList(unsigned int ll_len, unsigned int rl_len)
+{
+	unsigned int i;
+	like_list_length = ll_len;
+	recent_list_length = rl_len;
+
+	like_list = new unsigned int[like_list_length];
+	recent_list = new unsigned int[recent_list_length];
+	list = new unsigned int [like_list_length + recent_list_length];
+
+	for(i = 0; i < like_list_length; i++)
+	      like_list[i] = LIST_INFINITY;
+	for(i = 0; i < recent_list_length; i++)
+	      recent_list[i] = LIST_INFINITY;
+	for(i = 0; i < like_list_length + recent_list_length; i++)
+	      list[i] = LIST_INFINITY;
+}
+
+OrderedList::~OrderedList(void)
+{
+	like_list_length = recent_list_length = 0;
+
+	delete [] like_list;
+	delete [] recent_list;
+	delete [] list;
+}
+void OrderedList::addRecent(unsigned int ind)
+{
+	unsigned int i;
+	if(recent_list_length == 0)
+	      return;
+
+	for(i = 0; i < recent_list_length; i++) {
+	      if(recent_list[i] == LIST_INFINITY)
+		    break;
+	}
+	if(i < recent_list_length) {
+		recent_list[i] = ind;
+		return;
+	}
+	for(i = 1; i < recent_list_length; i++) {
+		recent_list[i-1] = recent_list[i];
+	}
+	recent_list[recent_list_length - 1] = ind;
+}
+void OrderedList::removeRecent(unsigned int ind)
+{
+	unsigned int i;
+
+	if(recent_list_length == 0)
+	      return;
+
+	for(i = 0; i < recent_list_length; i++) {
+		if(recent_list[i] == ind)
+		      break;
+	}
+	for(; i < recent_list_length - 1; i++) {
+		recent_list[i] = recent_list[i + 1];
+	}
+	recent_list[recent_list_length - 1] = LIST_INFINITY;
+}
+void OrderedList::addLike(unsigned int ind)
+{
+    unsigned int i;
+
+    if(like_list_length == 0)
+	  return;
+
+    for(i = 0; i < like_list_length; i++)
+	  if(like_list[i] == LIST_INFINITY)
+		break;
+    if(i < like_list_length) {
+    	like_list[i] = ind;
+	return;
+    }
+    for(i = 1; i < like_list_length; i++) {
+    	like_list[i - 1] = like_list[i];
+    }
+    like_list[like_list_length - 1] = ind;
+}
+unsigned int *OrderedList::getList(unsigned int *_len)
+{
+    unsigned int i;
+    unsigned int len = 0;
+    for(i = 0; i < like_list_length; i++) {
+	    if(like_list[i] == LIST_INFINITY)
+		  break;
+	    list[len++] = like_list[i];
+    }
+    for(i = 0; i < recent_list_length; i++) {
+    	if(recent_list[i] == LIST_INFINITY)
+	      break;
+	list[len++] = recent_list[i];
+    }
+    *_len = len;
+    return list;
+}
+
+void OrderedList::print(void)
+{
+	unsigned int i;
+	std::cout << "Like List: ";
+	for(i = 0; i < like_list_length; i++) {
+		if(like_list[i] == LIST_INFINITY)
+		      break;
+		std::cout << like_list[i] << " ";
+	}
+	std::cout << std::endl;
+
+	std::cout << "Recent List: ";
+	for(i = 0; i < recent_list_length; i++) {
+		if(recent_list[i] == LIST_INFINITY)
+		      break;
+		std::cout << recent_list[i] << " ";
+	}
+	std::cout << std::endl;
+}
+
+
 HistDB::HistDB(void)
 {
 	valid = 0;
@@ -32,6 +170,14 @@ HistDB::HistDB(void)
 	curDistance = HELLINGER_DIVERGANCE;
 	hist_list = NULL;
 	hist_len = 0;
+	likeList = new OrderedList();
+}
+
+HistDB::~HistDB(void)
+{
+	delete likeList;
+	if(hist_list)
+		free(hist_list);
 }
 
 bool HistDB::is_valid()
@@ -43,7 +189,6 @@ void HistDB::LoadDB(const char *dbname)
 {
 	valid = 0;
 	if(!dbname) {
-		std::cout << "Invalid (NULL) pointer passed as DB name" << std::endl;
 		return;
 	}
 
@@ -59,12 +204,6 @@ HistDB::HistDB(const char *dbname)
 {
 	HistDB();
 	LoadDB(dbname);
-}
-
-HistDB::~HistDB()
-{
-	if(hist_list)
-		free(hist_list);
 }
 
 unsigned int HistDB::length()
@@ -129,6 +268,17 @@ void HistDB::set_playing(unsigned int current)
 	hist_list[current].exclude = 1;
 }
 
+void HistDB::like(int ind)
+{
+	likeList->removeRecent((unsigned int)ind);
+	likeList->addLike((unsigned int)ind);
+}
+
+void HistDB::dislike(int ind)
+{
+	likeList->removeRecent((unsigned int)ind);
+}
+
 int HistDB::get_next(int _ind)
 {
 	QString ind_title;
@@ -149,9 +299,17 @@ int HistDB::get_next(int _ind)
 	ind_title = title(ind);
 	ind_artist = artist(ind);
 
+	unsigned int len;
+	unsigned int *like = likeList->getList(&len);
+
 	while(1) {
-		rc = hist_get_similar(hist_list, hist_len, &ind, 1, 
-			1, &next_ind, &next_dist, curDistance);
+		if(len) {
+			rc = hist_get_similar(hist_list, hist_len, like, len, 
+				1, &next_ind, &next_dist, curDistance);
+		} else {
+			rc = hist_get_similar(hist_list, hist_len, &ind, 1, 
+				1, &next_ind, &next_dist, curDistance);
+		}
 		if(rc) {
 			std::cout << "Getting similar failed" << std::endl;
 			return ret;
@@ -164,6 +322,7 @@ int HistDB::get_next(int _ind)
 		if(i_artist.toLower().compare(ind_artist.toLower()) != 0)
 		      break;
 	}
+	likeList->addRecent((unsigned int)next_ind);
 	return next_ind;
 }
 

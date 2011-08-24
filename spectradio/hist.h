@@ -27,7 +27,31 @@
  #include <phonon/volumeslider.h>
  #include <phonon/backendcapabilities.h>
 
-// Aux list which has a 1:1 equivalance to hist_list
+#define LIKE_LIST_LENGTH   (4)
+#define RECENT_LIST_LENGTH (4)
+#define LIST_INFINITY (0xdeadbeef)
+
+class OrderedList
+{
+	unsigned int *like_list;
+	unsigned int *recent_list;
+	unsigned int *list;
+
+	unsigned int like_list_length;
+	unsigned int recent_list_length;
+
+	public:
+
+	OrderedList(unsigned int ll_len, unsigned int rl_len);
+	OrderedList(void);
+	~OrderedList(void);
+	void addRecent(unsigned int ind);
+	void removeRecent(unsigned int ind);
+	void addLike(unsigned int ind);
+	unsigned int *getList(unsigned int *len);
+	void print(void);
+};
+
 class HistDB
 {
 	hist_t *hist_list;
@@ -45,6 +69,9 @@ class HistDB
 	void addToDB(QString name);
 	bool existsInDB(QString name);
 
+	void like(int ind);
+	void dislike(int ind);
+
 	bool is_valid();
 	unsigned int length(void);
 	float distance(unsigned int e1, unsigned int e2);
@@ -56,6 +83,7 @@ class HistDB
 	QString artist(unsigned int ind);
 	QString album(unsigned int ind);
 	QString track(unsigned int ind);
+	OrderedList *likeList;
 
 	QList<QString> getSupportedDistanceFunctions();
 	void setDistanceFunction(QString dist);

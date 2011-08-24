@@ -81,6 +81,9 @@
 #define ICON_ARTIST   QIcon::fromTheme("view-media-artist")
 #define ICON_SEARCH   QIcon::fromTheme("system-search")
 
+#define ICON_GOOD    QIcon::fromTheme("face-smile")
+#define ICON_BAD     QIcon::fromTheme("face-sad")
+
 // Do an indirect call to status bar... This is required when any
 // element is called for from a pthread (outside lib callbacks)
 #define PRINT_STATUS(msg, dur) QMetaObject::invokeMethod(progressBar, 	\
@@ -182,8 +185,25 @@ void SpectRadio::loadMusicDir(char *dir)
 void SpectRadio::genhistClicked(void)
 {
 	QFileDialog dialog(this);
+	QString musicLocation = QDesktopServices::storageLocation(QDesktopServices::MusicLocation);
+	QString homeLocation = QDesktopServices::storageLocation(QDesktopServices::HomeLocation);
+
+	if(homeLocation.endsWith("/")) {
+		homeLocation.chop(1);
+	}
+	if(musicLocation.endsWith("/")) {
+		musicLocation.chop(1);
+	}
+
+	if(musicLocation.compare(homeLocation) == 0) {
+		musicLocation += "/Music";
+	}
+	if(!QDir(musicLocation).exists()) {
+		musicLocation = homeLocation;
+	}
+
 	QString dir = dialog.getExistingDirectory(this, tr("Select Music Directory"),
-				QDesktopServices::storageLocation(QDesktopServices::MusicLocation),
+				musicLocation,
 				QFileDialog::ShowDirsOnly | QFileDialog::ReadOnly);
 	if(dir.isEmpty()) {
 		return;
@@ -324,7 +344,7 @@ void SpectRadio::retry(void)
 	}
 	mediaObject->stop();
 	mediaObject->clearQueue();
-	int index = htdb.get_next(playRow);
+	int index = htdb->get_next(playRow);
 	if(index >= sources.size()) {
 		std::cerr << "Bad index: " << index << std::endl;
 		return;
@@ -359,7 +379,7 @@ void SpectRadio::next(void)
 		return;
 	}
 
-	int nextSourcesIndex = htdb.get_next(sourcesIndex);
+	int nextSourcesIndex = htdb->get_next(sourcesIndex);
 	if(nextSourcesIndex >= sources.size()) {
 		std::cerr << "Bad index: " << nextSourcesIndex << std::endl;
 		return;
@@ -485,7 +505,7 @@ void SpectRadio::searchOptionTitle(void)
 void SpectRadio::acceptSettings(QAbstractButton * button)
 {
 	if(button->text().compare("Cancel") != 0) {
-		htdb.setDistanceFunction(button->text());
+		htdb->setDistanceFunction(button->text());
 	}
 	closeSettings();
 }
@@ -517,39 +537,39 @@ void SpectRadio::loadDB(QString dbfile)
 		return;
 	}
 
-	int at = htdb.length();
+	int at = htdb->length();
 
 
-	if(htdb.existsInDB(dbfile)) {
+	if(htdb->existsInDB(dbfile)) {
 		QString str(dbfile);
 		str.append(" Already loaded, so skipping it");
 		PRINT_STATUS(str, 2000);
 		std::cerr << str.toAscii().data() << std::endl;
 		return;
 	}
-	htdb.addToDB(dbfile);
+	htdb->addToDB(dbfile);
 
-	htdb.LoadDB(dbfile.toAscii().data());
+	htdb->LoadDB(dbfile.toAscii().data());
 	PRINT_STATUS("Done loading DB", 2000);
 
-	if(htdb.is_valid() != true) {
+	if(htdb->is_valid() != true) {
 		PRINT_STATUS("Error! DB Not read!", 4000);
 		exit(-1);
 	}
 
-	sources.reserve(htdb.length());
-	treeItemList.reserve(htdb.length());
-	for(unsigned int i = at; i < htdb.length(); i++) {
-		QString string(htdb.name(i));
+	sources.reserve(htdb->length());
+	treeItemList.reserve(htdb->length());
+	for(unsigned int i = at; i < htdb->length(); i++) {
+		QString string(htdb->name(i));
 		Phonon::MediaSource source(string);
 		sources.append(source);
-		QString title(htdb.title(i));
-		QString track(htdb.track(i));
-		QString artist(htdb.artist(i));
-		QString album(htdb.album(i));
+		QString title(htdb->title(i));
+		QString track(htdb->track(i));
+		QString artist(htdb->artist(i));
+		QString album(htdb->album(i));
 
 		if(title.isEmpty()) {
-			title = QString(htdb.name(i));
+			title = QString(htdb->name(i));
 		} else if(!artist.isEmpty() && !album.isEmpty()) {
 			title = track + " - " + title;
 		}
@@ -575,6 +595,41 @@ void SpectRadio::dropEvent(QDropEvent *event)
 void SpectRadio::dragEnterEvent(QDragEnterEvent *event)
 {
 	event->acceptProposedAction();
+}
+
+int SpectRadio::getLast(void)
+{
+	int latest = historyTable->rowCount() - 1;
+
+	if(latest < 0)
+	      return -1;
+
+	QTableWidgetItem *latestItem = historyTable->item(latest, INDEX_COLUMN);
+	int realRow = latestItem->text().toInt();
+	QTreeWidgetItem *item = treeItemList[realRow];
+	if(item->childCount() > 0)
+	      return -1;
+	return item->text(1).toInt();
+}
+
+void SpectRadio::likeClicked(void)
+{
+	int last = getLast();
+	if(last < 0)
+	      return;
+
+	htdb->like((unsigned int)last);
+}
+
+void SpectRadio::dislikeClicked(void)
+{
+	int last = getLast();
+	
+	if(last < 0)
+	      return;
+
+	htdb->dislike((unsigned int)last);
+	next();
 }
 
 void SpectRadio::stateChanged(Phonon::State newState, Phonon::State /* oldState */)
@@ -651,7 +706,7 @@ void SpectRadio::playSource(int sourceIndex)
 	if(sourceIndex >= sources.size()) {
 		return;
 	}
-	htdb.set_playing(sourceIndex);
+	htdb->set_playing(sourceIndex);
 	mediaObject->setCurrentSource(sources[sourceIndex]);
 	mediaObject->play();
 }
@@ -663,9 +718,10 @@ void SpectRadio::treeClicked(QTreeWidgetItem *item, int /* column */)
 		return;
 	}
 	int sourcesIndex = item->text(1).toInt();
-	if(playlistHistoryToggle == false)
-		playSource(sourcesIndex);
-	else {
+	if(playlistHistoryToggle == false) {
+		playSource(sourcesIndex); 
+		htdb->like(sourcesIndex);
+	} else {
 		appendPlaylist(item->text(0), item->parent()->parent()->text(0), 
 					item->parent()->text(0), sourcesIndex);
 		if(playlistCurrentRow == -1) {
@@ -697,6 +753,7 @@ void SpectRadio::sourceChanged(const Phonon::MediaSource &source)
 
 void SpectRadio::aboutToFinish()
 {
+
 	if(playlistHistoryToggle) {
 		if(playlistTable->rowCount() - 1 == (int)playlistCurrentRow)
 		      return;
@@ -710,7 +767,7 @@ void SpectRadio::aboutToFinish()
 		return;
 	}
 	int index = sources.indexOf(mediaObject->currentSource());
-	index = htdb.get_next(index);
+	index = htdb->get_next(index);
 	if (sources.size() > index) {
 		mediaObject->enqueue(sources.at(index));
 	}
@@ -783,6 +840,12 @@ void SpectRadio::setupActions()
 
 	aboutAction = new QAction(ICON_ABOUT, tr("About"), this);
 	aboutAction->setDisabled(false);
+	
+	goodAction = new QAction(ICON_GOOD, tr("Like"), this);
+
+	badAction = new QAction(ICON_BAD, tr("Dislike"), this);
+
+	htdb = new HistDB;
 
 	searchAllAction = new QAction(tr("All"), this);
 	searchArtistAction = new QAction(tr("Artist"), this);
@@ -802,13 +865,15 @@ void SpectRadio::setupActions()
 	connect(retryAction, SIGNAL(triggered()), this, SLOT(retry()));
 	connect(nextAction, SIGNAL(triggered()), this, SLOT(next()));
 	connect(toggleHistoryAction, SIGNAL(triggered()), this, SLOT(toggleHistory()));
+	connect(goodAction, SIGNAL(triggered()), this, SLOT(likeClicked()));
+	connect(badAction, SIGNAL(triggered()), this, SLOT(dislikeClicked()));
 }
 
 void SpectRadio::setupUi()
 {
 	// ----------- Hidden artifacts ---------------
 	dialogBox = new QDialogButtonBox();
-	QList<QString> distFuncs = htdb.getSupportedDistanceFunctions();
+	QList<QString> distFuncs = htdb->getSupportedDistanceFunctions();
 	for(int i = 0; i < distFuncs.length(); i++) {
 		dialogBox->addButton(distFuncs[i], QDialogButtonBox::ActionRole);
 	}
@@ -826,6 +891,8 @@ void SpectRadio::setupUi()
 	tbar1->addAction(stopAction);		// stop
 	tbar1->addAction(retryAction);		// Retry
 	tbar1->addAction(nextAction);		// Next
+	tbar1->addAction(goodAction);
+	tbar1->addAction(badAction);
 
 	seekSlider = new Phonon::SeekSlider(this);
 	seekSlider->setMediaObject(mediaObject);
