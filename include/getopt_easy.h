@@ -6,6 +6,17 @@
 #include <string.h>
 #include <unistd.h>
 
+#define GETOPT_EASY_NO_MEM                   (-1)
+#define GETOPT_EASY_INVALID_OPT_STRING       (-2)
+#define GETOPT_EASY_INVALID_VALUE_PTR        (-3)
+#define GETOPT_EASY_INVALID_TYPE             (-4)
+#define GETOPT_EASY_NO_REQUIRED_OPTION_VALUE (-5)
+#define GETOPT_EASY_ARGC_INVALID             (-6)
+#define GETOPT_EASY_ARGV_INVALID             (-7)
+#define GETOPT_EASY_OPT_ARRAY_INVALID        (-8)
+#define GETOPT_EASY_OPT_ARRAY_LEN_INVALID    (-9)
+#define GETOPT_EASY_INTERNAL_ERROR           (-10)
+
 typedef enum {
 	TYPE_START,
 	FLAG,
@@ -24,6 +35,8 @@ typedef struct {
 	void                   *value;
 } getopt_easy_opt_t;
 
+static int error_option_index = 0;
+
 static inline int getopt_easy
 (
 	int               *_argc,   /* In/Out - pointer to argc */
@@ -32,19 +45,37 @@ static inline int getopt_easy
 	unsigned int      len       /* In     - Number of options */
 )
 {
-	int argc = 0;
+	int argc = 1; /* argc will at least be 1 */
 	char **argv = NULL;
 	char opt_string[256] = "";
 	int c;
 	int i;
-	int rc = -1;
-	if(!_argc || !_argv || !opt || !len)
-	      return -1;
+	int rc = GETOPT_EASY_INTERNAL_ERROR;
+
+
+	if(!_argc)
+	      return GETOPT_EASY_ARGC_INVALID;
+	if(!_argv)
+	      return GETOPT_EASY_ARGV_INVALID;
+	if(!opt)
+	      return GETOPT_EASY_OPT_ARRAY_INVALID;
+	if(!len)
+	      return GETOPT_EASY_OPT_ARRAY_LEN_INVALID;
+
 	for(i = 0; i < len; i++) {
-		if(!opt[i].opt || !opt[i].value)
-		      return -1;
+		error_option_index = i;
+		if(!opt[i].opt)
+		      return GETOPT_EASY_INVALID_OPT_STRING;
+		if(!opt[i].value)
+		      return GETOPT_EASY_INVALID_VALUE_PTR;
 		if(opt[i].type <= TYPE_START || opt[i].type >= TYPE_END)
-		      return -1;
+		      return GETOPT_EASY_INVALID_TYPE;
+		/* If not a flag, then a value is required (the : or = */
+		if(opt[i].type > FLAG && opt[i].opt[1] != ':') {
+			if(opt[i].opt[1] != ':') {
+				return GETOPT_EASY_INVALID_OPT_STRING;
+			}
+		}
 		strcat(opt_string, opt[i].opt);
 	}
 	while((c = getopt(*_argc, *_argv, opt_string)) != -1) {
@@ -94,17 +125,18 @@ static inline int getopt_easy
 		}
 		if(c == '?') {
 			fprintf(stderr, "Option %c requires an argument\n", optopt);
+			rc = GETOPT_EASY_NO_REQUIRED_OPTION_VALUE;
 			goto bailout;
 		} else {
-			/* TODO: Increment argc realloc argv, and store optarg in there */
 			printf("Unknown option!\n");
 		}
 	}
 	if(optind < *_argc) {
 		argc = *_argc - optind + 1;
 		argv = (char **)calloc(argc, sizeof(char *));
+		printf("Allocating %d pointers!\n", argc); fflush(stdout);
 		if(!argv)
-		      return -1;
+		      return GETOPT_EASY_NO_MEM;
 		argv[0] = (*_argv)[0];
 		for(i = optind; i < *_argc; i++)  {
 			int ind = 1 + i - optind;
@@ -125,7 +157,7 @@ bailout:
  *           EXAMPLE MAIN (USAGE)
  ****************************************************/
 
-int main(int argc, char **argv)
+int ain(int argc, char **argv)
 {
 	int help = 0; /* The default value of flag */
 	int val = 0;  /* The default value of integer option */
