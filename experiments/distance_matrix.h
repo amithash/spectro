@@ -1,6 +1,7 @@
 #ifndef _DISTANCE_MATRIX_H_
 #define _DISTANCE_MATRIX_H_
 
+typedef void (*perc_cb_t)(float perc);
 typedef float (*distance_cb_t)(void *a, void *b);
 typedef void *(*index_cb_t)(void *data, int ind);
 
@@ -18,6 +19,7 @@ dist_matrix_t *create_dist_matrix(
 	void *data, unsigned int n, 
 	distance_cb_t dist, 
 	index_cb_t index,
+	perc_cb_t perc,
 	int nr_threads);
 void print_dist_matrix(dist_matrix_t *mat);
 

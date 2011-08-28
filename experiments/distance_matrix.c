@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <math.h>
 #include <pthread.h>
 #include "distance_matrix.h"
@@ -73,6 +74,8 @@ typedef struct {
 	int end;
 	void *data;
 	float *out;
+	pthread_mutex_t *mutex;
+	volatile int     *total;
 	index_cb_t index;
 	distance_cb_t dist;
 } worker_data_t;
@@ -80,12 +83,25 @@ typedef struct {
 static void *worker_thread(void *priv)
 {
 	int i,j,k;
+	int done = 0;
 	worker_data_t *work = (worker_data_t *)priv;
 	for(k = work->start; k < work->end; k++) {
 		i = (int)((1.0 + sqrt(1.0 + 8.0 * k))/2);
 		j = k - ((i * (i - 1)) / 2);
 		work->out[k] = 
 		    work->dist(work->index(work->data, i), work->index(work->data,j));
+		done++;
+		if(done % 10 == 0) {
+			pthread_mutex_lock(work->mutex);
+			*(work->total) += done;
+			pthread_mutex_unlock(work->mutex);
+			done = 0;
+		}
+	}
+	if(done) {
+		pthread_mutex_lock(work->mutex);
+		*work->total += done;
+		pthread_mutex_unlock(work->mutex);
 	}
 	pthread_exit(NULL);
 }
@@ -94,6 +110,7 @@ dist_matrix_t *create_dist_matrix(
 	void *data, unsigned int n, 
 	distance_cb_t dist, 
 	index_cb_t index,
+	perc_cb_t perc_cb,
 	int nr_threads)
 {
 	dist_matrix_t *mat;
@@ -102,6 +119,9 @@ dist_matrix_t *create_dist_matrix(
 	int work_per_thread = 0;
 	pthread_t *threads;
 	worker_data_t *work_data;
+	pthread_mutex_t mutex;
+	volatile int total = 0;
+
 
 	if(n < 2)
 	      return NULL;
@@ -131,11 +151,15 @@ dist_matrix_t *create_dist_matrix(
 		return NULL;
 	}
 
+	pthread_mutex_init(&mutex, NULL);
+
 	for(i = 0; i < nr_threads; i++) {
 		work_data[i].index = index;
 		work_data[i].dist = dist;
 		work_data[i].out = mat->data;
 		work_data[i].data = data;
+		work_data[i].mutex = &mutex;
+		work_data[i].total = &total;
 		work_data[i].start = work_per_thread * i;
 		if(i == nr_threads - 1) {
 			work_data[i].end = total_operations;
@@ -145,9 +169,17 @@ dist_matrix_t *create_dist_matrix(
 		pthread_create(&threads[i], 0, worker_thread, &work_data[i]);
 	
 	}
+	while(perc_cb && total < total_operations) {
+		float perc = ((float)total * 100) / (float)total_operations;
+		perc_cb(perc);
+		sleep(1);
+	}
+	if(perc_cb)
+		perc_cb(100);
 	for(i = 0; i < nr_threads; i++) {
 		pthread_join(threads[i], NULL);
 	}
+	pthread_mutex_destroy(&mutex);
 	free(work_data);
 	free(threads);
 	return mat;

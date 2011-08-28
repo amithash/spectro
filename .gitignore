@@ -16,6 +16,7 @@ experiments/spect_range
 experiments/exp_distance
 experiments/plotspect3d
 experiments/plotspect
+experiments/histmatrix
 spectradio/spectradio
 utils/decoder
 utils/genhistdb
