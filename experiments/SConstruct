@@ -23,8 +23,8 @@ env.Append(LIBS = ['m','pthread', 'fftw3f', 'histdb', 'decoder', 'spectgen', 'ta
 env.Append(CPPPATH = ['/usr/include/taglib'])
 
 CLUSTER_SOURCES = [
-	"kmeans.c",
-	"hist_ops.c",
+	"distance_matrix.c",
+	"quicksort.c",
 	"hist_cluster.c"
 ]
 env.Program('cluster', CLUSTER_SOURCES)

@@ -19,83 +19,113 @@
 #include <stdlib.h>
 #include "kmeans.h"
 #include "histdb.h"
-#include "hist_ops.h"
+#include "distance_matrix.h"
+#include "spect-config.h"
+#include "getopt_easy.h"
 #include <math.h>
 #include <string.h>
+#include "quicksort.h"
 
-#define DBNAME "../Music.hdb"
+float matrix_dist_cb(void *_a, void *_b)
+{
+	hist_t *a = (hist_t *)_a;
+	hist_t *b = (hist_t *)_b;
+	if(!a || !b)
+	      return 0;
+	return hist_distance(a, b, HELLINGER_DIVERGANCE);
+}
 
-#define ONE 1267
-#define TWO 7653
-#define THR 5432
+void *matrix_index_cb(void *_hist_list, int ind)
+{
+	hist_t *hist_list = (hist_t *)_hist_list;
+	return &hist_list[ind];
+}
+
+void print_perc(float perc)
+{
+	progress(perc, stdout);
+}
+
+typedef struct {
+	float val;
+	unsigned int i;
+	unsigned int j;
+} dist_touple_t;
+
+void *touple_index(void *arr, int ind)
+{
+	dist_touple_t *t = (dist_touple_t *)arr;
+	return &t[ind];
+}
+int touple_compare(void *_a, void *_b)
+{
+	dist_touple_t *a = (dist_touple_t *)_a;
+	dist_touple_t *b = (dist_touple_t *)_b;
+	if(a->val < b->val)
+	      return 1;
+	return 0;
+}
+
 
 int main(int argc, char *argv[])
 {
-	hist_t *list;
-	unsigned int len;
-	kmeans_ops_t ops;
-	clustered_data_t *out;
-	int i,j;
-	int errno;
-	int km = 10;
-	if(argc > 2) {
-		printf("Arg %s\n",argv[2]);
-		km = atoi(argv[2]);
-	}
-	if(km <= 0) {
-		km = 10;
-	}
+	hist_t *hist_list = NULL;
+	unsigned int hist_len = 0;
+	char *hdb_file = NULL;
+	int rc;
+	dist_touple_t *touple = NULL;
+	dist_matrix_t *dist;
+	int k;
+	getopt_easy_opt_t opt[] = {
+		{"h:", STRING, (void *)&hdb_file}
+	};
 
-	printf("Using %d\n",km);
-
-
-
-	ops.dist = hist_dist;
-	ops.zero = cent_clear;
-	ops.copy = cent_copy;
-	ops.accum = cent_accum;
-	ops.final = cent_final;
-	ops.calloc = hist_calloc;
-	ops.index = hist_ind;
-
-	if(read_histdb(&list, &len, argv[1])) {
-		printf("ERROR Reading db!\n");
+	if((rc = getopt_easy(&argc, &argv, opt, 1))) {
+		printf("Getopt failed with rc = %d\n", rc);
 		exit(-1);
 	}
-	errno = cluster(km, list, len, ops, &out);
-
-	if(errno != 0) {
-		printf("Something went wrong\n");
-		if(errno == -2) {
-			printf("Max iterations reached!\n");
-		} else {
-			exit(-1);
-		}
+	if(!hdb_file) {
+		printf("USAGE: %s -h <Path to hdb file>\n", argv[0]);
+		exit(-1);
 	}
 
-	for(i = 0; i < km; i++) {
-		printf("\n\n----------------------------------------\n");
-		printf("                  %d                    \n",i);
-		printf("----------------------------------------\n");
-		for(j = 0; j < len; j++) {
-			if(out[j].id == i) {
-				hist_t *dt = (hist_t *)out[j].data;
-				dt->fname[255] = '\0';
-				printf("%s\n",dt->fname);
-			}
+	if(read_histdb(&hist_list, &hist_len, hdb_file)) {
+		printf("Opening hdb:%s failed\n", hdb_file);
+		exit(-1);
+	}
+	printf("Computing distance matrix on %d elements\n", hist_len);
+
+	dist = create_dist_matrix(hist_list, hist_len,
+				matrix_dist_cb, 
+				matrix_index_cb,
+				print_perc, 2); /* TODO: Configure nr threads */
+
+	touple = malloc(sizeof(dist_touple_t) * dist->len);
+	if(!touple) {
+		printf("Alloc failure\n");
+		goto touple_failed;
+	}
+	for(k = 0; k < dist->len; k++) {
+		touple[k].val = dist->data[k];
+		touple[k].i = (unsigned int)((1.0 + sqrt(1.0 + 8.0 * (float)k))/2);
+		touple[k].j = ((touple[k].i * (touple[k].i - 1)) / 2);
+	}
+	printf("Sorting %d elements...\n", dist->len);
+	touple = quicksort(touple, dist->len, sizeof(dist_touple_t), touple_index, touple_compare);
+	printf("Sorted!\n");
+
+	for(k = 0; k < dist->len - 1; k++) {
+		if(touple[k].val > touple[k + 1].val) {
+			printf("Sorting has failed!\n");
+			break;
 		}
 	}
-	free(out);
-	free(list);
+	free(touple);
+touple_failed:
+	delete_dist_matrix(dist);
 
 	return 0;
 }
 	
-
-
-
-
-
-
 
 
