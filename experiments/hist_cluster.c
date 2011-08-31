@@ -52,11 +52,6 @@ typedef struct {
 	unsigned int j;
 } dist_touple_t;
 
-void *touple_index(void *arr, int ind)
-{
-	dist_touple_t *t = (dist_touple_t *)arr;
-	return &t[ind];
-}
 int touple_compare(void *_a, void *_b)
 {
 	dist_touple_t *a = (dist_touple_t *)_a;
@@ -111,7 +106,7 @@ int main(int argc, char *argv[])
 		touple[k].j = ((touple[k].i * (touple[k].i - 1)) / 2);
 	}
 	printf("Sorting %d elements...\n", dist->len);
-	touple = quicksort(touple, dist->len, sizeof(dist_touple_t), touple_index, touple_compare);
+	touple = quicksort(touple, dist->len, sizeof(dist_touple_t), touple_compare);
 	printf("Sorted!\n");
 
 	for(k = 0; k < dist->len - 1; k++) {
